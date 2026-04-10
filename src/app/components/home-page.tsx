@@ -52,7 +52,7 @@ const models = [
     description: "최적 모델 자동 선택",
     icon: (
       <div className="w-5 h-5 rounded-full bg-[#1A73E8] flex items-center justify-center">
-        <Sparkles size={11} className="text-white" />
+        <Sparkles size={9} className="text-white" />
       </div>
     ),
   },
@@ -199,36 +199,36 @@ export function HomePage() {
       <div className="flex flex-col h-full bg-[#F8F9FA]">
         {/* Chat Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-[#E0E3E8]">
-          <button className="flex items-center gap-1.5 text-[#1A1A1A] text-[22px] hover:text-[#1A472A] transition-colors">
+          <button className="flex items-center gap-1.5 text-[#1A1A1A] text-[1.1rem] hover:text-[#1A472A] transition-colors">
             채팅
-            <ChevronDown size={16} className="text-[#999]" />
+            <ChevronDown size={13} className="text-[#999]" />
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[#555] text-[18px] hover:bg-[#F0F1F3] transition-colors">
-            <Share size={16} />
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[#555] text-[0.9rem] hover:bg-[#F0F1F3] transition-colors">
+            <Share size={13} />
             공유
           </button>
         </div>
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto px-6 py-6">
-          <div className="max-w-[1100px] mx-auto space-y-6">
+          <div className="max-w-[880px] mx-auto space-y-6">
             {messages.map((msg) => (
               <div key={msg.id}>
                 {msg.role === "user" ? (
                   <div className="flex justify-end">
-                    <div className="bg-[#EFF5F1] text-[#1A1A1A] text-[22px] px-5 py-3 rounded-2xl max-w-[70%]">
+                    <div className="bg-[#EFF5F1] text-[#1A1A1A] text-[1.1rem] px-5 py-3 rounded-2xl max-w-[70%]">
                       {msg.content}
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {msg.status && (
-                      <button className="flex items-center gap-1 text-[#999] text-[18px] hover:text-[#666] transition-colors">
+                      <button className="flex items-center gap-1 text-[#999] text-[0.9rem] hover:text-[#666] transition-colors">
                         {msg.status}
-                        <ChevronDown size={14} className="rotate-[-90deg]" />
+                        <ChevronDown size={11} className="rotate-[-90deg]" />
                       </button>
                     )}
-                    <p className="text-[#1A1A1A] text-[22px] leading-relaxed">
+                    <p className="text-[#1A1A1A] text-[1.1rem] leading-relaxed">
                       {msg.content}
                     </p>
                     <div className="flex items-center gap-3 mt-2">
@@ -243,7 +243,7 @@ export function HomePage() {
                           className="text-[#BBB] hover:text-[#666] transition-colors p-1"
                           title={action.label}
                         >
-                          <action.icon size={16} />
+                          <action.icon size={13} />
                         </button>
                       ))}
                     </div>
@@ -254,7 +254,7 @@ export function HomePage() {
 
             {isTyping && (
               <div className="flex items-center gap-2">
-                <Sparkles size={22} className="text-[#1A472A] animate-spin" />
+                <Sparkles size={18} className="text-[#1A472A] animate-spin" />
               </div>
             )}
 
@@ -264,7 +264,7 @@ export function HomePage() {
 
         {/* Bottom Input Bar */}
         <div className="px-6 pb-4">
-          <div className="max-w-[1100px] mx-auto">
+          <div className="max-w-[880px] mx-auto">
             <div className="bg-white border border-[#E0E3E8] rounded-2xl overflow-visible shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
               <div className="relative px-5 pt-4 pb-3">
                 <textarea
@@ -273,8 +273,8 @@ export function HomePage() {
                   onKeyDown={handleKeyDown}
                   placeholder="답글..."
                   rows={2}
-                  style={{ minHeight: '56px' }}
-                  className="w-full bg-transparent text-[22px] text-[#1A1A1A] placeholder-[#999] focus:outline-none resize-none leading-relaxed pr-6"
+                  style={{ minHeight: '45px' }}
+                  className="w-full bg-transparent text-[1.1rem] text-[#1A1A1A] placeholder-[#999] focus:outline-none resize-none leading-relaxed pr-6"
                 />
                 <div className="absolute right-4 top-4 w-2.5 h-2.5 rounded-full bg-[#2CBF60]" />
               </div>
@@ -285,11 +285,11 @@ export function HomePage() {
                     onClick={() => setPlusMenuOpen(!plusMenuOpen)}
                     className="w-8 h-8 rounded-lg border border-[#E0E3E8] flex items-center justify-center text-[#888] hover:text-[#555] hover:bg-[#F7F8FA] transition-colors"
                   >
-                    <Plus size={16} />
+                    <Plus size={13} />
                   </button>
 
                   {plusMenuOpen && (
-                    <div className="absolute left-0 bottom-full mb-2 w-[260px] bg-white border border-[#E0E3E8] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-50 py-1.5">
+                    <div className="absolute left-0 bottom-full mb-2 w-[208px] bg-white border border-[#E0E3E8] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-50 py-1.5">
                       {[
                         { icon: Paperclip, label: "파일 또는 사진 추가", toggleable: false },
                         { icon: Layers, label: "종합", toggleable: true },
@@ -312,9 +312,9 @@ export function HomePage() {
                               isActive ? "bg-[#EFF5F1]" : "hover:bg-[#F7F8FA]"
                             }`}
                           >
-                            <item.icon size={18} className={`${isActive ? "text-[#1A472A]" : "text-[#666]"} shrink-0`} />
-                            <span className={`text-[20px] flex-1 ${isActive ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>{item.label}</span>
-                            {isActive && <Check size={16} className="text-[#1A472A] shrink-0" />}
+                            <item.icon size={14} className={`${isActive ? "text-[#1A472A]" : "text-[#666]"} shrink-0`} />
+                            <span className={`text-[1rem] flex-1 ${isActive ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>{item.label}</span>
+                            {isActive && <Check size={13} className="text-[#1A472A] shrink-0" />}
                           </button>
                         );
                       })}
@@ -330,17 +330,17 @@ export function HomePage() {
                         dropdownOpen ? "bg-[#EFF5F1] text-[#1A472A]" : "text-[#666] hover:bg-[#F7F8FA]"
                       }`}
                     >
-                      <span className="text-[#1A1A1A] text-[20px]">{currentModel.name}</span>
+                      <span className="text-[#1A1A1A] text-[1rem]">{currentModel.name}</span>
                       <ChevronDown
-                        size={12}
+                        size={10}
                         className={`text-[#999] transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
                       />
                     </button>
 
                     {dropdownOpen && (
-                      <div className="absolute right-0 bottom-full mb-2 w-[280px] bg-white border border-[#E0E3E8] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-50 py-1.5">
+                      <div className="absolute right-0 bottom-full mb-2 w-[224px] bg-white border border-[#E0E3E8] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-50 py-1.5">
                         <div className="px-4 py-2.5 border-b border-[#F0F1F3]">
-                          <p className="text-[#999] text-[16px] tracking-wider uppercase">모델 선택</p>
+                          <p className="text-[#999] text-[0.8rem] tracking-wider uppercase">모델 선택</p>
                         </div>
                         <div className="py-1">
                           {models.map((model) => {
@@ -359,19 +359,19 @@ export function HomePage() {
                                 <div className="shrink-0">{model.icon}</div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
-                                    <span className={`text-[20px] ${isActive ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>
+                                    <span className={`text-[1rem] ${isActive ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>
                                       {model.name}
                                     </span>
-                                    {isActive && <Check size={14} className="text-[#1A472A]" />}
+                                    {isActive && <Check size={11} className="text-[#1A472A]" />}
                                   </div>
-                                  <p className="text-[18px] text-[#999] truncate">{model.description}</p>
+                                  <p className="text-[0.9rem] text-[#999] truncate">{model.description}</p>
                                 </div>
                               </button>
                             );
                           })}
                         </div>
                         <div className="px-4 py-2 border-t border-[#F0F1F3]">
-                          <p className="text-[18px] text-[#BBB]">모델은 작업 유형에 따라 자동 전환됩니다.</p>
+                          <p className="text-[0.9rem] text-[#BBB]">모델은 작업 유형에 따라 자동 전환됩니다.</p>
                         </div>
                       </div>
                     )}
@@ -385,13 +385,13 @@ export function HomePage() {
                         : "text-[#999] hover:bg-[#F7F8FA] hover:text-[#555]"
                     }`}
                   >
-                    {query.trim() ? <ArrowUp size={16} /> : <SlidersHorizontal size={16} />}
+                    {query.trim() ? <ArrowUp size={13} /> : <SlidersHorizontal size={13} />}
                   </button>
                 </div>
               </div>
             </div>
 
-            <p className="text-center text-[16px] text-[#BBB] mt-3">
+            <p className="text-center text-[0.8rem] text-[#BBB] mt-3">
               AI이며 실수할 수 있습니다. 응답을 다시 한번 확인해 주세요.
             </p>
           </div>
@@ -405,14 +405,14 @@ export function HomePage() {
     <div className="flex flex-col h-full items-center justify-center px-6">
       {/* Greeting — Claude style */}
       <div className="flex items-center gap-2.5 mb-8">
-        <Sparkles size={28} className="text-[#1A472A]" />
-        <h1 className="text-[#1A1A1A] text-[48px]">
+        <Sparkles size={22} className="text-[#1A472A]" />
+        <h1 className="text-[#1A1A1A] text-[38px]">
           dnagol님, 안녕하세요
         </h1>
       </div>
 
       {/* Input Card */}
-      <div className="w-full max-w-[920px]">
+      <div className="w-full max-w-[736px]">
         <div className="bg-white border border-[#E0E3E8] rounded-[20px] shadow-[0_1px_6px_rgba(0,0,0,0.04)] overflow-visible">
           {/* Textarea row */}
           <div className="relative px-6 pt-6 pb-5">
@@ -421,8 +421,8 @@ export function HomePage() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="오늘 어떤 도움을 드릴까요?"
               rows={3}
-              style={{ minHeight: '90px' }}
-              className="w-full bg-white text-[24px] text-[#1A1A1A] placeholder-[#999] focus:outline-none resize-none leading-relaxed pr-6"
+              style={{ minHeight: '72px' }}
+              className="w-full bg-white text-[1.2rem] text-[#1A1A1A] placeholder-[#999] focus:outline-none resize-none leading-relaxed pr-6"
               onKeyDown={handleKeyDown}
             />
             {/* Status dot */}
@@ -437,11 +437,11 @@ export function HomePage() {
                 onClick={() => setPlusMenuOpen(!plusMenuOpen)}
                 className="w-8 h-8 rounded-lg border border-[#E0E3E8] flex items-center justify-center text-[#888] hover:text-[#555] hover:bg-[#F7F8FA] transition-colors"
               >
-                <Plus size={16} />
+                <Plus size={13} />
               </button>
 
               {plusMenuOpen && (
-                <div className="absolute left-0 top-full mt-2 w-[260px] bg-white border border-[#E0E3E8] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-50 py-1.5">
+                <div className="absolute left-0 top-full mt-2 w-[208px] bg-white border border-[#E0E3E8] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-50 py-1.5">
                   {[
                     { icon: Paperclip, label: "파일 또는 사진 추가", toggleable: false },
                     { icon: Layers, label: "종합", toggleable: true },
@@ -464,9 +464,9 @@ export function HomePage() {
                           isActive ? "bg-[#EFF5F1]" : "hover:bg-[#F7F8FA]"
                         }`}
                       >
-                        <item.icon size={18} className={`${isActive ? "text-[#1A472A]" : "text-[#666]"} shrink-0`} />
-                        <span className={`text-[18px] flex-1 ${isActive ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>{item.label}</span>
-                        {isActive && <Check size={16} className="text-[#1A472A] shrink-0" />}
+                        <item.icon size={14} className={`${isActive ? "text-[#1A472A]" : "text-[#666]"} shrink-0`} />
+                        <span className={`text-[0.9rem] flex-1 ${isActive ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>{item.label}</span>
+                        {isActive && <Check size={13} className="text-[#1A472A] shrink-0" />}
                       </button>
                     );
                   })}
@@ -480,23 +480,23 @@ export function HomePage() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] transition-all ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[0.65rem] transition-all ${
                     dropdownOpen
                       ? "bg-[#EFF5F1] text-[#1A472A]"
                       : "text-[#666] hover:bg-[#F7F8FA]"
                   }`}
                 >
-                  <span className="text-[#1A1A1A] text-[18px]">{currentModel.name}</span>
+                  <span className="text-[#1A1A1A] text-[0.9rem]">{currentModel.name}</span>
                   <ChevronDown
-                    size={12}
+                    size={10}
                     className={`text-[#999] transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 bottom-full mb-2 w-[280px] bg-white border border-[#E0E3E8] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-50 py-1.5">
+                  <div className="absolute right-0 bottom-full mb-2 w-[224px] bg-white border border-[#E0E3E8] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.1)] z-50 py-1.5">
                     <div className="px-4 py-2.5 border-b border-[#F0F1F3]">
-                      <p className="text-[#999] text-[16px] tracking-wider uppercase">모델 선택</p>
+                      <p className="text-[#999] text-[0.8rem] tracking-wider uppercase">모델 선택</p>
                     </div>
                     <div className="py-1">
                       {models.map((model) => {
@@ -515,19 +515,19 @@ export function HomePage() {
                             <div className="shrink-0">{model.icon}</div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className={`text-[18px] ${isActive ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>
+                                <span className={`text-[0.9rem] ${isActive ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>
                                   {model.name}
                                 </span>
-                                {isActive && <Check size={14} className="text-[#1A472A]" />}
+                                {isActive && <Check size={11} className="text-[#1A472A]" />}
                               </div>
-                              <p className="text-[16px] text-[#999] truncate">{model.description}</p>
+                              <p className="text-[0.8rem] text-[#999] truncate">{model.description}</p>
                             </div>
                           </button>
                         );
                       })}
                     </div>
                     <div className="px-4 py-2 border-t border-[#F0F1F3]">
-                      <p className="text-[16px] text-[#BBB]">모델은 작업 유형에 따라 자동 전환됩니다.</p>
+                      <p className="text-[0.8rem] text-[#BBB]">모델은 작업 유형에 따라 자동 전환됩니다.</p>
                     </div>
                   </div>
                 )}
@@ -542,7 +542,7 @@ export function HomePage() {
                     : "text-[#999] hover:bg-[#F7F8FA] hover:text-[#555]"
                 }`}
               >
-                {query.trim() ? <ArrowUp size={16} /> : <SlidersHorizontal size={16} />}
+                {query.trim() ? <ArrowUp size={13} /> : <SlidersHorizontal size={13} />}
               </button>
             </div>
           </div>
@@ -554,9 +554,9 @@ export function HomePage() {
             <button
               key={a.label}
               onClick={() => setQuery(a.command + " ")}
-              className="flex items-center gap-1.5 px-3.5 py-2 border border-[#E0E3E8] rounded-full text-[18px] text-[#555] bg-white hover:text-[#1A472A] hover:border-[#1A472A] hover:bg-[#EFF5F1] transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 border border-[#E0E3E8] rounded-full text-[0.9rem] text-[#555] bg-white hover:text-[#1A472A] hover:border-[#1A472A] hover:bg-[#EFF5F1] transition-colors"
             >
-              <a.icon size={14} strokeWidth={1.8} />
+              <a.icon size={11} strokeWidth={1.8} />
               {a.label}
             </button>
           ))}

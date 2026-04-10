@@ -275,7 +275,7 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         {[1, 2, 3].map((s) => (
           <div key={s} className="flex items-center gap-3">
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-[16px]"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[0.8rem]"
               style={{
                 background: step >= s ? T.primary : "#E0E3E8",
                 color: step >= s ? "#fff" : "#999",
@@ -284,7 +284,7 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
               {step > s ? "✓" : s}
             </div>
             <span
-              className="text-[16px]"
+              className="text-[0.8rem]"
               style={{ color: step >= s ? T.textPrimary : "#999" }}
             >
               {s === 1 ? "파일 업로드" : s === 2 ? "컬럼 매핑" : "완료"}
@@ -295,13 +295,13 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       </div>
 
       {step === 1 && (
-        <div className="bg-white rounded-2xl p-10 w-full max-w-[600px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+        <div className="bg-white rounded-2xl p-10 w-full max-w-[480px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
           <div className="flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: "#EBF5FF" }}>
-              <FileSpreadsheet size={28} color={T.primary} />
+              <FileSpreadsheet size={22} color={T.primary} />
             </div>
-            <h2 className="text-[28px] text-[#1A1A1A] mb-2">영업 데이터를 가져오세요</h2>
-            <p className="text-[17px] text-[#999] mb-8">기존 Excel 파일을 업로드하면 자동으로 딜 데이터가 생성됩니다.</p>
+            <h2 className="text-[22px] text-[#1A1A1A] mb-2">영업 데이터를 가져오세요</h2>
+            <p className="text-[0.85rem] text-[#999] mb-8">기존 Excel 파일을 업로드하면 자동으로 딜 데이터가 생성됩니다.</p>
 
             <div
               className="w-full rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors mb-4"
@@ -315,29 +315,29 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
               onDrop={(e) => { e.preventDefault(); setDragOver(false); setFileSelected(true); }}
               onClick={() => setFileSelected(true)}
             >
-              <Upload size={32} color="#999" className="mb-3" />
+              <Upload size={26} color="#999" className="mb-3" />
               {fileSelected ? (
-                <p className="text-[17px]" style={{ color: T.primary }}>sample_deals.xlsx 선택됨</p>
+                <p className="text-[0.85rem]" style={{ color: T.primary }}>sample_deals.xlsx 선택됨</p>
               ) : (
                 <>
-                  <p className="text-[17px] text-[#666] mb-1">여기에 파일을 끌어다 놓으세요</p>
-                  <p className="text-[16px]" style={{ color: T.primary }}>또는 파일 선택</p>
+                  <p className="text-[0.85rem] text-[#666] mb-1">여기에 파일을 끌어다 놓으세요</p>
+                  <p className="text-[0.8rem]" style={{ color: T.primary }}>또는 파일 선택</p>
                 </>
               )}
             </div>
-            <p className="text-[15px] text-[#BBB] mb-6">지원 형식: .xlsx, .xls, .csv · 최대 10MB</p>
+            <p className="text-[0.75rem] text-[#BBB] mb-6">지원 형식: .xlsx, .xls, .csv · 최대 10MB</p>
 
             <div className="flex items-center gap-4 w-full">
-              <button className="flex items-center gap-2 px-4 py-2.5 border rounded-lg text-[16px] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
-                <Download size={16} /> 샘플 파일 다운로드
+              <button className="flex items-center gap-2 px-4 py-2.5 border rounded-lg text-[0.8rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
+                <Download size={13} /> 샘플 파일 다운로드
               </button>
               <button
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[16px] text-white transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[0.8rem] text-white transition-colors"
                 style={{ background: fileSelected ? T.primary : "#CCC", cursor: fileSelected ? "pointer" : "not-allowed" }}
                 onClick={() => fileSelected && setStep(2)}
                 disabled={!fileSelected}
               >
-                다음 <ArrowRight size={16} />
+                다음 <ArrowRight size={13} />
               </button>
             </div>
           </div>
@@ -345,40 +345,40 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       )}
 
       {step === 2 && (
-        <div className="bg-white rounded-2xl p-8 w-full max-w-[900px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+        <div className="bg-white rounded-2xl p-8 w-full max-w-[720px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-[24px] text-[#1A1A1A]">컬럼 매핑</h2>
+            <h2 className="text-[1.2rem] text-[#1A1A1A]">컬럼 매핑</h2>
             <button
               onClick={autoMap}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-[16px] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-[0.8rem] transition-colors"
               style={{ background: "#F0F4FF", color: T.primary }}
             >
-              <Sparkles size={16} /> AI 자동 매핑
+              <Sparkles size={13} /> AI 자동 매핑
             </button>
           </div>
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <p className="text-[15px] text-[#999] mb-3 uppercase tracking-wider">Excel 컬럼</p>
+              <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">Excel 컬럼</p>
               <div className="space-y-2">
                 {excelColumns.map((col) => (
                   <div key={col.name} className="flex items-center justify-between px-4 py-2.5 rounded-lg" style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }}>
-                    <span className="text-[16px] text-[#1A1A1A]">{col.name}</span>
-                    <span className="text-[14px] text-[#BBB]">{col.preview}</span>
+                    <span className="text-[0.8rem] text-[#1A1A1A]">{col.name}</span>
+                    <span className="text-[0.7rem] text-[#BBB]">{col.preview}</span>
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-[15px] text-[#999] mb-3 uppercase tracking-wider">DealFlow 필드</p>
+              <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">DealFlow 필드</p>
               <div className="space-y-2">
                 {dealflowFields.map((field) => (
                   <div key={field.name} className="flex items-center gap-2 px-4 py-2.5 rounded-lg" style={{ background: "#F8F9FA", border: `1px solid ${mappings[field.name] ? T.border : field.required ? "#FCA5A5" : T.border}` }}>
-                    <span className="text-[16px] text-[#1A1A1A] flex-1">
+                    <span className="text-[0.8rem] text-[#1A1A1A] flex-1">
                       {field.name}
                       {field.required && <span className="text-red-500 ml-0.5">*</span>}
                     </span>
                     <select
-                      className="text-[15px] px-2 py-1 rounded border bg-white text-[#666]"
+                      className="text-[0.75rem] px-2 py-1 rounded border bg-white text-[#666]"
                       style={{ borderColor: T.border }}
                       value={mappings[field.name] || ""}
                       onChange={(e) => setMappings((p) => ({ ...p, [field.name]: e.target.value }))}
@@ -396,7 +396,7 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           <div className="flex justify-end mt-6">
             <button
               onClick={() => setStep(3)}
-              className="px-6 py-2.5 rounded-lg text-[16px] text-white transition-colors"
+              className="px-6 py-2.5 rounded-lg text-[0.8rem] text-white transition-colors"
               style={{ background: T.primary }}
             >
               데이터 가져오기 (48건)
@@ -406,22 +406,22 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       )}
 
       {step === 3 && (
-        <div className="bg-white rounded-2xl p-10 w-full max-w-[520px] text-center" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+        <div className="bg-white rounded-2xl p-10 w-full max-w-[416px] text-center" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: "#ECFDF5" }}>
-            <CheckCircle2 size={32} color={T.success} />
+            <CheckCircle2 size={26} color={T.success} />
           </div>
-          <h2 className="text-[28px] text-[#1A1A1A] mb-2">데이터 가져오기 완료!</h2>
-          <p className="text-[18px] text-[#666] mb-6">48건의 딜이 성공적으로 추가되었습니다</p>
+          <h2 className="text-[22px] text-[#1A1A1A] mb-2">데이터 가져오기 완료!</h2>
+          <p className="text-[0.9rem] text-[#666] mb-6">48건의 딜이 성공적으로 추가되었습니다</p>
           <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
             {["기업 23개", "담당자 8명", "총 견적 ₩4.2억"].map((s) => (
-              <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[15px]" style={{ background: "#ECFDF5", color: "#059669" }}>
+              <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.75rem]" style={{ background: "#ECFDF5", color: "#059669" }}>
                 ✓ {s}
               </span>
             ))}
           </div>
           <button
             onClick={onComplete}
-            className="px-8 py-3 rounded-lg text-[17px] text-white transition-colors"
+            className="px-8 py-3 rounded-lg text-[0.85rem] text-white transition-colors"
             style={{ background: T.primary }}
           >
             대시보드로 이동하기
@@ -442,20 +442,20 @@ function DetailDrawer({ deal, onClose }: { deal: Deal; onClose: () => void }) {
   ];
 
   return (
-    <div className="w-[480px] h-full bg-white border-l flex flex-col shrink-0" style={{ borderColor: T.border }}>
+    <div className="w-[384px] h-full bg-white border-l flex flex-col shrink-0" style={{ borderColor: T.border }}>
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: T.border }}>
         <div className="flex items-center gap-3">
-          <span className="text-[20px] text-[#1A1A1A]">{deal.company}</span>
+          <span className="text-[1rem] text-[#1A1A1A]">{deal.company}</span>
           <span
-            className="px-2.5 py-0.5 rounded-md text-[14px]"
+            className="px-2.5 py-0.5 rounded-md text-[0.7rem]"
             style={{ background: stageColors[deal.stage] + "18", color: stageColors[deal.stage] }}
           >
             {deal.stage}
           </span>
         </div>
         <button onClick={onClose} className="p-1 rounded hover:bg-[#F7F8FA] transition-colors">
-          <X size={18} color="#999" />
+          <X size={14} color="#999" />
         </button>
       </div>
 
@@ -465,7 +465,7 @@ function DetailDrawer({ deal, onClose }: { deal: Deal; onClose: () => void }) {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className="pb-3 text-[16px] transition-colors"
+            className="pb-3 text-[0.8rem] transition-colors"
             style={{
               color: tab === t.key ? T.primary : "#999",
               borderBottom: tab === t.key ? `2px solid ${T.primary}` : "2px solid transparent",
@@ -495,39 +495,39 @@ function DetailDrawer({ deal, onClose }: { deal: Deal; onClose: () => void }) {
               { label: "등록일", value: deal.date },
             ].map((field) => (
               <div key={field.label} className="grid grid-cols-[120px_1fr] gap-2 items-center">
-                <span className="text-[15px] text-[#999]">{field.label}</span>
-                <span className="text-[16px] text-[#1A1A1A]">{field.value}</span>
+                <span className="text-[0.75rem] text-[#999]">{field.label}</span>
+                <span className="text-[0.8rem] text-[#1A1A1A]">{field.value}</span>
               </div>
             ))}
             <div className="mt-4 p-4 rounded-xl" style={{ background: "#F5F3FF", border: "1px solid #DDD6FE" }}>
               <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={16} color="#7C3AED" />
-                <span className="text-[16px] text-[#7C3AED]">AI 기업정보 조회</span>
+                <Sparkles size={13} color="#7C3AED" />
+                <span className="text-[0.8rem] text-[#7C3AED]">AI 기업정보 조회</span>
               </div>
-              <p className="text-[14px] text-[#8B5CF6]">클릭하여 이 기업의 상세정보를 AI로 분석합니다.</p>
+              <p className="text-[0.7rem] text-[#8B5CF6]">클릭하여 이 기업의 상세정보를 AI로 분석합니다.</p>
             </div>
           </>
         )}
         {tab === "quantity" && (
           <div className="space-y-3">
-            <p className="text-[17px] text-[#1A1A1A]">상세 수량 정보</p>
+            <p className="text-[0.85rem] text-[#1A1A1A]">상세 수량 정보</p>
             {[
               { item: "기본 라이선스", qty: deal.quantity, unit: "₩250,000" },
               { item: "추가 모듈", qty: Math.floor(deal.quantity * 0.3), unit: "₩180,000" },
               { item: "교육 서비스", qty: 2, unit: "₩500,000" },
             ].map((row) => (
               <div key={row.item} className="flex items-center justify-between py-2.5 px-3 rounded-lg" style={{ background: "#F8F9FA" }}>
-                <span className="text-[16px] text-[#444]">{row.item}</span>
-                <span className="text-[16px] text-[#1A1A1A]">{row.qty}개 × {row.unit}</span>
+                <span className="text-[0.8rem] text-[#444]">{row.item}</span>
+                <span className="text-[0.8rem] text-[#1A1A1A]">{row.qty}개 × {row.unit}</span>
               </div>
             ))}
           </div>
         )}
         {tab === "memo" && (
           <div>
-            <p className="text-[15px] text-[#999] mb-3">관리 메모</p>
+            <p className="text-[0.75rem] text-[#999] mb-3">관리 메모</p>
             <textarea
-              className="w-full h-40 p-3 rounded-lg text-[16px] text-[#1A1A1A] resize-none focus:outline-none"
+              className="w-full h-40 p-3 rounded-lg text-[0.8rem] text-[#1A1A1A] resize-none focus:outline-none"
               style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }}
               placeholder="메모를 입력하세요..."
               defaultValue="초기 미팅 후 긍정적 반응. 다음 주 데모 예정."
@@ -539,7 +539,7 @@ function DetailDrawer({ deal, onClose }: { deal: Deal; onClose: () => void }) {
       {/* Footer */}
       <div className="px-6 py-4 border-t" style={{ borderColor: T.border }}>
         <button
-          className="w-full py-2.5 rounded-lg text-[16px] text-white transition-colors"
+          className="w-full py-2.5 rounded-lg text-[0.8rem] text-white transition-colors"
           style={{ background: T.success }}
         >
           수주확정으로 변경
@@ -556,16 +556,16 @@ function WidgetPalette({ onClose, activeWidgets, onToggleWidget }: { onClose: ()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl w-[720px] max-h-[85vh] flex flex-col" style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.15)" }}>
+      <div className="relative bg-white rounded-2xl w-[576px] max-h-[85vh] flex flex-col" style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.15)" }}>
         <div className="flex items-center justify-between px-7 py-5 border-b" style={{ borderColor: T.border }}>
-          <div><h2 className="text-[22px] text-[#1A1A1A]">위젯 갤러리</h2><p className="text-[15px] text-[#999] mt-1">대시보드에 표시할 위젯을 선택하세요</p></div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#F7F8FA]"><X size={20} color="#999" /></button>
+          <div><h2 className="text-[1.1rem] text-[#1A1A1A]">위젯 갤러리</h2><p className="text-[0.75rem] text-[#999] mt-1">대시보드에 표시할 위젯을 선택하세요</p></div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#F7F8FA]"><X size={16} color="#999" /></button>
         </div>
         <div className="flex items-center gap-2 px-7 py-3 border-b overflow-x-auto" style={{ borderColor: T.border }}>
-          <button onClick={() => setSelCat("all")} className="px-3.5 py-1.5 rounded-full text-[14px] shrink-0 transition-colors" style={{ background: selCat === "all" ? T.primary : "transparent", color: selCat === "all" ? "#fff" : "#666" }}>전체 ({allWidgets.length})</button>
+          <button onClick={() => setSelCat("all")} className="px-3.5 py-1.5 rounded-full text-[0.7rem] shrink-0 transition-colors" style={{ background: selCat === "all" ? T.primary : "transparent", color: selCat === "all" ? "#fff" : "#666" }}>전체 ({allWidgets.length})</button>
           {WIDGET_CATEGORIES.map((c) => {
             const n = allWidgets.filter((w) => w.category === c.key).length;
-            return <button key={c.key} onClick={() => setSelCat(c.key)} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[14px] shrink-0 transition-colors" style={{ background: selCat === c.key ? T.primary : "transparent", color: selCat === c.key ? "#fff" : "#666" }}><c.icon size={14} />{c.label} ({n})</button>;
+            return <button key={c.key} onClick={() => setSelCat(c.key)} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[0.7rem] shrink-0 transition-colors" style={{ background: selCat === c.key ? T.primary : "transparent", color: selCat === c.key ? "#fff" : "#666" }}><c.icon size={11} />{c.label} ({n})</button>;
           })}
         </div>
         <div className="flex-1 overflow-y-auto p-7">
@@ -575,13 +575,13 @@ function WidgetPalette({ onClose, activeWidgets, onToggleWidget }: { onClose: ()
               return (
                 <div key={w.id} onClick={() => onToggleWidget(w.id)} className="p-4 rounded-xl border flex flex-col gap-2.5 transition-all cursor-pointer hover:shadow-sm" style={{ borderColor: on ? T.primary : T.border, background: on ? "#F0F7F2" : "#fff" }}>
                   <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: on ? "#D5E8DA" : "#F3F4F6" }}><w.icon size={20} color={on ? T.primary : "#666"} /></div>
-                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: on ? T.primary : "#D1D5DB", background: on ? T.primary : "transparent" }}>{on && <CheckCircle2 size={14} color="#fff" />}</div>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: on ? "#D5E8DA" : "#F3F4F6" }}><w.icon size={16} color={on ? T.primary : "#666"} /></div>
+                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center" style={{ borderColor: on ? T.primary : "#D1D5DB", background: on ? T.primary : "transparent" }}>{on && <CheckCircle2 size={11} color="#fff" />}</div>
                   </div>
-                  <div><p className="text-[15px] text-[#1A1A1A] mb-0.5">{w.name}</p><p className="text-[13px] text-[#999] leading-relaxed">{w.description}</p></div>
+                  <div><p className="text-[0.75rem] text-[#1A1A1A] mb-0.5">{w.name}</p><p className="text-[0.65rem] text-[#999] leading-relaxed">{w.description}</p></div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#666" }}>{w.colSpan === 1 ? "1칸" : w.colSpan === 2 ? "2칸" : w.colSpan === 3 ? "3칸" : "4칸"}</span>
-                    <span className="text-[12px] px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#666" }}>{WIDGET_CATEGORIES.find((c) => c.key === w.category)?.label}</span>
+                    <span className="text-[0.6rem] px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#666" }}>{w.colSpan === 1 ? "1칸" : w.colSpan === 2 ? "2칸" : w.colSpan === 3 ? "3칸" : "4칸"}</span>
+                    <span className="text-[0.6rem] px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#666" }}>{WIDGET_CATEGORIES.find((c) => c.key === w.category)?.label}</span>
                   </div>
                 </div>
               );
@@ -589,8 +589,8 @@ function WidgetPalette({ onClose, activeWidgets, onToggleWidget }: { onClose: ()
           </div>
         </div>
         <div className="flex items-center justify-between px-7 py-4 border-t" style={{ borderColor: T.border }}>
-          <span className="text-[15px] text-[#999]">{activeWidgets.size}개 위젯 활성</span>
-          <button onClick={onClose} className="px-6 py-2 rounded-lg text-[15px] text-white" style={{ background: T.primary }}>완료</button>
+          <span className="text-[0.75rem] text-[#999]">{activeWidgets.size}개 위젯 활성</span>
+          <button onClick={onClose} className="px-6 py-2 rounded-lg text-[0.75rem] text-white" style={{ background: T.primary }}>완료</button>
         </div>
       </div>
     </div>
@@ -605,63 +605,63 @@ function WidgetContent({ widgetId }: { widgetId: string }) {
     const Ic = kpi.icon;
     return (
       <div className="flex items-start gap-4">
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: kpi.iconBg }}><Ic size={22} color={T.primary} /></div>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: kpi.iconBg }}><Ic size={18} color={T.primary} /></div>
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] text-[#999] mb-1">{kpi.title}</p>
-          <p className="text-[30px] text-[#1A1A1A] leading-none mb-2">{kpi.value}</p>
+          <p className="text-[0.7rem] text-[#999] mb-1">{kpi.title}</p>
+          <p className="text-[24px] text-[#1A1A1A] leading-none mb-2">{kpi.value}</p>
           <div className="flex items-center justify-between">
-            <span className="text-[13px] text-[#BBB]">{kpi.sub}</span>
-            <span className="text-[13px] px-2 py-0.5 rounded-full" style={{ color: kpi.trendColor, background: kpi.trendColor + "14" }}>{kpi.trend}</span>
+            <span className="text-[0.65rem] text-[#BBB]">{kpi.sub}</span>
+            <span className="text-[0.65rem] px-2 py-0.5 rounded-full" style={{ color: kpi.trendColor, background: kpi.trendColor + "14" }}>{kpi.trend}</span>
           </div>
         </div>
       </div>
     );
   }
-  if (widgetId === "funnel") return <><p className="text-[17px] text-[#1A1A1A] mb-4">영업 파이프라인 현황</p><FunnelBar data={funnelData} /></>;
+  if (widgetId === "funnel") return <><p className="text-[0.85rem] text-[#1A1A1A] mb-4">영업 파이프라인 현황</p><FunnelBar data={funnelData} /></>;
   if (widgetId === "donut") return (
     <>
-      <p className="text-[17px] text-[#1A1A1A] mb-2">성공여부 분포</p>
-      <div className="h-[180px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={donutData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>{donutData.map((d) => <Cell key={d.name} fill={d.color} />)}</Pie><Tooltip formatter={(v: number) => `${v}%`} /></PieChart></ResponsiveContainer></div>
-      <div className="flex justify-center gap-4 mt-1">{donutData.map((d) => (<div key={d.name} className="flex items-center gap-1.5 text-[13px]"><div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className="text-[#666]">{d.name}</span><span className="text-[#999]">{d.count}건</span></div>))}</div>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-2">성공여부 분포</p>
+      <div className="h-[144px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={donutData} cx="50%" cy="50%" innerRadius={36} outerRadius={56} dataKey="value" paddingAngle={3}>{donutData.map((d) => <Cell key={d.name} fill={d.color} />)}</Pie><Tooltip formatter={(v: number) => `${v}%`} /></PieChart></ResponsiveContainer></div>
+      <div className="flex justify-center gap-4 mt-1">{donutData.map((d) => (<div key={d.name} className="flex items-center gap-1.5 text-[0.65rem]"><div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className="text-[#666]">{d.name}</span><span className="text-[#999]">{d.count}건</span></div>))}</div>
     </>
   );
   if (widgetId === "trend") return (
     <>
-      <p className="text-[17px] text-[#1A1A1A] mb-4">월별 딜 추이</p>
-      <div className="h-[200px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="cDeals" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 13, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 13, fill: "#999" }} axisLine={false} tickLine={false} /><Tooltip /><Area type="monotone" dataKey="deals" stroke={T.primary} fill="url(#cDeals)" strokeWidth={2} name="딜 수" /></AreaChart></ResponsiveContainer></div>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">월별 딜 추이</p>
+      <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="cDeals" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><Tooltip /><Area type="monotone" dataKey="deals" stroke={T.primary} fill="url(#cDeals)" strokeWidth={2} name="딜 수" /></AreaChart></ResponsiveContainer></div>
     </>
   );
   if (widgetId === "stage-bar") return (
     <>
-      <p className="text-[17px] text-[#1A1A1A] mb-4">스테이지별 금액</p>
-      <div className="h-[200px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={stageAmountData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} /><XAxis type="number" tick={{ fontSize: 12, fill: "#999" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}만`} /><YAxis type="category" dataKey="stage" tick={{ fontSize: 13, fill: "#555" }} axisLine={false} tickLine={false} width={85} /><Tooltip formatter={(v: number) => `${v}만원`} /><Bar dataKey="amount" radius={[0, 4, 4, 0]} fill={T.primary} barSize={18} /></BarChart></ResponsiveContainer></div>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">스테이지별 금액</p>
+      <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={stageAmountData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} /><XAxis type="number" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}만`} /><YAxis type="category" dataKey="stage" tick={{ fontSize: 10, fill: "#555" }} axisLine={false} tickLine={false} width={68} /><Tooltip formatter={(v: number) => `${v}만원`} /><Bar dataKey="amount" radius={[0, 4, 4, 0]} fill={T.primary} barSize={14} /></BarChart></ResponsiveContainer></div>
     </>
   );
   if (widgetId === "performance") return (
     <>
-      <p className="text-[17px] text-[#1A1A1A] mb-4">담당자별 성과</p>
-      <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["담당자", "딜 수", "수주", "수주율", "총 금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[13px] text-[#999]">{h}</th>)}</tr></thead>
-      <tbody>{performanceData.map((p) => <tr key={p.name} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-[12px] text-white" style={{ background: T.primary }}>{p.name[0]}</div><span className="text-[14px] text-[#1A1A1A]">{p.name}</span></div></td><td className="py-2.5 px-3 text-[14px] text-[#555]">{p.deals}</td><td className="py-2.5 px-3 text-[14px] text-[#555]">{p.won}</td><td className="py-2.5 px-3 text-[14px]" style={{ color: T.primary }}>{p.rate}</td><td className="py-2.5 px-3 text-[14px] text-[#555]">{p.amount}</td></tr>)}</tbody></table>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">담당자별 성과</p>
+      <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["담당자", "딜 수", "수주", "수주율", "총 금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
+      <tbody>{performanceData.map((p) => <tr key={p.name} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-[0.6rem] text-white" style={{ background: T.primary }}>{p.name[0]}</div><span className="text-[0.7rem] text-[#1A1A1A]">{p.name}</span></div></td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.deals}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.won}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: T.primary }}>{p.rate}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.amount}</td></tr>)}</tbody></table>
     </>
   );
   if (widgetId === "recent-deals") return (
     <>
-      <p className="text-[17px] text-[#1A1A1A] mb-4">최근 딜 목록</p>
-      <div className="space-y-2">{deals.slice(0, 5).map((d) => <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors"><div className="flex items-center gap-3"><span className="text-[14px] text-[#1A1A1A]">{d.company}</span><span className="text-[12px] px-2 py-0.5 rounded-md" style={{ background: stageColors[d.stage] + "18", color: stageColors[d.stage] }}>{d.stage}</span></div><span className="text-[14px] text-[#999]">{d.amount}</span></div>)}</div>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 딜 목록</p>
+      <div className="space-y-2">{deals.slice(0, 5).map((d) => <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors"><div className="flex items-center gap-3"><span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span><span className="text-[0.6rem] px-2 py-0.5 rounded-md" style={{ background: stageColors[d.stage] + "18", color: stageColors[d.stage] }}>{d.stage}</span></div><span className="text-[0.7rem] text-[#999]">{d.amount}</span></div>)}</div>
     </>
   );
   if (widgetId === "memo") return (
     <>
-      <p className="text-[17px] text-[#1A1A1A] mb-3">메모</p>
-      <textarea className="w-full h-[140px] p-3 rounded-lg text-[15px] text-[#1A1A1A] resize-none focus:outline-none" style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }} placeholder="메모를 입력하세요..." defaultValue="이번 주 목표: 신규 딜 5건 확보, 가격조율 중인 3건 마무리" />
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-3">메모</p>
+      <textarea className="w-full h-[112px] p-3 rounded-lg text-[0.75rem] text-[#1A1A1A] resize-none focus:outline-none" style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }} placeholder="메모를 입력하세요..." defaultValue="이번 주 목표: 신규 딜 5건 확보, 가격조율 중인 3건 마무리" />
     </>
   );
   if (widgetId === "shortcuts") {
     const sc = [{ label: "딜 추가", icon: Plus, color: T.primary }, { label: "Excel 가져오기", icon: Upload, color: "#6366F1" }, { label: "보고서 내보내기", icon: Download, color: "#F59E0B" }, { label: "팀 성과 분석", icon: Users, color: "#06B6D4" }];
     return (
       <>
-        <p className="text-[17px] text-[#1A1A1A] mb-3">빠른 실행</p>
-        <div className="grid grid-cols-2 gap-2">{sc.map((s) => <button key={s.label} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border text-[14px] text-[#555] hover:bg-[#FAFBFC] transition-colors" style={{ borderColor: T.border }}><s.icon size={16} color={s.color} />{s.label}</button>)}</div>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-3">빠른 실행</p>
+        <div className="grid grid-cols-2 gap-2">{sc.map((s) => <button key={s.label} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border text-[0.7rem] text-[#555] hover:bg-[#FAFBFC] transition-colors" style={{ borderColor: T.border }}><s.icon size={13} color={s.color} />{s.label}</button>)}</div>
       </>
     );
   }
@@ -672,10 +672,10 @@ function WidgetContent({ widgetId }: { widgetId: string }) {
 function FunnelBar({ data }: { data: typeof funnelData }) {
   const maxCount = Math.max(...data.map((d) => d.count));
   return (
-    <div className="flex items-end gap-2 h-[180px]">
+    <div className="flex items-end gap-2 h-[144px]">
       {data.map((d) => (
         <div key={d.stage} className="flex-1 flex flex-col items-center gap-1">
-          <span className="text-[15px] text-[#1A1A1A]">{d.count}</span>
+          <span className="text-[0.75rem] text-[#1A1A1A]">{d.count}</span>
           <div
             className="w-full rounded-t-md transition-all"
             style={{
@@ -684,7 +684,7 @@ function FunnelBar({ data }: { data: typeof funnelData }) {
               opacity: 0.85,
             }}
           />
-          <span className="text-[12px] text-[#999] text-center leading-tight mt-1 whitespace-nowrap">{d.stage}</span>
+          <span className="text-[0.6rem] text-[#999] text-center leading-tight mt-1 whitespace-nowrap">{d.stage}</span>
         </div>
       ))}
     </div>
@@ -750,39 +750,39 @@ function AddDealModal({ onClose, onAdd, visibleColumns }: { onClose: () => void;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-[640px] max-h-[85vh] flex flex-col" style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl w-full max-w-[512px] max-h-[85vh] flex flex-col" style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-7 py-5 border-b" style={{ borderColor: T.border }}>
-          <h2 className="text-[22px] text-[#1A1A1A]">새 딜 추가</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F7F8FA]"><X size={18} color="#999" /></button>
+          <h2 className="text-[1.1rem] text-[#1A1A1A]">새 딜 추가</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F7F8FA]"><X size={14} color="#999" /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-7 py-5 space-y-4">
           {fieldDefs.map((col) => (
             <div key={col.key}>
-              <label className="text-[15px] text-[#666] mb-1.5 block">
+              <label className="text-[0.75rem] text-[#666] mb-1.5 block">
                 {col.label}
                 {col.required && <span className="text-red-500 ml-0.5">*</span>}
               </label>
               {col.key === "stage" ? (
-                <select className="w-full px-4 py-2.5 rounded-lg border text-[16px] text-[#1A1A1A] bg-white focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.stage} onChange={(e) => set("stage", e.target.value)}>
+                <select className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] bg-white focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.stage} onChange={(e) => set("stage", e.target.value)}>
                   {Object.keys(stageColors).map((s) => <option key={s}>{s}</option>)}
                 </select>
               ) : col.key === "status" ? (
-                <select className="w-full px-4 py-2.5 rounded-lg border text-[16px] text-[#1A1A1A] bg-white focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.status} onChange={(e) => set("status", e.target.value)}>
+                <select className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] bg-white focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.status} onChange={(e) => set("status", e.target.value)}>
                   <option>진행중</option><option>성공</option><option>실패</option>
                 </select>
               ) : col.key === "date" ? (
-                <input type="date" className="w-full px-4 py-2.5 rounded-lg border text-[16px] text-[#1A1A1A] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.date} onChange={(e) => set("date", e.target.value)} />
+                <input type="date" className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.date} onChange={(e) => set("date", e.target.value)} />
               ) : col.key === "memo" ? (
-                <textarea className="w-full px-4 py-2.5 rounded-lg border text-[16px] text-[#1A1A1A] focus:outline-none focus:border-[#1A472A] resize-none h-[80px]" style={{ borderColor: T.border }} value={form[col.key] || ""} onChange={(e) => set(col.key, e.target.value)} placeholder={`${col.label}을 입력하세요`} />
+                <textarea className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] focus:outline-none focus:border-[#1A472A] resize-none h-[64px]" style={{ borderColor: T.border }} value={form[col.key] || ""} onChange={(e) => set(col.key, e.target.value)} placeholder={`${col.label}을 입력하세요`} />
               ) : (
-                <input className="w-full px-4 py-2.5 rounded-lg border text-[16px] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form[col.key] || ""} onChange={(e) => set(col.key, e.target.value)} placeholder={`${col.label}을 입력하세요`} />
+                <input className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form[col.key] || ""} onChange={(e) => set(col.key, e.target.value)} placeholder={`${col.label}을 입력하세요`} />
               )}
             </div>
           ))}
         </div>
         <div className="flex items-center justify-end gap-3 px-7 py-4 border-t" style={{ borderColor: T.border }}>
-          <button onClick={onClose} className="px-5 py-2.5 rounded-lg text-[15px] text-[#666] border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>취소</button>
-          <button onClick={handleSubmit} className="px-6 py-2.5 rounded-lg text-[15px] text-white transition-colors" style={{ background: form.company.trim() ? T.primary : "#CCC", cursor: form.company.trim() ? "pointer" : "not-allowed" }}>추가</button>
+          <button onClick={onClose} className="px-5 py-2.5 rounded-lg text-[0.75rem] text-[#666] border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>취소</button>
+          <button onClick={handleSubmit} className="px-6 py-2.5 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: form.company.trim() ? T.primary : "#CCC", cursor: form.company.trim() ? "pointer" : "not-allowed" }}>추가</button>
         </div>
       </div>
     </div>
@@ -873,21 +873,21 @@ function DealflowPageInner() {
       {/* Header */}
       <div className="flex items-center justify-between px-8 py-4 bg-white border-b shrink-0" style={{ borderColor: T.border }}>
         <div>
-          <p className="text-[14px] text-[#BBB] mb-0.5">영업관리 &gt; DealFlow</p>
-          <h1 className="text-[30px] text-[#1A1A1A]">영업 관리</h1>
+          <p className="text-[0.7rem] text-[#BBB] mb-0.5">영업관리 &gt; DealFlow</p>
+          <h1 className="text-[24px] text-[#1A1A1A]">영업 관리</h1>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[15px] text-[#666]" style={{ borderColor: T.border }}>
-            <Calendar size={15} /> 2026년 4월
+          <div className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666]" style={{ borderColor: T.border }}>
+            <Calendar size={12} /> 2026년 4월
           </div>
-          <button onClick={() => setShowOnboarding(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[15px] transition-colors hover:bg-[#F7F8FA]" style={{ borderColor: T.border, color: "#666" }}>
-            <Upload size={15} /> Excel 가져오기
+          <button onClick={() => setShowOnboarding(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] transition-colors hover:bg-[#F7F8FA]" style={{ borderColor: T.border, color: "#666" }}>
+            <Upload size={12} /> Excel 가져오기
           </button>
-          <button className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[15px] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
-            <Download size={15} /> XLSX 내보내기
+          <button className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
+            <Download size={12} /> XLSX 내보내기
           </button>
-          <button onClick={() => setShowAddDeal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[15px] text-white transition-colors" style={{ background: T.primary }}>
-            <Plus size={15} /> 딜 추가
+          <button onClick={() => setShowAddDeal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: T.primary }}>
+            <Plus size={12} /> 딜 추가
           </button>
         </div>
       </div>
@@ -899,24 +899,24 @@ function DealflowPageInner() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <LayoutGrid size={20} color={T.primary} />
-                  <span className="text-[22px] text-[#1A1A1A]">대시보드</span>
-                  <span className="text-[14px] text-[#999]">{activeWidgets.size}개 위젯</span>
+                  <LayoutGrid size={16} color={T.primary} />
+                  <span className="text-[1.1rem] text-[#1A1A1A]">대시보드</span>
+                  <span className="text-[0.7rem] text-[#999]">{activeWidgets.size}개 위젯</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setCustomizeMode(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[15px] transition-colors hover:bg-[#EFF5F1]"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#EFF5F1]"
                     style={{ color: T.primary, border: `1px solid ${T.border}` }}
                   >
-                    <Plus size={15} /> 위젯 추가
+                    <Plus size={12} /> 위젯 추가
                   </button>
                   <button
                     onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
                     className="p-2 rounded-lg hover:bg-[#F7F8FA] transition-colors"
                     style={{ border: `1px solid ${T.border}` }}
                   >
-                    {dashboardCollapsed ? <ChevronDown size={16} color="#999" /> : <ChevronUp size={16} color="#999" />}
+                    {dashboardCollapsed ? <ChevronDown size={13} color="#999" /> : <ChevronUp size={13} color="#999" />}
                   </button>
                 </div>
               </div>
@@ -942,7 +942,7 @@ function DealflowPageInner() {
                               className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FEF2F2] z-10"
                               title="위젯 제거"
                             >
-                              <X size={13} color={T.danger} />
+                              <X size={10} color={T.danger} />
                             </button>
                             <WidgetContent widgetId={w.id} />
                           </div>
@@ -952,13 +952,13 @@ function DealflowPageInner() {
                   ) : (
                     <div
                       onClick={() => setCustomizeMode(true)}
-                      className="rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer transition-all hover:border-[#1A472A] hover:bg-[#FAFBFC] min-h-[160px]"
+                      className="rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer transition-all hover:border-[#1A472A] hover:bg-[#FAFBFC] min-h-[128px]"
                       style={{ border: `2px dashed ${T.border}` }}
                     >
                       <div className="w-11 h-11 rounded-full flex items-center justify-center mb-2.5" style={{ background: "#EFF5F1" }}>
-                        <Plus size={20} color={T.primary} />
+                        <Plus size={16} color={T.primary} />
                       </div>
-                      <span className="text-[15px] text-[#999]">위젯 추가</span>
+                      <span className="text-[0.75rem] text-[#999]">위젯 추가</span>
                     </div>
                   )}
                 </>
@@ -970,10 +970,10 @@ function DealflowPageInner() {
               {/* Section Header */}
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <Table2 size={20} color={T.primary} />
-                  <span className="text-[22px] text-[#1A1A1A]">딜 데이터</span>
+                  <Table2 size={16} color={T.primary} />
+                  <span className="text-[1.1rem] text-[#1A1A1A]">딜 데이터</span>
                   {customerDeals.length > 0 && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[14px]" style={{ background: "#EFF5F1", color: T.primary }}>
+                    <span className="px-2.5 py-0.5 rounded-full text-[0.7rem]" style={{ background: "#EFF5F1", color: T.primary }}>
                       {filteredDeals.length === customerDeals.length ? `${customerDeals.length}건` : `${filteredDeals.length} / ${customerDeals.length}건`}
                     </span>
                   )}
@@ -981,10 +981,10 @@ function DealflowPageInner() {
                 {customerDeals.length > 0 && (
                   <button
                     onClick={() => setShowAddDeal(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[15px] text-white transition-colors hover:opacity-90"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] text-white transition-colors hover:opacity-90"
                     style={{ background: T.primary }}
                   >
-                    <Plus size={15} /> 딜 추가
+                    <Plus size={12} /> 딜 추가
                   </button>
                 )}
               </div>
@@ -995,31 +995,31 @@ function DealflowPageInner() {
                   <div className="py-20 px-8 flex flex-col items-center justify-center">
                     <div className="flex items-center gap-3 mb-7">
                       <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "#EFF5F1" }}>
-                        <Users size={20} color={T.primary} />
+                        <Users size={16} color={T.primary} />
                       </div>
                       <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: "#EFF5F1" }}>
-                        <FileSpreadsheet size={26} color={T.primary} />
+                        <FileSpreadsheet size={21} color={T.primary} />
                       </div>
                       <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "#EFF5F1" }}>
-                        <TrendingUp size={20} color={T.primary} />
+                        <TrendingUp size={16} color={T.primary} />
                       </div>
                     </div>
-                    <p className="text-[22px] text-[#1A1A1A] mb-2">딜 데이터를 추가해보세요</p>
-                    <p className="text-[16px] text-[#999] mb-9 text-center leading-relaxed">
+                    <p className="text-[1.1rem] text-[#1A1A1A] mb-2">딜 데이터를 추가해보세요</p>
+                    <p className="text-[0.8rem] text-[#999] mb-9 text-center leading-relaxed">
                       고객 정보와 영업 기회를 등록하면 파이프라인을 한 눈에 관리할 수 있습니다.
                     </p>
-                    <div className="flex items-stretch gap-4 w-full max-w-[640px]">
+                    <div className="flex items-stretch gap-4 w-full max-w-[512px]">
                       <button
                         onClick={() => setShowAddDeal(true)}
                         className="flex-1 flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all hover:border-[#1A472A] hover:bg-[#FAFDFB]"
                         style={{ borderColor: T.primary, background: "#FAFDFB" }}
                       >
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: T.primary }}>
-                          <Plus size={20} color="#fff" />
+                          <Plus size={16} color="#fff" />
                         </div>
                         <div>
-                          <p className="text-[16px] text-[#1A1A1A] mb-0.5">직접 추가</p>
-                          <p className="text-[13px] text-[#999]">딜 정보를 하나씩 입력</p>
+                          <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">직접 추가</p>
+                          <p className="text-[0.65rem] text-[#999]">딜 정보를 하나씩 입력</p>
                         </div>
                       </button>
                       <button
@@ -1028,11 +1028,11 @@ function DealflowPageInner() {
                         style={{ borderColor: T.border }}
                       >
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "#F3F4F6" }}>
-                          <Upload size={20} color="#666" />
+                          <Upload size={16} color="#666" />
                         </div>
                         <div>
-                          <p className="text-[16px] text-[#1A1A1A] mb-0.5">Excel 가져오기</p>
-                          <p className="text-[13px] text-[#999]">파일에서 일괄 업로드</p>
+                          <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">Excel 가져오기</p>
+                          <p className="text-[0.65rem] text-[#999]">파일에서 일괄 업로드</p>
                         </div>
                       </button>
                       <button
@@ -1041,11 +1041,11 @@ function DealflowPageInner() {
                         style={{ borderColor: T.border }}
                       >
                         <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "#F3F4F6" }}>
-                          <Grid3X3 size={20} color="#666" />
+                          <Grid3X3 size={16} color="#666" />
                         </div>
                         <div>
-                          <p className="text-[16px] text-[#1A1A1A] mb-0.5">컬럼 설정</p>
-                          <p className="text-[13px] text-[#999]">데이터 구조 미리 구성</p>
+                          <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">컬럼 설정</p>
+                          <p className="text-[0.65rem] text-[#999]">데이터 구조 미리 구성</p>
                         </div>
                       </button>
                     </div>
@@ -1058,21 +1058,21 @@ function DealflowPageInner() {
                   <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: T.border }}>
                     {selectedIds.size > 0 ? (
                       <div className="flex items-center gap-3 w-full">
-                        <span className="text-[15px] text-[#1A1A1A]">{selectedIds.size}건 선택</span>
+                        <span className="text-[0.75rem] text-[#1A1A1A]">{selectedIds.size}건 선택</span>
                         <div className="w-px h-5" style={{ background: T.border }} />
-                        <button className="px-3 py-1.5 rounded-md text-[14px] hover:bg-[#F7F8FA] transition-colors text-[#555]">상태 변경</button>
-                        <button className="px-3 py-1.5 rounded-md text-[14px] hover:bg-[#EFF5F1] transition-colors" style={{ color: T.primary }}>담당자 배정</button>
-                        <button className="px-3 py-1.5 rounded-md text-[14px] hover:bg-[#FEF2F2] transition-colors" style={{ color: T.danger }}>삭제</button>
+                        <button className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-[#F7F8FA] transition-colors text-[#555]">상태 변경</button>
+                        <button className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-[#EFF5F1] transition-colors" style={{ color: T.primary }}>담당자 배정</button>
+                        <button className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-[#FEF2F2] transition-colors" style={{ color: T.danger }}>삭제</button>
                         <div className="flex-1" />
-                        <button onClick={() => setSelectedIds(new Set())} className="text-[14px] text-[#999] hover:text-[#666] transition-colors">선택 해제</button>
+                        <button onClick={() => setSelectedIds(new Set())} className="text-[0.7rem] text-[#999] hover:text-[#666] transition-colors">선택 해제</button>
                       </div>
                     ) : (
                       <>
                         <div className="flex items-center gap-2">
                           <div className="relative">
-                            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#BBB]" />
+                            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#BBB]" />
                             <input
-                              className="pl-9 pr-3 py-[7px] rounded-lg border text-[15px] text-[#1A1A1A] placeholder-[#BBB] focus:outline-none focus:border-[#1A472A] w-[220px] transition-colors"
+                              className="pl-9 pr-3 py-[6px] rounded-lg border text-[0.75rem] text-[#1A1A1A] placeholder-[#BBB] focus:outline-none focus:border-[#1A472A] w-[176px] transition-colors"
                               style={{ borderColor: T.border, background: "#fff" }}
                               placeholder="기업명, 담당자 검색"
                               value={searchQuery}
@@ -1081,7 +1081,7 @@ function DealflowPageInner() {
                           </div>
                           <div className="w-px h-5" style={{ background: T.border }} />
                           <select
-                            className="px-3 py-[7px] rounded-lg border text-[14px] text-[#555] bg-white focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
+                            className="px-3 py-[6px] rounded-lg border text-[0.7rem] text-[#555] bg-white focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
                             style={{ borderColor: T.border }}
                             value={stageFilter}
                             onChange={(e) => setStageFilter(e.target.value)}
@@ -1090,7 +1090,7 @@ function DealflowPageInner() {
                             {Object.keys(stageColors).map((s) => <option key={s}>{s}</option>)}
                           </select>
                           <select
-                            className="px-3 py-[7px] rounded-lg border text-[14px] text-[#555] bg-white focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
+                            className="px-3 py-[6px] rounded-lg border text-[0.7rem] text-[#555] bg-white focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
                             style={{ borderColor: T.border }}
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
@@ -1103,7 +1103,7 @@ function DealflowPageInner() {
                           {(searchQuery || stageFilter !== "전체" || statusFilter !== "전체") && (
                             <button
                               onClick={() => { setSearchQuery(""); setStageFilter("전체"); setStatusFilter("전체"); }}
-                              className="text-[13px] text-[#999] hover:text-[#666] transition-colors px-2"
+                              className="text-[0.65rem] text-[#999] hover:text-[#666] transition-colors px-2"
                             >
                               필터 초기화
                             </button>
@@ -1111,11 +1111,11 @@ function DealflowPageInner() {
                         </div>
                         <button
                           onClick={() => setShowColumnConfig(!showColumnConfig)}
-                          className="p-[7px] rounded-lg border hover:bg-[#F7F8FA] transition-colors"
+                          className="p-[6px] rounded-lg border hover:bg-[#F7F8FA] transition-colors"
                           style={{ borderColor: T.border }}
                           title="컬럼 설정"
                         >
-                          <Grid3X3 size={15} color="#888" />
+                          <Grid3X3 size={12} color="#888" />
                         </button>
                       </>
                     )}
@@ -1123,7 +1123,7 @@ function DealflowPageInner() {
 
                   {/* Table */}
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[900px]">
+                    <table className="w-full min-w-[720px]">
                       <thead>
                         <tr style={{ background: "#FAFBFC" }}>
                           <th className="py-3 px-4 w-12 border-b" style={{ borderColor: T.border }}>
@@ -1132,10 +1132,10 @@ function DealflowPageInner() {
                           {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((h) => (
                             <th key={h.key} className="text-left py-3 px-4 whitespace-nowrap border-b" style={{ borderColor: T.border }}>
                               <div className="flex items-center gap-1.5">
-                                <span className="text-[13px] text-[#888] tracking-wide">{h.label}</span>
+                                <span className="text-[0.65rem] text-[#888] tracking-wide">{h.label}</span>
                                 {h.sort && (
                                   <button className="p-0.5 rounded hover:bg-[#EDEEF0] transition-colors">
-                                    <ArrowUpDown size={11} className="text-[#CCC]" />
+                                    <ArrowUpDown size={9} className="text-[#CCC]" />
                                   </button>
                                 )}
                               </div>
@@ -1148,9 +1148,9 @@ function DealflowPageInner() {
                           <tr>
                             <td colSpan={visibleColumns.size + 1} className="py-16 text-center">
                               <div className="flex flex-col items-center">
-                                <Search size={24} color="#DDD" className="mb-3" />
-                                <p className="text-[16px] text-[#999] mb-1">검색 결과가 없습니다</p>
-                                <p className="text-[14px] text-[#CCC]">다른 키워드나 필터 조건을 시도해보세요.</p>
+                                <Search size={19} color="#DDD" className="mb-3" />
+                                <p className="text-[0.8rem] text-[#999] mb-1">검색 결과가 없습니다</p>
+                                <p className="text-[0.7rem] text-[#CCC]">다른 키워드나 필터 조건을 시도해보세요.</p>
                               </div>
                             </td>
                           </tr>
@@ -1160,45 +1160,45 @@ function DealflowPageInner() {
                             const cellMap: Record<string, React.ReactNode> = {
                               company: (
                                 <div className="flex items-center gap-2.5">
-                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[13px] text-white shrink-0" style={{ background: stageColors[deal.stage] || T.primary }}>
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[0.65rem] text-white shrink-0" style={{ background: stageColors[deal.stage] || T.primary }}>
                                     {deal.company.replace(/[\(\)주]/g, "").charAt(0)}
                                   </div>
-                                  <span className="text-[15px] text-[#1A1A1A]">{deal.company}</span>
+                                  <span className="text-[0.75rem] text-[#1A1A1A]">{deal.company}</span>
                                 </div>
                               ),
                               stage: (
-                                <span className="inline-flex items-center gap-1.5 text-[13px] px-2.5 py-1 rounded-full" style={{ background: (stageColors[deal.stage] || "#999") + "14", color: stageColors[deal.stage] || "#999" }}>
+                                <span className="inline-flex items-center gap-1.5 text-[0.65rem] px-2.5 py-1 rounded-full" style={{ background: (stageColors[deal.stage] || "#999") + "14", color: stageColors[deal.stage] || "#999" }}>
                                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] || "#999" }} />
                                   {deal.stage}
                                 </span>
                               ),
                               contact: (
                                 <div className="flex flex-col">
-                                  <span className="text-[15px] text-[#1A1A1A]">{deal.contact}</span>
-                                  {!visibleColumns.has("position") && <span className="text-[12px] text-[#BBB]">{deal.position}</span>}
+                                  <span className="text-[0.75rem] text-[#1A1A1A]">{deal.contact}</span>
+                                  {!visibleColumns.has("position") && <span className="text-[0.6rem] text-[#BBB]">{deal.position}</span>}
                                 </div>
                               ),
-                              position: <span className="text-[14px] text-[#666]">{deal.position}</span>,
-                              service: <span className="text-[14px] text-[#555]">{deal.service}</span>,
-                              amount: <span className="text-[15px] text-[#1A1A1A] tabular-nums">{deal.amount}</span>,
-                              quantity: <span className="text-[14px] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>,
+                              position: <span className="text-[0.7rem] text-[#666]">{deal.position}</span>,
+                              service: <span className="text-[0.7rem] text-[#555]">{deal.service}</span>,
+                              amount: <span className="text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.amount}</span>,
+                              quantity: <span className="text-[0.7rem] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>,
                               manager: (
                                 <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] text-white" style={{ background: "#94A3B8" }}>
+                                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[0.55rem] text-white" style={{ background: "#94A3B8" }}>
                                     {deal.manager.charAt(0)}
                                   </div>
-                                  <span className="text-[14px] text-[#555]">{deal.manager}</span>
+                                  <span className="text-[0.7rem] text-[#555]">{deal.manager}</span>
                                 </div>
                               ),
                               status: (
-                                <span className="inline-flex items-center text-[13px] px-2.5 py-1 rounded-full" style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}>
+                                <span className="inline-flex items-center text-[0.65rem] px-2.5 py-1 rounded-full" style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}>
                                   {deal.status}
                                 </span>
                               ),
-                              date: <span className="text-[14px] text-[#999] whitespace-nowrap tabular-nums">{deal.date}</span>,
-                              phone: <span className="text-[14px] text-[#555]">—</span>,
-                              email: <span className="text-[14px] text-[#555]">—</span>,
-                              memo: <span className="text-[14px] text-[#BBB]">—</span>,
+                              date: <span className="text-[0.7rem] text-[#999] whitespace-nowrap tabular-nums">{deal.date}</span>,
+                              phone: <span className="text-[0.7rem] text-[#555]">—</span>,
+                              email: <span className="text-[0.7rem] text-[#555]">—</span>,
+                              memo: <span className="text-[0.7rem] text-[#BBB]">—</span>,
                             };
                             return (
                               <tr
@@ -1225,13 +1225,13 @@ function DealflowPageInner() {
 
                   {/* Footer */}
                   <div className="flex items-center justify-between px-5 py-3 border-t" style={{ borderColor: T.border, background: "#FAFBFC" }}>
-                    <span className="text-[14px] text-[#999]">
+                    <span className="text-[0.7rem] text-[#999]">
                       {filteredDeals.length < customerDeals.length
                         ? `필터 결과 ${filteredDeals.length}건 (전체 ${customerDeals.length}건)`
                         : `전체 ${customerDeals.length}건`}
                     </span>
                     <div className="flex items-center gap-1.5">
-                      <button className="w-8 h-8 rounded-lg text-[14px] transition-colors" style={{ background: T.primary, color: "#fff" }}>1</button>
+                      <button className="w-8 h-8 rounded-lg text-[0.7rem] transition-colors" style={{ background: T.primary, color: "#fff" }}>1</button>
                     </div>
                   </div>
                 </div>
@@ -1240,22 +1240,22 @@ function DealflowPageInner() {
               {/* Column Config Dialog */}
               {showColumnConfig && (
                 <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.2)" }} onClick={() => setShowColumnConfig(false)}>
-                  <div className="bg-white rounded-xl border w-[280px]" style={{ borderColor: T.border, boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }} onClick={(e) => e.stopPropagation()}>
+                  <div className="bg-white rounded-xl border w-[224px]" style={{ borderColor: T.border, boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }} onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: T.border }}>
-                      <p className="text-[16px] text-[#1A1A1A]">컬럼 설정</p>
-                      <button onClick={() => setShowColumnConfig(false)} className="p-1 rounded hover:bg-[#F7F8FA]"><X size={16} color="#999" /></button>
+                      <p className="text-[0.8rem] text-[#1A1A1A]">컬럼 설정</p>
+                      <button onClick={() => setShowColumnConfig(false)} className="p-1 rounded hover:bg-[#F7F8FA]"><X size={13} color="#999" /></button>
                     </div>
-                    <div className="p-3 max-h-[380px] overflow-y-auto">
+                    <div className="p-3 max-h-[304px] overflow-y-auto">
                       {ALL_COLUMNS.map((col) => (
                         <label key={col.key} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#F8F9FA] cursor-pointer transition-colors">
                           <input type="checkbox" checked={visibleColumns.has(col.key)} disabled={col.required} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
-                          <span className="text-[15px] text-[#333] flex-1">{col.label}</span>
-                          {col.required && <span className="text-[12px] text-[#BBB]">필수</span>}
+                          <span className="text-[0.75rem] text-[#333] flex-1">{col.label}</span>
+                          {col.required && <span className="text-[0.6rem] text-[#BBB]">필수</span>}
                         </label>
                       ))}
                     </div>
                     <div className="px-5 py-3 border-t flex justify-end" style={{ borderColor: T.border }}>
-                      <button onClick={() => setShowColumnConfig(false)} className="px-4 py-1.5 rounded-lg text-[14px] text-white" style={{ background: T.primary }}>완료</button>
+                      <button onClick={() => setShowColumnConfig(false)} className="px-4 py-1.5 rounded-lg text-[0.7rem] text-white" style={{ background: T.primary }}>완료</button>
                     </div>
                   </div>
                 </div>

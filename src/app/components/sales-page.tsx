@@ -66,11 +66,11 @@ export function SalesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[#1A1A1A] text-[34px]">영업관리</h1>
-          <p className="text-[#999] text-[18px]">영업 파이프라인 및 실적 현황</p>
+          <h1 className="text-[#1A1A1A] text-[27px]">영업관리</h1>
+          <p className="text-[#999] text-[0.9rem]">영업 파이프라인 및 실적 현황</p>
         </div>
-        <button className="flex items-center gap-2 text-[#1A73E8] text-[18px] hover:underline">
-          <Settings2 size={15} />
+        <button className="flex items-center gap-2 text-[#1A73E8] text-[0.9rem] hover:underline">
+          <Settings2 size={12} />
           대시보드 설정
         </button>
       </div>
@@ -85,13 +85,13 @@ export function SalesPage() {
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white border border-[#E0E3E8] rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <kpi.icon size={16} className="text-[#999]" />
-              <span className="text-[14px]" style={{ color: kpi.changeColor }}>
+              <kpi.icon size={13} className="text-[#999]" />
+              <span className="text-[0.7rem]" style={{ color: kpi.changeColor }}>
                 {kpi.change}
               </span>
             </div>
-            <p className="text-[#1A1A1A] text-[30px] mb-0.5">{kpi.value}</p>
-            <p className="text-[#999] text-[17px]">{kpi.label}</p>
+            <p className="text-[#1A1A1A] text-[24px] mb-0.5">{kpi.value}</p>
+            <p className="text-[#999] text-[0.85rem]">{kpi.label}</p>
           </div>
         ))}
       </div>
@@ -104,14 +104,14 @@ export function SalesPage() {
           <div className="grid grid-cols-3 gap-4">
             {/* Revenue Forecast */}
             <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
-              <h3 className="text-[#1A1A1A] text-[22px] mb-3">매출 전망</h3>
+              <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">매출 전망</h3>
               <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={revenueData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E0E3E8" vertical={false} />
                   <XAxis dataKey="month" stroke="#999" fontSize={16} tickLine={false} axisLine={false} />
                   <YAxis stroke="#999" fontSize={16} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}M`} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: "#fff", border: "1px solid #E0E3E8", borderRadius: "6px", fontSize: "11px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+                    contentStyle={{ backgroundColor: "#fff", border: "1px solid #E0E3E8", borderRadius: "6px", fontSize: "9px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
                   />
                   <Line type="monotone" dataKey="value" stroke="#1A73E8" strokeWidth={2} dot={{ r: 2.5, fill: "#1A73E8", strokeWidth: 0 }} />
                 </LineChart>
@@ -120,13 +120,13 @@ export function SalesPage() {
 
             {/* Top Deals */}
             <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
-              <h3 className="text-[#1A1A1A] text-[22px] mb-3">주요 딜</h3>
+              <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">주요 딜</h3>
               <div className="space-y-3">
                 {topDeals.map((deal) => (
                   <div key={deal.name}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[#1A1A1A] text-[17px]">{deal.name}</span>
-                      <span className="text-[#1A73E8] text-[17px]">{deal.value}</span>
+                      <span className="text-[#1A1A1A] text-[0.85rem]">{deal.name}</span>
+                      <span className="text-[#1A73E8] text-[0.85rem]">{deal.value}</span>
                     </div>
                     <div className="h-1.5 bg-[#F0F1F3] rounded-full overflow-hidden">
                       <div
@@ -144,17 +144,17 @@ export function SalesPage() {
 
             {/* Activity Feed */}
             <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
-              <h3 className="text-[#1A1A1A] text-[22px] mb-3">활동 피드</h3>
+              <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">활동 피드</h3>
               <div className="space-y-2.5">
                 {activities.map((a, i) => (
                   <div
                     key={i}
                     className="flex items-start gap-2.5 pb-2.5 border-b border-[#F0F1F3] last:border-0 last:pb-0"
                   >
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#1A73E8] mt-[7px] shrink-0" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#1A73E8] mt-[6px] shrink-0" />
                     <div>
-                      <p className="text-[#1A1A1A] text-[17px]">{a.action}</p>
-                      <p className="text-[#999] text-[16px]">{a.time}</p>
+                      <p className="text-[#1A1A1A] text-[0.85rem]">{a.action}</p>
+                      <p className="text-[#999] text-[0.8rem]">{a.time}</p>
                     </div>
                   </div>
                 ))}
@@ -165,8 +165,8 @@ export function SalesPage() {
           {/* Pipeline Chart */}
           <div className="bg-white border border-[#E0E3E8] rounded-lg p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[#1A1A1A] text-[24px]">영업 파이프라인</h3>
-              <div className="flex items-center gap-4 text-[17px]">
+              <h3 className="text-[#1A1A1A] text-[1.2rem]">영업 파이프라인</h3>
+              <div className="flex items-center gap-4 text-[0.85rem]">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded bg-[#1A73E8]" />
                   <span className="text-[#666]">딜 수</span>
@@ -183,18 +183,18 @@ export function SalesPage() {
                 <XAxis dataKey="stage" stroke="#999" fontSize={17} tickLine={false} axisLine={{ stroke: "#E0E3E8" }} />
                 <YAxis stroke="#999" fontSize={16} tickLine={false} axisLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #E0E3E8", borderRadius: "6px", fontSize: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
+                  contentStyle={{ backgroundColor: "#fff", border: "1px solid #E0E3E8", borderRadius: "6px", fontSize: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
                 />
-                <Bar dataKey="count" fill="#1A73E8" radius={[4, 4, 0, 0]} barSize={28} name="딜 수" key="bar-count" />
-                <Bar dataKey="value" fill="#2CBF60" radius={[4, 4, 0, 0]} barSize={28} name="금액 (M)" key="bar-value" />
+                <Bar dataKey="count" fill="#1A73E8" radius={[4, 4, 0, 0]} barSize={22} name="딜 수" key="bar-count" />
+                <Bar dataKey="value" fill="#2CBF60" radius={[4, 4, 0, 0]} barSize={22} name="금액 (M)" key="bar-value" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Alert Banner */}
           <div className="bg-[#FFA726] rounded-lg px-5 py-3 flex items-center gap-3">
-            <AlertTriangle size={18} className="text-white shrink-0" />
-            <p className="text-white text-[18px]">
+            <AlertTriangle size={14} className="text-white shrink-0" />
+            <p className="text-white text-[0.9rem]">
               <strong>알림:</strong> 5건의 휴면 리드에 대한 재참여가 필요합니다. 검토 후 조치가 필요합니다.
             </p>
           </div>
@@ -204,19 +204,19 @@ export function SalesPage() {
         <div className="col-span-1 space-y-4">
           <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[#1A1A1A] text-[20px]">파이프라인 정보</h3>
+              <h3 className="text-[#1A1A1A] text-[1rem]">파이프라인 정보</h3>
               <button
                 onClick={() => setPipelineActive(!pipelineActive)}
                 className="text-[#1A73E8]"
               >
                 {pipelineActive ? (
-                  <ToggleRight size={24} />
+                  <ToggleRight size={19} />
                 ) : (
-                  <ToggleLeft size={24} className="text-[#D1D5DB]" />
+                  <ToggleLeft size={19} className="text-[#D1D5DB]" />
                 )}
               </button>
             </div>
-            <p className="text-[16px] text-[#999] mb-3">파이프라인 활성</p>
+            <p className="text-[0.8rem] text-[#999] mb-3">파이프라인 활성</p>
 
             <div className="space-y-3">
               {[
@@ -226,8 +226,8 @@ export function SalesPage() {
                 { label: "전환율", value: pipelineInfo.conversionRate },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between py-2 border-b border-[#F0F1F3] last:border-0">
-                  <span className="text-[#999] text-[17px]">{item.label}</span>
-                  <span className="text-[#1A1A1A] text-[18px]">{item.value}</span>
+                  <span className="text-[#999] text-[0.85rem]">{item.label}</span>
+                  <span className="text-[#1A1A1A] text-[0.9rem]">{item.value}</span>
                 </div>
               ))}
             </div>
@@ -235,7 +235,7 @@ export function SalesPage() {
 
           {/* Quick Stats */}
           <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
-            <h3 className="text-[#1A1A1A] text-[22px] mb-3">빠른 통계</h3>
+            <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">빠른 통계</h3>
             <div className="space-y-2.5">
               {[
                 { label: "이번 주 미팅", value: "12건", color: "#1A73E8" },
@@ -243,8 +243,8 @@ export function SalesPage() {
                 { label: "신규 리드", value: "7건", color: "#FFA726" },
               ].map((s) => (
                 <div key={s.label} className="flex items-center justify-between">
-                  <span className="text-[#666] text-[17px]">{s.label}</span>
-                  <span className="text-[18px]" style={{ color: s.color }}>{s.value}</span>
+                  <span className="text-[#666] text-[0.85rem]">{s.label}</span>
+                  <span className="text-[0.9rem]" style={{ color: s.color }}>{s.value}</span>
                 </div>
               ))}
             </div>

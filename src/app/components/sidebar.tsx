@@ -215,9 +215,9 @@ export function Sidebar() {
 
   return (
     <Resizable
-      defaultSize={{ width: 320, height: "100%" }}
-      minWidth={180}
-      maxWidth={360}
+      defaultSize={{ width: 256, height: "100%" }}
+      minWidth={144}
+      maxWidth={288}
       enable={{ right: true }}
       handleStyles={{
         right: {
@@ -241,11 +241,11 @@ export function Sidebar() {
                     className="flex items-center gap-1.5 flex-1 hover:bg-[#F7F8FA] rounded-md transition-colors"
                   >
                     {collapsed[section.label!] ? (
-                      <ChevronRight size={14} className="text-[#999]" />
+                      <ChevronRight size={11} className="text-[#999]" />
                     ) : (
-                      <ChevronDown size={14} className="text-[#999]" />
+                      <ChevronDown size={11} className="text-[#999]" />
                     )}
-                    <p className="text-[#999] text-[14px] tracking-wide uppercase">
+                    <p className="text-[#999] text-[0.7rem] tracking-wide uppercase">
                       {section.label}
                     </p>
                   </button>
@@ -281,7 +281,7 @@ export function Sidebar() {
                     className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#E8EEFF] transition-all"
                     title="페이지 추가"
                   >
-                    <Plus size={14} className="text-[#999] hover:text-[#1A472A]" />
+                    <Plus size={11} className="text-[#999] hover:text-[#1A472A]" />
                   </button>
                 </div>
               )}
@@ -290,12 +290,12 @@ export function Sidebar() {
                 {section.items.map((item) => (
                   <div key={item.id} className="relative group/item">
                     {renaming === item.id ? (
-                      <div className="flex items-center gap-2.5 px-3 py-[7px]">
-                        <item.icon size={16} strokeWidth={1.8} className="text-[#1A472A] shrink-0" />
+                      <div className="flex items-center gap-2.5 px-3 py-[6px]">
+                        <item.icon size={13} strokeWidth={1.8} className="text-[#1A472A] shrink-0" />
                         <input
                           ref={renameRef}
                           defaultValue={getDisplayLabel(item.id, item.label)}
-                          className="flex-1 text-[18px] text-[#1A1A1A] bg-white border border-[#1A472A] rounded px-1.5 py-0.5 focus:outline-none"
+                          className="flex-1 text-[0.9rem] text-[#1A1A1A] bg-white border border-[#1A472A] rounded px-1.5 py-0.5 focus:outline-none"
                           onKeyDown={(e) => {
                             if (e.key === "Enter") handleRenameSubmit(item.id, (e.target as HTMLInputElement).value);
                             if (e.key === "Escape") setRenaming(null);
@@ -308,14 +308,14 @@ export function Sidebar() {
                         to={item.to}
                         end={item.to === "/"}
                         className={({ isActive }) =>
-                          `flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[18px] transition-colors ${
+                          `flex items-center gap-2.5 px-3 py-[6px] rounded-md text-[0.9rem] transition-colors ${
                             isActive
                               ? "bg-[#EFF5F1] text-[#1A472A]"
                               : "text-[#444] hover:text-[#1A1A1A] hover:bg-[#F7F8FA]"
                           }`
                         }
                       >
-                        <item.icon size={16} strokeWidth={1.8} />
+                        <item.icon size={13} strokeWidth={1.8} />
                         <span className="flex-1">{getDisplayLabel(item.id, item.label)}</span>
                         <button
                           onClick={(e) => {
@@ -326,7 +326,7 @@ export function Sidebar() {
                           }}
                           className="opacity-0 group-hover/item:opacity-100 p-0.5 rounded hover:bg-[#E0E3E8] transition-all shrink-0"
                         >
-                          <MoreHorizontal size={14} className="text-[#999]" />
+                          <MoreHorizontal size={11} className="text-[#999]" />
                         </button>
                       </NavLink>
                     )}
@@ -345,11 +345,11 @@ export function Sidebar() {
                 className="flex items-center gap-1.5 flex-1 hover:bg-[#F7F8FA] rounded-md transition-colors"
               >
                 {collapsed["최근 목"] ? (
-                  <ChevronRight size={14} className="text-[#999]" />
+                  <ChevronRight size={11} className="text-[#999]" />
                 ) : (
-                  <ChevronDown size={14} className="text-[#999]" />
+                  <ChevronDown size={11} className="text-[#999]" />
                 )}
-                <p className="text-[#999] text-[16px] tracking-wide uppercase">최근 항목</p>
+                <p className="text-[#999] text-[0.8rem] tracking-wide uppercase">최근 항목</p>
               </button>
               <button
                 onClick={(e) => {
@@ -359,19 +359,19 @@ export function Sidebar() {
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#E8EEFF] transition-all"
                 title="페이지 추가"
               >
-                <Plus size={14} className="text-[#999] hover:text-[#1A472A]" />
+                <Plus size={11} className="text-[#999] hover:text-[#1A472A]" />
               </button>
             </div>
             {!collapsed["최근 항목"] && (
-            <div className="space-y-0.5 max-h-[360px] overflow-y-auto recent-scroll">
+            <div className="space-y-0.5 max-h-[288px] overflow-y-auto recent-scroll">
               {recentChats.map((item) => (
                 <div key={item.id} className="relative group/recent">
                   {recentRenaming === item.id ? (
-                    <div className="flex items-center px-3 py-[6px]">
+                    <div className="flex items-center px-3 py-[5px]">
                       <input
                         autoFocus
                         defaultValue={item.title}
-                        className="flex-1 text-[17px] text-[#1A1A1A] bg-white border border-[#1A472A] rounded px-1.5 py-0.5 focus:outline-none"
+                        className="flex-1 text-[0.85rem] text-[#1A1A1A] bg-white border border-[#1A472A] rounded px-1.5 py-0.5 focus:outline-none"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleRecentRenameSubmit(item.id, (e.target as HTMLInputElement).value);
                           if (e.key === "Escape") setRecentRenaming(null);
@@ -381,7 +381,7 @@ export function Sidebar() {
                     </div>
                   ) : (
                     <button
-                      className="flex items-center w-full px-3 py-[6px] rounded-md text-[17px] text-[#444] hover:text-[#1A1A1A] hover:bg-[#F7F8FA] transition-colors text-left"
+                      className="flex items-center w-full px-3 py-[5px] rounded-md text-[0.85rem] text-[#444] hover:text-[#1A1A1A] hover:bg-[#F7F8FA] transition-colors text-left"
                     >
                       <span className="flex-1 truncate">{item.title}</span>
                       <span
@@ -393,7 +393,7 @@ export function Sidebar() {
                         }}
                         className="opacity-0 group-hover/recent:opacity-100 p-0.5 rounded hover:bg-[#E0E3E8] transition-all shrink-0 cursor-pointer"
                       >
-                        <MoreHorizontal size={14} className="text-[#999]" />
+                        <MoreHorizontal size={11} className="text-[#999]" />
                       </span>
                     </button>
                   )}
@@ -406,8 +406,8 @@ export function Sidebar() {
 
         {/* Help */}
         <div className="px-2 py-3 border-t border-[#E0E3E8]">
-          <button className="flex items-center gap-2.5 px-3 py-[7px] rounded-md text-[18px] text-[#999] hover:text-[#444] hover:bg-[#F7F8FA] w-full transition-colors">
-            <HelpCircle size={16} strokeWidth={1.8} />
+          <button className="flex items-center gap-2.5 px-3 py-[6px] rounded-md text-[0.9rem] text-[#999] hover:text-[#444] hover:bg-[#F7F8FA] w-full transition-colors">
+            <HelpCircle size={13} strokeWidth={1.8} />
             <span>고객센터</span>
           </button>
         </div>
@@ -417,14 +417,14 @@ export function Sidebar() {
       {contextMenu && (
         <div
           ref={menuRef}
-          className="fixed z-[100] bg-white rounded-xl border border-[#E0E3E8] py-1.5 min-w-[220px]"
+          className="fixed z-[100] bg-white rounded-xl border border-[#E0E3E8] py-1.5 min-w-[176px]"
           style={{
             left: contextMenu.x,
             top: contextMenu.y,
             boxShadow: "0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
           }}
         >
-          <div className="px-3 py-1.5 text-[12px] text-[#999] tracking-wide uppercase">페이지</div>
+          <div className="px-3 py-1.5 text-[0.6rem] text-[#999] tracking-wide uppercase">페이지</div>
           {contextMenuItems.map((menuItem) => (
             <div key={menuItem.action}>
               {menuItem.action === "trash" && (
@@ -432,16 +432,16 @@ export function Sidebar() {
               )}
               <button
                 onClick={() => handleContextAction(menuItem.action, contextMenu)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[15px] transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[0.75rem] transition-colors ${
                   (menuItem as any).danger
                     ? "text-[#EF4444] hover:bg-[#FEF2F2]"
                     : "text-[#333] hover:bg-[#F7F8FA]"
                 }`}
               >
-                <menuItem.icon size={15} strokeWidth={1.6} />
+                <menuItem.icon size={12} strokeWidth={1.6} />
                 <span className="flex-1 text-left">{menuItem.label}</span>
                 {menuItem.shortcut && (
-                  <span className="text-[12px] text-[#BBB]">{menuItem.shortcut}</span>
+                  <span className="text-[0.6rem] text-[#BBB]">{menuItem.shortcut}</span>
                 )}
               </button>
             </div>
@@ -453,14 +453,14 @@ export function Sidebar() {
       {recentContextMenu && (
         <div
           ref={menuRef}
-          className="fixed z-[100] bg-white rounded-xl border border-[#E0E3E8] py-1.5 min-w-[220px]"
+          className="fixed z-[100] bg-white rounded-xl border border-[#E0E3E8] py-1.5 min-w-[176px]"
           style={{
             left: recentContextMenu.x,
             top: recentContextMenu.y,
             boxShadow: "0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
           }}
         >
-          <div className="px-3 py-1.5 text-[12px] text-[#999] tracking-wide uppercase">페이지</div>
+          <div className="px-3 py-1.5 text-[0.6rem] text-[#999] tracking-wide uppercase">페이지</div>
           {recentContextMenuItems.map((menuItem) => (
             <div key={menuItem.action}>
               {menuItem.action === "trash" && (
@@ -477,16 +477,16 @@ export function Sidebar() {
                     showToast(`"${item?.title}" 항목이 휴지통으로 이동되었습니다.`);
                   }
                 }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[15px] transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[0.75rem] transition-colors ${
                   (menuItem as any).danger
                     ? "text-[#EF4444] hover:bg-[#FEF2F2]"
                     : "text-[#333] hover:bg-[#F7F8FA]"
                 }`}
               >
-                <menuItem.icon size={15} strokeWidth={1.6} />
+                <menuItem.icon size={12} strokeWidth={1.6} />
                 <span className="flex-1 text-left">{menuItem.label}</span>
                 {menuItem.shortcut && (
-                  <span className="text-[12px] text-[#BBB]">{menuItem.shortcut}</span>
+                  <span className="text-[0.6rem] text-[#BBB]">{menuItem.shortcut}</span>
                 )}
               </button>
             </div>
@@ -497,7 +497,7 @@ export function Sidebar() {
       {/* Toast */}
       {toast && (
         <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] bg-[#1A1A1A] text-white text-[15px] px-5 py-3 rounded-xl shadow-lg"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] bg-[#1A1A1A] text-white text-[0.75rem] px-5 py-3 rounded-xl shadow-lg"
           style={{ animation: "fadeInUp 0.2s ease-out" }}
         >
           {toast}
