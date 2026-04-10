@@ -346,7 +346,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void })
               <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">DealFlow 필드</p>
               <div className="space-y-2">
                 {dealflowFields.map((field) => (
-                  <div key={field.name} className="flex items-center gap-2 px-4 py-2.5 rounded-lg" style={{ background: "#F8F9FA", border: `1px solid ${mappings[field.name] ? T.border : field.required ? "#FCA5A5" : T.border}` }}>
+                  <div key={field.name} className="flex items-center gap-2 px-4 py-2.5 rounded-lg" style={{ background: "#F8F9FA", border: `1px solid ${T.primary}` }}>
                     <span className="text-[0.8rem] text-[#1A1A1A] flex-1">
                       {field.name}
                       {field.required && <span className="text-red-500 ml-0.5">*</span>}
