@@ -88,22 +88,6 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   실패: { bg: "#FEF2F2", text: "#DC2626" },
 };
 
-const funnelData = [
-  { stage: "신규", count: 12 },
-  { stage: "유선상담", count: 10 },
-  { stage: "견적서 발송", count: 8 },
-  { stage: "유선견적상담", count: 6 },
-  { stage: "가격조율", count: 5 },
-  { stage: "일정조율", count: 4 },
-  { stage: "수주확정", count: 3 },
-];
-
-const donutData = [
-  { name: "진행중", value: 55, color: "#3B82F6", count: 26 },
-  { name: "성공", value: 32, color: "#10B981", count: 15 },
-  { name: "실패", value: 13, color: "#EF4444", count: 7 },
-];
-
 interface Deal {
   id: number;
   company: string;
@@ -118,16 +102,6 @@ interface Deal {
   date: string;
 }
 
-const deals: Deal[] = [
-  { id: 1, company: "(주)테크솔루션", stage: "수주확정", contact: "김영호", position: "이사", service: "ERP 구축", quantity: 120, amount: "₩3,200만", manager: "박지은", status: "성공", date: "2026-03-15" },
-  { id: 2, company: "스마트팩토리(주)", stage: "가격조율", contact: "이수진", position: "부장", service: "MES 도입", quantity: 85, amount: "₩2,800만", manager: "김태현", status: "진행중", date: "2026-03-18" },
-  { id: 3, company: "(주)글로벌트레이드", stage: "견적서 발송", contact: "박민수", position: "과장", service: "SCM 컨설팅", quantity: 200, amount: "₩5,500만", manager: "이서연", status: "진행중", date: "2026-03-20" },
-  { id: 4, company: "디지털커머스(주)", stage: "신규", contact: "최지아", position: "대리", service: "CRM 솔루션", quantity: 50, amount: "₩1,200만", manager: "박지은", status: "진행중", date: "2026-03-22" },
-  { id: 5, company: "(주)바이오헬스", stage: "유선상담", contact: "정대현", position: "팀장", service: "데이터 분석", quantity: 30, amount: "₩980만", manager: "김태현", status: "진행중", date: "2026-03-25" },
-  { id: 6, company: "에너지플러스(주)", stage: "일정조율", contact: "한소희", position: "차장", service: "IoT 플랫폼", quantity: 150, amount: "₩4,100만", manager: "이서연", status: "진행중", date: "2026-03-28" },
-  { id: 7, company: "(주)푸드테크", stage: "유선견적상담", contact: "오재석", position: "과장", service: "POS 시스템", quantity: 90, amount: "₩1,500만", manager: "박지은", status: "진행중", date: "2026-04-01" },
-  { id: 8, company: "클라우드원(주)", stage: "수주확정", contact: "윤미래", position: "부장", service: "클라우드 마이그레이션", quantity: 40, amount: "₩6,200만", manager: "김태현", status: "성공", date: "2026-04-03" },
-];
 
 /* ─── WIDGET DEFINITIONS ─── */
 interface WidgetDef {
@@ -166,41 +140,22 @@ const allWidgets: WidgetDef[] = [
   { id: "shortcuts", name: "빠른 실행", description: "자주 사용하는 기능에 빠르게 접근합니다", category: "utility", icon: Zap, colSpan: 1 },
 ];
 
-const kpiDataMap: Record<string, { title: string; value: string; sub: string; trend: string; trendColor: string; icon: typeof BarChart3; iconBg: string }> = {
-  "kpi-deals": { title: "총 딜 수", value: "48", sub: "이번 달 기준", trend: "+12%", trendColor: T.success, icon: BarChart3, iconBg: "#EFF5F1" },
-  "kpi-winrate": { title: "수주율 (건수)", value: "32.5%", sub: "성공 15건 / 전체 46건", trend: "-2.1%", trendColor: T.danger, icon: Target, iconBg: "#FEF2F2" },
-  "kpi-amount": { title: "총 견적 금액", value: "₩4.2억", sub: "수주확정 ₩1.8억 포함", trend: "+18%", trendColor: T.success, icon: DollarSign, iconBg: "#FFFBEB" },
-  "kpi-winrate-amount": { title: "수주율 (금액)", value: "42.8%", sub: "₩1.8억 / ₩4.2억", trend: "+5.3%", trendColor: T.success, icon: TrendingUp, iconBg: "#EFF6FF" },
-  "kpi-active": { title: "활성 딜", value: "31", sub: "진행중인 딜", trend: "+4건", trendColor: T.success, icon: Activity, iconBg: "#F0F9FF" },
-  "kpi-avg-cycle": { title: "평균 영업 주기", value: "23일", sub: "지난달 대비", trend: "-3일", trendColor: T.success, icon: Clock, iconBg: "#F5F3FF" },
-  "kpi-at-risk": { title: "위험 딜", value: "5", sub: "7일 이상 미진행", trend: "+2건", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
-  "kpi-new-month": { title: "이달 신규", value: "12", sub: "2026년 4월", trend: "+33%", trendColor: T.success, icon: Plus, iconBg: "#ECFDF5" },
-};
+/* ─── AMOUNT PARSER (₩3,200만 → 3200, ₩1.8억 → 18000) ─── */
+function parseAmt(s: string): number {
+  const cleaned = s.replace(/[₩,\s]/g, "");
+  const m = cleaned.match(/^(\d+(?:\.\d+)?)(억|만)?$/);
+  if (!m) return 0;
+  const n = parseFloat(m[1]);
+  if (m[2] === "억") return Math.round(n * 10000);
+  if (m[2] === "만") return Math.round(n);
+  return Math.round(n / 10000); // 원 단위로 입력된 경우 만 단위로 변환
+}
 
-const trendData = [
-  { month: "11월", deals: 28, amount: 2.1 },
-  { month: "12월", deals: 35, amount: 2.8 },
-  { month: "1월", deals: 32, amount: 3.1 },
-  { month: "2월", deals: 40, amount: 3.5 },
-  { month: "3월", deals: 44, amount: 3.9 },
-  { month: "4월", deals: 48, amount: 4.2 },
-];
-
-const stageAmountData = [
-  { stage: "수주확정", amount: 9400 },
-  { stage: "일정조율", amount: 4100 },
-  { stage: "가격조율", amount: 2800 },
-  { stage: "견적서 발송", amount: 5500 },
-  { stage: "유선견적상담", amount: 1500 },
-  { stage: "유선상담", amount: 980 },
-  { stage: "신규", amount: 1200 },
-];
-
-const performanceData = [
-  { name: "박지은", deals: 18, won: 7, rate: "38.9%", amount: "₩1.49억" },
-  { name: "김태현", deals: 16, won: 5, rate: "31.3%", amount: "₩1.32억" },
-  { name: "이서연", deals: 14, won: 3, rate: "21.4%", amount: "₩1.39억" },
-];
+function fmtAmt(manWon: number): string {
+  if (manWon >= 10000) return `₩${(manWon / 10000).toFixed(1)}억`;
+  if (manWon > 0) return `₩${manWon}만`;
+  return "₩0";
+}
 
 const DEFAULT_ACTIVE_WIDGETS = ["kpi-deals", "kpi-winrate", "kpi-amount", "kpi-winrate-amount", "funnel", "donut"];
 
@@ -598,9 +553,42 @@ function WidgetPalette({ onClose, activeWidgets, onToggleWidget }: { onClose: ()
 }
 
 /* ─── WIDGET CONTENT RENDERER ─── */
-function WidgetContent({ widgetId }: { widgetId: string }) {
+function WidgetContent({ widgetId, deals }: { widgetId: string; deals: Deal[] }) {
+  /* ── KPI computations ── */
+  const total = deals.length;
+  const wonDeals = deals.filter((d) => d.status === "성공");
+  const wonCount = wonDeals.length;
+  const totalAmt = deals.reduce((s, d) => s + parseAmt(d.amount), 0);
+  const wonAmt = wonDeals.reduce((s, d) => s + parseAmt(d.amount), 0);
+  const activeCount = deals.filter((d) => d.status === "진행중").length;
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const newThisMonth = deals.filter((d) => d.date.startsWith(thisMonth)).length;
+  /* at-risk: 진행중이며 30일 이상 경과 */
+  const atRisk = deals.filter((d) => {
+    if (d.status !== "진행중") return false;
+    const diff = (now.getTime() - new Date(d.date).getTime()) / 86400000;
+    return diff >= 30;
+  }).length;
+  /* avg cycle: 성공/실패 딜만 */
+  const closedDeals = deals.filter((d) => d.status !== "진행중");
+  const avgCycle = closedDeals.length > 0
+    ? Math.round(closedDeals.reduce((s, d) => s + (now.getTime() - new Date(d.date).getTime()) / 86400000, 0) / closedDeals.length)
+    : 0;
+
   if (widgetId.startsWith("kpi-")) {
-    const kpi = kpiDataMap[widgetId];
+    type KpiEntry = { title: string; value: string; sub: string; trend: string; trendColor: string; icon: typeof BarChart3; iconBg: string };
+    const kpiMap: Record<string, KpiEntry> = {
+      "kpi-deals":         { title: "총 딜 수",       value: `${total}건`,        sub: "전체 등록 딜",        trend: `활성 ${activeCount}건`,    trendColor: T.primary,    icon: BarChart3,    iconBg: "#EFF5F1" },
+      "kpi-winrate":       { title: "수주율 (건수)",   value: total > 0 ? `${Math.round((wonCount / total) * 100)}%` : "0%", sub: `수주 ${wonCount}건`,     trend: `전체 ${total}건`,          trendColor: T.success,    icon: Target,       iconBg: "#ECFDF5" },
+      "kpi-amount":        { title: "총 견적 금액",    value: fmtAmt(totalAmt),   sub: "VAT 미포함",         trend: `수주 ${fmtAmt(wonAmt)}`,   trendColor: "#6366F1",    icon: DollarSign,   iconBg: "#EEF2FF" },
+      "kpi-winrate-amount":{ title: "수주율 (금액)",   value: totalAmt > 0 ? `${Math.round((wonAmt / totalAmt) * 100)}%` : "0%", sub: `수주액 ${fmtAmt(wonAmt)}`, trend: `총 ${fmtAmt(totalAmt)}`, trendColor: T.success, icon: TrendingUp, iconBg: "#ECFDF5" },
+      "kpi-active":        { title: "활성 딜",        value: `${activeCount}건`,  sub: "진행중 딜",          trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#06B6D4", icon: Activity, iconBg: "#ECFEFF" },
+      "kpi-avg-cycle":     { title: "평균 영업 주기", value: `${avgCycle}일`,     sub: "종료 딜 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#F59E0B", icon: Clock,      iconBg: "#FFFBEB" },
+      "kpi-at-risk":       { title: "위험 딜",        value: `${atRisk}건`,       sub: "30일+ 미진행",       trend: activeCount > 0 ? `활성의 ${Math.round((atRisk / activeCount) * 100)}%` : "0%", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
+      "kpi-new-month":     { title: "이달 신규",      value: `${newThisMonth}건`, sub: thisMonth,            trend: `전체의 ${total > 0 ? Math.round((newThisMonth / total) * 100) : 0}%`, trendColor: "#8B5CF6", icon: Plus, iconBg: "#F5F3FF" },
+    };
+    const kpi = kpiMap[widgetId];
     if (!kpi) return null;
     const Ic = kpi.icon;
     return (
@@ -617,7 +605,24 @@ function WidgetContent({ widgetId }: { widgetId: string }) {
       </div>
     );
   }
+
+  /* ── Funnel data ── */
+  const funnelData = Object.keys(stageColors).map((stage) => ({
+    stage,
+    count: deals.filter((d) => d.stage === stage).length,
+  }));
+
   if (widgetId === "funnel") return <><p className="text-[0.85rem] text-[#1A1A1A] mb-4">영업 파이프라인 현황</p><FunnelBar data={funnelData} /></>;
+
+  /* ── Donut data ── */
+  const statusCounts: Record<string, number> = { 진행중: 0, 성공: 0, 실패: 0 };
+  deals.forEach((d) => { if (d.status in statusCounts) statusCounts[d.status]++; });
+  const donutColors: Record<string, string> = { 진행중: "#3B82F6", 성공: "#10B981", 실패: "#EF4444" };
+  const donutData = Object.entries(statusCounts).map(([name, count]) => ({
+    name, count, color: donutColors[name],
+    value: total > 0 ? Math.round((count / total) * 100) : 0,
+  }));
+
   if (widgetId === "donut") return (
     <>
       <p className="text-[0.85rem] text-[#1A1A1A] mb-2">성공여부 분포</p>
@@ -625,18 +630,51 @@ function WidgetContent({ widgetId }: { widgetId: string }) {
       <div className="flex justify-center gap-4 mt-1">{donutData.map((d) => (<div key={d.name} className="flex items-center gap-1.5 text-[0.65rem]"><div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className="text-[#666]">{d.name}</span><span className="text-[#999]">{d.count}건</span></div>))}</div>
     </>
   );
+
+  /* ── Trend data (last 6 months) ── */
+  const trendData = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = `${d.getMonth() + 1}월`;
+    const monthDeals = deals.filter((deal) => deal.date.startsWith(key));
+    return { month: label, deals: monthDeals.length, amount: monthDeals.reduce((s, deal) => s + parseAmt(deal.amount), 0) };
+  });
+
   if (widgetId === "trend") return (
     <>
       <p className="text-[0.85rem] text-[#1A1A1A] mb-4">월별 딜 추이</p>
       <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="cDeals" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><Tooltip /><Area type="monotone" dataKey="deals" stroke={T.primary} fill="url(#cDeals)" strokeWidth={2} name="딜 수" /></AreaChart></ResponsiveContainer></div>
     </>
   );
+
+  /* ── Stage-amount data ── */
+  const stageAmountData = Object.keys(stageColors).map((stage) => ({
+    stage,
+    amount: deals.filter((d) => d.stage === stage).reduce((s, d) => s + parseAmt(d.amount), 0),
+  })).filter((s) => s.amount > 0);
+
   if (widgetId === "stage-bar") return (
     <>
       <p className="text-[0.85rem] text-[#1A1A1A] mb-4">스테이지별 금액</p>
       <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={stageAmountData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} /><XAxis type="number" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}만`} /><YAxis type="category" dataKey="stage" tick={{ fontSize: 10, fill: "#555" }} axisLine={false} tickLine={false} width={68} /><Tooltip formatter={(v: number) => `${v}만원`} /><Bar dataKey="amount" radius={[0, 4, 4, 0]} fill={T.primary} barSize={14} /></BarChart></ResponsiveContainer></div>
     </>
   );
+
+  /* ── Performance data ── */
+  const perfMap: Record<string, { deals: number; won: number; amount: number }> = {};
+  deals.forEach((d) => {
+    if (!d.manager) return;
+    if (!perfMap[d.manager]) perfMap[d.manager] = { deals: 0, won: 0, amount: 0 };
+    perfMap[d.manager].deals++;
+    if (d.status === "성공") perfMap[d.manager].won++;
+    perfMap[d.manager].amount += parseAmt(d.amount);
+  });
+  const performanceData = Object.entries(perfMap).map(([name, v]) => ({
+    name, deals: v.deals, won: v.won,
+    rate: v.deals > 0 ? `${Math.round((v.won / v.deals) * 100)}%` : "0%",
+    amount: fmtAmt(v.amount),
+  }));
+
   if (widgetId === "performance") return (
     <>
       <p className="text-[0.85rem] text-[#1A1A1A] mb-4">담당자별 성과</p>
@@ -644,16 +682,20 @@ function WidgetContent({ widgetId }: { widgetId: string }) {
       <tbody>{performanceData.map((p) => <tr key={p.name} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-[0.6rem] text-white" style={{ background: T.primary }}>{p.name[0]}</div><span className="text-[0.7rem] text-[#1A1A1A]">{p.name}</span></div></td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.deals}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.won}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: T.primary }}>{p.rate}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.amount}</td></tr>)}</tbody></table>
     </>
   );
+
+  /* ── Recent deals ── */
+  const recentDeals = [...deals].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+
   if (widgetId === "recent-deals") return (
     <>
       <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 딜 목록</p>
-      <div className="space-y-2">{deals.slice(0, 5).map((d) => <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors"><div className="flex items-center gap-3"><span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span><span className="text-[0.6rem] px-2 py-0.5 rounded-md" style={{ background: stageColors[d.stage] + "18", color: stageColors[d.stage] }}>{d.stage}</span></div><span className="text-[0.7rem] text-[#999]">{d.amount}</span></div>)}</div>
+      <div className="space-y-2">{recentDeals.map((d) => <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors"><div className="flex items-center gap-3"><span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span><span className="text-[0.6rem] px-2 py-0.5 rounded-md" style={{ background: stageColors[d.stage] + "18", color: stageColors[d.stage] }}>{d.stage}</span></div><span className="text-[0.7rem] text-[#999]">{d.amount}</span></div>)}</div>
     </>
   );
   if (widgetId === "memo") return (
     <>
       <p className="text-[0.85rem] text-[#1A1A1A] mb-3">메모</p>
-      <textarea className="w-full h-[112px] p-3 rounded-lg text-[0.75rem] text-[#1A1A1A] resize-none focus:outline-none" style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }} placeholder="메모를 입력하세요..." defaultValue="이번 주 목표: 신규 딜 5건 확보, 가격조율 중인 3건 마무리" />
+      <textarea className="w-full h-[112px] p-3 rounded-lg text-[0.75rem] text-[#1A1A1A] resize-none focus:outline-none" style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }} placeholder="메모를 입력하세요..." />
     </>
   );
   if (widgetId === "shortcuts") {
@@ -669,7 +711,7 @@ function WidgetContent({ widgetId }: { widgetId: string }) {
 }
 
 /* ─── CUSTOM FUNNEL BAR ─── */
-function FunnelBar({ data }: { data: typeof funnelData }) {
+function FunnelBar({ data }: { data: Array<{ stage: string; count: number }> }) {
   const maxCount = Math.max(...data.map((d) => d.count));
   return (
     <div className="flex items-end gap-2 h-[144px]">
@@ -823,7 +865,6 @@ function DealflowPageInner() {
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
-    setCustomerDeals(deals);
   };
 
   const toggleWidget = (id: string) => {
@@ -960,7 +1001,7 @@ function DealflowPageInner() {
                                 >
                                   <X size={10} color={T.danger} />
                                 </button>
-                                <WidgetContent widgetId={w.id} />
+                                <WidgetContent widgetId={w.id} deals={customerDeals} />
                               </div>
                             ))}
                         </div>
