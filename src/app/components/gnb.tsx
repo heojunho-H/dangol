@@ -8,7 +8,7 @@ export function GNB() {
         <div className="w-6 h-6 rounded bg-[#1A472A] flex items-center justify-center text-white text-[0.6rem]">
           D
         </div>
-        <span className="text-[#1A472A] text-[1.2rem]">dnagol CRM</span>
+        <span className="text-[#1A472A] text-[1.2rem]">dangol CRM</span>
       </div>
 
       {/* Breadcrumb area - placeholder */}
