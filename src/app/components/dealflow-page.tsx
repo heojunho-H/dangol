@@ -897,69 +897,86 @@ function DealflowPageInner() {
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             {/* ZONE 1: 대시보드 위젯 그리드 */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <LayoutGrid size={16} color={T.primary} />
-                  <span className="text-[1.1rem] text-[#1A1A1A]">대시보드</span>
-                  <span className="text-[0.7rem] text-[#999]">{activeWidgets.size}개 위젯</span>
+              {customerDeals.length === 0 ? (
+                /* 딜 데이터 없음 → 위젯 추가 플레이스홀더만 노출 */
+                <div
+                  onClick={() => setCustomizeMode(true)}
+                  className="rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer transition-all hover:border-[#1A472A] hover:bg-[#FAFBFC] min-h-[128px]"
+                  style={{ border: `2px dashed ${T.border}` }}
+                >
+                  <div className="w-11 h-11 rounded-full flex items-center justify-center mb-2.5" style={{ background: "#EFF5F1" }}>
+                    <Plus size={16} color={T.primary} />
+                  </div>
+                  <span className="text-[0.75rem] text-[#999]">위젯 추가</span>
+                  <span className="text-[0.65rem] text-[#CCC] mt-1">딜 데이터를 추가하면 대시보드를 구성할 수 있습니다</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCustomizeMode(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#EFF5F1]"
-                    style={{ color: T.primary, border: `1px solid ${T.border}` }}
-                  >
-                    <Plus size={12} /> 위젯 추가
-                  </button>
-                  <button
-                    onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
-                    className="p-2 rounded-lg hover:bg-[#F7F8FA] transition-colors"
-                    style={{ border: `1px solid ${T.border}` }}
-                  >
-                    {dashboardCollapsed ? <ChevronDown size={13} color="#999" /> : <ChevronUp size={13} color="#999" />}
-                  </button>
-                </div>
-              </div>
-
-              {!dashboardCollapsed && (
+              ) : (
+                /* 딜 데이터 있음 → 전체 대시보드 */
                 <>
-                  {activeWidgets.size > 0 ? (
-                    <div className="grid grid-cols-4 gap-4">
-                      {allWidgets
-                        .filter((w) => activeWidgets.has(w.id))
-                        .map((w) => (
-                          <div
-                            key={w.id}
-                            className="bg-white rounded-xl p-5 border relative group"
-                            style={{
-                              borderColor: T.border,
-                              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                              gridColumn: `span ${w.colSpan}`,
-                            }}
-                          >
-                            <button
-                              onClick={() => removeWidget(w.id)}
-                              className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FEF2F2] z-10"
-                              title="위젯 제거"
-                            >
-                              <X size={10} color={T.danger} />
-                            </button>
-                            <WidgetContent widgetId={w.id} />
-                          </div>
-                        ))}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <LayoutGrid size={16} color={T.primary} />
+                      <span className="text-[1.1rem] text-[#1A1A1A]">대시보드</span>
+                      <span className="text-[0.7rem] text-[#999]">{activeWidgets.size}개 위젯</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCustomizeMode(true)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#EFF5F1]"
+                        style={{ color: T.primary, border: `1px solid ${T.border}` }}
+                      >
+                        <Plus size={12} /> 위젯 추가
+                      </button>
+                      <button
+                        onClick={() => setDashboardCollapsed(!dashboardCollapsed)}
+                        className="p-2 rounded-lg hover:bg-[#F7F8FA] transition-colors"
+                        style={{ border: `1px solid ${T.border}` }}
+                      >
+                        {dashboardCollapsed ? <ChevronDown size={13} color="#999" /> : <ChevronUp size={13} color="#999" />}
+                      </button>
+                    </div>
+                  </div>
 
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => setCustomizeMode(true)}
-                      className="rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer transition-all hover:border-[#1A472A] hover:bg-[#FAFBFC] min-h-[128px]"
-                      style={{ border: `2px dashed ${T.border}` }}
-                    >
-                      <div className="w-11 h-11 rounded-full flex items-center justify-center mb-2.5" style={{ background: "#EFF5F1" }}>
-                        <Plus size={16} color={T.primary} />
-                      </div>
-                      <span className="text-[0.75rem] text-[#999]">위젯 추가</span>
-                    </div>
+                  {!dashboardCollapsed && (
+                    <>
+                      {activeWidgets.size > 0 ? (
+                        <div className="grid grid-cols-4 gap-4">
+                          {allWidgets
+                            .filter((w) => activeWidgets.has(w.id))
+                            .map((w) => (
+                              <div
+                                key={w.id}
+                                className="bg-white rounded-xl p-5 border relative group"
+                                style={{
+                                  borderColor: T.border,
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                                  gridColumn: `span ${w.colSpan}`,
+                                }}
+                              >
+                                <button
+                                  onClick={() => removeWidget(w.id)}
+                                  className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FEF2F2] z-10"
+                                  title="위젯 제거"
+                                >
+                                  <X size={10} color={T.danger} />
+                                </button>
+                                <WidgetContent widgetId={w.id} />
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => setCustomizeMode(true)}
+                          className="rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer transition-all hover:border-[#1A472A] hover:bg-[#FAFBFC] min-h-[128px]"
+                          style={{ border: `2px dashed ${T.border}` }}
+                        >
+                          <div className="w-11 h-11 rounded-full flex items-center justify-center mb-2.5" style={{ background: "#EFF5F1" }}>
+                            <Plus size={16} color={T.primary} />
+                          </div>
+                          <span className="text-[0.75rem] text-[#999]">위젯 추가</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
