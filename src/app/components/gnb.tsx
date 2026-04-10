@@ -5,10 +5,10 @@ export function GNB() {
     <header className="h-[42px] min-h-[42px] bg-white border-b border-[#E0E3E8] flex items-center px-5 gap-4">
       {/* Logo */}
       <div className="flex items-center gap-2 shrink-0">
-        <div className="w-6 h-6 rounded bg-[#1A73E8] flex items-center justify-center text-white text-[0.6rem]">
+        <div className="w-6 h-6 rounded bg-[#1A472A] flex items-center justify-center text-white text-[0.6rem]">
           D
         </div>
-        <span className="text-[#1A73E8] text-[1.2rem]">dnagol CRM</span>
+        <span className="text-[#1A472A] text-[1.2rem]">dnagol CRM</span>
       </div>
 
       {/* Breadcrumb area - placeholder */}
