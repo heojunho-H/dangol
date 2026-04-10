@@ -6,7 +6,7 @@ import { RecentItemsProvider } from "./recent-items-context";
 export function Layout() {
   return (
     <RecentItemsProvider>
-      <div className="flex flex-col h-screen bg-[#F7F8FA] overflow-hidden">
+      <div className="flex flex-col h-full bg-[#F7F8FA] overflow-hidden">
         <GNB />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar />

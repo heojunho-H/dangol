@@ -4,4 +4,6 @@
 
 #root {
   zoom: 0.8;
+  height: 125vh; /* 100vh ÷ zoom(0.8) = 125vh → 시각적으로 정확히 100vh */
+  overflow: hidden;
 }
