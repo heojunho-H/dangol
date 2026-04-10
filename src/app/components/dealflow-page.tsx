@@ -103,6 +103,25 @@ interface Deal {
 }
 
 
+/* ─── SAMPLE DEALS (onboarding 완료 시 로드) ─── */
+const SAMPLE_DEALS: Deal[] = [
+  { id: 1,  company: "(주)테크솔루션",     stage: "수주확정",    contact: "김영호", position: "이사",  service: "ERP 구축",            quantity: 120, amount: "₩3,200만", manager: "박지은", status: "성공",  date: "2026-03-15" },
+  { id: 2,  company: "스마트팩토리(주)",   stage: "가격조율",    contact: "이수진", position: "부장",  service: "MES 도입",            quantity: 85,  amount: "₩2,800만", manager: "김태현", status: "진행중", date: "2026-03-18" },
+  { id: 3,  company: "(주)글로벌트레이드", stage: "견적서 발송", contact: "박민수", position: "과장",  service: "SCM 컨설팅",          quantity: 200, amount: "₩5,500만", manager: "이서연", status: "진행중", date: "2026-03-20" },
+  { id: 4,  company: "디지털커머스(주)",   stage: "신규",        contact: "최지아", position: "대리",  service: "CRM 솔루션",          quantity: 50,  amount: "₩1,200만", manager: "박지은", status: "진행중", date: "2026-03-22" },
+  { id: 5,  company: "(주)바이오헬스",     stage: "유선상담",    contact: "정대현", position: "팀장",  service: "데이터 분석",         quantity: 30,  amount: "₩980만",  manager: "김태현", status: "진행중", date: "2026-03-25" },
+  { id: 6,  company: "에너지플러스(주)",   stage: "일정조율",    contact: "한소희", position: "차장",  service: "IoT 플랫폼",          quantity: 150, amount: "₩4,100만", manager: "이서연", status: "진행중", date: "2026-03-28" },
+  { id: 7,  company: "(주)푸드테크",       stage: "유선견적상담",contact: "오재석", position: "과장",  service: "POS 시스템",          quantity: 90,  amount: "₩1,500만", manager: "박지은", status: "진행중", date: "2026-04-01" },
+  { id: 8,  company: "클라우드원(주)",     stage: "수주확정",    contact: "윤미래", position: "부장",  service: "클라우드 마이그레이션",quantity: 40,  amount: "₩6,200만", manager: "김태현", status: "성공",  date: "2026-04-03" },
+  { id: 9,  company: "(주)핀테크랩",       stage: "견적서 발송", contact: "서준혁", position: "이사",  service: "결제 시스템",         quantity: 60,  amount: "₩2,300만", manager: "이서연", status: "진행중", date: "2026-04-05" },
+  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",        contact: "강하은", position: "대리",  service: "차량 관제 시스템",    quantity: 200, amount: "₩8,500만", manager: "박지은", status: "진행중", date: "2026-04-07" },
+  { id: 11, company: "(주)헬스케어AI",     stage: "가격조율",    contact: "윤성민", position: "팀장",  service: "의료 AI 솔루션",      quantity: 1,   amount: "₩1.2억",   manager: "김태현", status: "진행중", date: "2026-03-10" },
+  { id: 12, company: "리테일허브(주)",     stage: "수주확정",    contact: "조은지", position: "과장",  service: "POS 통합 시스템",     quantity: 300, amount: "₩4,700만", manager: "이서연", status: "성공",  date: "2026-02-28" },
+  { id: 13, company: "(주)스마트물류",     stage: "유선상담",    contact: "임재현", position: "부장",  service: "WMS 도입",            quantity: 80,  amount: "₩3,400만", manager: "박지은", status: "실패",  date: "2026-02-14" },
+  { id: 14, company: "에듀테크파트너(주)", stage: "유선견적상담",contact: "노지수", position: "이사",  service: "LMS 구축",            quantity: 500, amount: "₩9,800만", manager: "김태현", status: "진행중", date: "2026-04-08" },
+  { id: 15, company: "(주)그린에너지",     stage: "일정조율",    contact: "배소연", position: "차장",  service: "에너지 모니터링",     quantity: 100, amount: "₩2,100만", manager: "이서연", status: "진행중", date: "2026-01-20" },
+];
+
 /* ─── WIDGET DEFINITIONS ─── */
 interface WidgetDef {
   id: string;
@@ -160,7 +179,7 @@ function fmtAmt(manWon: number): string {
 const DEFAULT_ACTIVE_WIDGETS = ["kpi-deals", "kpi-winrate", "kpi-amount", "kpi-winrate-amount", "funnel", "donut"];
 
 /* ─── ONBOARDING FLOW ─── */
-function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
+function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void }) {
   const [step, setStep] = useState(1);
   const [fileSelected, setFileSelected] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -354,7 +373,7 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
               className="px-6 py-2.5 rounded-lg text-[0.8rem] text-white transition-colors"
               style={{ background: T.primary }}
             >
-              데이터 가져오기 (48건)
+              데이터 가져오기 ({SAMPLE_DEALS.length}건)
             </button>
           </div>
         </div>
@@ -366,16 +385,16 @@ function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             <CheckCircle2 size={26} color={T.success} />
           </div>
           <h2 className="text-[22px] text-[#1A1A1A] mb-2">데이터 가져오기 완료!</h2>
-          <p className="text-[0.9rem] text-[#666] mb-6">48건의 딜이 성공적으로 추가되었습니다</p>
+          <p className="text-[0.9rem] text-[#666] mb-6">{SAMPLE_DEALS.length}건의 딜이 성공적으로 추가되었습니다</p>
           <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
-            {["기업 23개", "담당자 8명", "총 견적 ₩4.2억"].map((s) => (
+            {[`기업 ${new Set(SAMPLE_DEALS.map((d) => d.company)).size}개`, `담당자 ${new Set(SAMPLE_DEALS.map((d) => d.manager)).size}명`, `총 견적 ${(SAMPLE_DEALS.reduce((s, d) => s + parseInt(d.amount.replace(/[₩,만억\s]/g, "") || "0"), 0) / 10000).toFixed(1)}억`].map((s) => (
               <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.75rem]" style={{ background: "#ECFDF5", color: "#059669" }}>
                 ✓ {s}
               </span>
             ))}
           </div>
           <button
-            onClick={onComplete}
+            onClick={() => onComplete(SAMPLE_DEALS)}
             className="px-8 py-3 rounded-lg text-[0.85rem] text-white transition-colors"
             style={{ background: T.primary }}
           >
@@ -863,7 +882,12 @@ function DealflowPageInner() {
     setCustomerDeals((prev) => [deal, ...prev]);
   };
 
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = (importedDeals: Deal[]) => {
+    setCustomerDeals((prev) => {
+      const existingIds = new Set(prev.map((d) => d.id));
+      const newDeals = importedDeals.filter((d) => !existingIds.has(d.id));
+      return [...newDeals, ...prev];
+    });
     setShowOnboarding(false);
   };
 
