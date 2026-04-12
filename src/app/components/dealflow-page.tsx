@@ -1,5 +1,12 @@
 import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
+import {
+  parseFile,
+  transformRows,
+  detectUnknownValues,
+  type ParsedSheet,
+  type FieldMapping,
+} from "../lib/excel-import";
 import { useDrag, useDrop, DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -777,12 +784,31 @@ function computeSmartMappings(
 }
 
 /* ─── ONBOARDING FLOW ─── */
-function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommendedWidgets?: string[]) => void }) {
+function OnboardingFlow({ onComplete, customFields, pipelineStages }: { onComplete: (deals: Deal[], recommendedWidgets?: string[]) => void; customFields: CustomField[]; pipelineStages: PipelineStage[] }) {
   const [step, setStep] = useState(1);
   const [fileSelected, setFileSelected] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
-  const excelColumns = [
+  /* ── Parsed file state (null = demo/sample-fallback path) ── */
+  const [parsedSheet, setParsedSheet] = useState<ParsedSheet | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /* ── Mapping + analysis state (declared early so parsers can reset it) ── */
+  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<MappingResult[] | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const mappingAbortRef = React.useRef<AbortController | null>(null);
+
+  /* ── User-editable stage aliases: unknown value → known pipeline stage ── */
+  const [stageAliases, setStageAliases] = useState<Record<string, string>>({});
+
+  /* ── Ref holding the deals we'll analyze in step 3 (real or fallback) ── */
+  const dealsForAnalysisRef = useRef<Deal[]>(SAMPLE_DEALS);
+
+  /* ── Static fallback (used only if user proceeds without a real file, for demo) ── */
+  const FALLBACK_EXCEL_COLUMNS = useMemo(() => [
     { name: "회사명", preview: "(주)테크솔루션" },
     { name: "담당자", preview: "김영호" },
     { name: "직책", preview: "이사" },
@@ -794,27 +820,134 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
     { name: "영업담당", preview: "박지은" },
     { name: "상태", preview: "견적서 발송" },
     { name: "등록일자", preview: "2026-03-15" },
-  ];
+  ], []);
 
-  const dealflowFields = [
-    { name: "기업명", required: true },
-    { name: "담당자명", required: false },
-    { name: "직책", required: false },
-    { name: "전화번호", required: false },
-    { name: "이메일", required: false },
-    { name: "희망서비스", required: true },
-    { name: "총수량", required: false },
-    { name: "견적금액", required: false },
-    { name: "담당자", required: false },
-    { name: "진행상태", required: false },
-    { name: "문의 등록일", required: false },
-  ];
+  /* ── excelColumns = parsed headers (dynamic) OR fallback (sample demo) ── */
+  const excelColumns = useMemo(() =>
+    parsedSheet
+      ? parsedSheet.columns.map((c) => ({ name: c.name, preview: c.preview }))
+      : FALLBACK_EXCEL_COLUMNS,
+    [parsedSheet, FALLBACK_EXCEL_COLUMNS]
+  );
 
-  const [mappings, setMappings] = useState<Record<string, string>>({});
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResults, setAnalysisResults] = useState<MappingResult[] | null>(null);
-  const [analysisProgress, setAnalysisProgress] = useState(0);
-  const mappingAbortRef = React.useRef<AbortController | null>(null);
+  /* ── dealflowFields built from live customFields (not hardcoded) ── */
+  const dealflowFields = useMemo(
+    () => customFields
+      .filter((f) => f.type !== "file")    // can't import files from spreadsheet
+      .map((f) => ({ name: f.label, required: f.required })),
+    [customFields]
+  );
+
+  /* ── Map from field label → CustomField (needed to find key + type at transform time) ── */
+  const fieldByLabel = useMemo(() => {
+    const m: Record<string, CustomField> = {};
+    for (const f of customFields) m[f.label] = f;
+    return m;
+  }, [customFields]);
+
+  /* ── File parsing handler ── */
+  const handleFileSelect = async (file: File) => {
+    setParseError(null);
+    if (file.size > 10 * 1024 * 1024) {
+      setParseError("파일이 10MB를 초과합니다");
+      return;
+    }
+    try {
+      const sheet = await parseFile(file);
+      setParsedSheet(sheet);
+      setFileSelected(true);
+      // Reset mapping when new file loaded
+      setMappings({});
+      setAnalysisResults(null);
+    } catch (err) {
+      setParseError((err as Error).message || "파일을 읽을 수 없습니다");
+      setParsedSheet(null);
+    }
+  };
+
+  /* ── Convert UI mappings + customFields → typed FieldMapping[] for transform ── */
+  const buildFieldMappings = useCallback((): FieldMapping[] => {
+    const result: FieldMapping[] = [];
+    for (const [label, excelColumn] of Object.entries(mappings)) {
+      const cf = fieldByLabel[label];
+      if (!cf) continue;
+      // Amount detection: by key name OR by label hint
+      const isAmount = cf.key === "amount" || /금액|amount|price|매출/i.test(cf.label);
+      let tType: FieldMapping["type"];
+      if (isAmount) tType = "amount";
+      else if (cf.type === "date") tType = "date";
+      else if (cf.type === "number") tType = "number";
+      else if (cf.type === "phone") tType = "phone";
+      else if (cf.type === "email") tType = "email";
+      else if (cf.type === "select") tType = "select";
+      else if (cf.type === "person") tType = "person";
+      else tType = "text";
+
+      result.push({
+        dealflowKey: cf.key,
+        dealflowLabel: cf.label,
+        excelColumn,
+        type: tType,
+        required: cf.required,
+      });
+    }
+    return result;
+  }, [mappings, fieldByLabel]);
+
+  /* ── Stage value audit: which source-stage values don't match our pipeline? ── */
+  const stageMappingAudit = useMemo(() => {
+    if (!parsedSheet) return { unknowns: [] as string[], stageColumn: "" };
+    // Find the excel column mapped to the stage field
+    const stageField = customFields.find((f) => f.key === "stage");
+    if (!stageField) return { unknowns: [] as string[], stageColumn: "" };
+    const stageColumn = mappings[stageField.label] || "";
+    if (!stageColumn) return { unknowns: [] as string[], stageColumn: "" };
+    const known = pipelineStages.map((s) => s.name);
+    const unknowns = detectUnknownValues(parsedSheet.rows, stageColumn, known);
+    return { unknowns, stageColumn };
+  }, [parsedSheet, customFields, mappings, pipelineStages]);
+
+  /* ── Build Deal[] from parsed sheet + current mappings (used by both AI analysis and commit) ── */
+  const buildDealsFromSheet = useCallback((): Deal[] => {
+    if (!parsedSheet) return SAMPLE_DEALS;
+    const fieldMappings = buildFieldMappings();
+    const firstActive = pipelineStages.find((s) => s.type === "active");
+    const { records } = transformRows(parsedSheet.rows, fieldMappings, {
+      stageAlias: stageAliases,
+      defaultStage: firstActive?.name || pipelineStages[0]?.name,
+      defaultStatus: "진행중",
+    });
+    const knownStages = new Set(pipelineStages.map((s) => s.name));
+    const now = Date.now();
+    return records.map((r, i) => {
+      let stage = String(r.stage ?? "");
+      if (stage && !knownStages.has(stage)) {
+        stage = stageAliases[stage] || firstActive?.name || pipelineStages[0]?.name || "";
+      }
+      return {
+        id: now + i,
+        company: String(r.company ?? ""),
+        stage,
+        contact: String(r.contact ?? ""),
+        position: String(r.position ?? ""),
+        service: String(r.service ?? ""),
+        quantity: typeof r.quantity === "number" ? r.quantity : 0,
+        amount: String(r.amount ?? ""),
+        manager: String(r.manager ?? ""),
+        status: String(r.status ?? "진행중"),
+        date: String(r.date ?? ""),
+        ...r,
+      };
+    });
+  }, [parsedSheet, buildFieldMappings, pipelineStages, stageAliases]);
+
+  /* ── Final commit: build deals and hand off to parent ── */
+  const commitImportedDeals = () => {
+    const deals = dealsForAnalysisRef.current.length > 0
+      ? dealsForAnalysisRef.current
+      : buildDealsFromSheet();
+    onComplete(deals, Array.from(selectedWidgets));
+  };
 
   // Dashboard AI state
   const [isAnalyzingDashboard, setIsAnalyzingDashboard] = useState(false);
@@ -832,6 +965,9 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
     const controller = new AbortController();
     dashboardAbortRef.current = controller;
 
+    // Snapshot the deals we'll analyze (real transform or SAMPLE_DEALS fallback)
+    dealsForAnalysisRef.current = parsedSheet ? buildDealsFromSheet() : SAMPLE_DEALS;
+
     setStep(3);
     setIsAnalyzingDashboard(true);
     setDashboardProgress(0);
@@ -844,7 +980,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          deals: SAMPLE_DEALS,
+          deals: dealsForAnalysisRef.current,
           availableWidgets: allWidgets.map(w => ({ id: w.id, name: w.name, category: w.category })),
         }),
         signal: controller.signal,
@@ -862,7 +998,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
       if ((err as Error).name === "AbortError") return;
       // Fallback: 로컬 규칙 기반 추천
       console.warn("AI 대시보드 추천 실패, 로컬 폴백 사용");
-      const analysis = analyzeDealData(SAMPLE_DEALS);
+      const analysis = analyzeDealData(dealsForAnalysisRef.current);
       const detected = detectScenario(analysis);
       const recs = recommendWidgets(analysis, detected.scenario);
       setDashboardProgress(3);
@@ -983,12 +1119,24 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
               }}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => { e.preventDefault(); setDragOver(false); setFileSelected(true); }}
-              onClick={() => setFileSelected(true)}
+              onDrop={async (e) => {
+                e.preventDefault();
+                setDragOver(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f) await handleFileSelect(f);
+              }}
+              onClick={() => fileInputRef.current?.click()}
             >
               <Upload size={26} color="#999" className="mb-3" />
-              {fileSelected ? (
-                <p className="text-[0.85rem]" style={{ color: T.primary }}>sample_deals.xlsx 선택됨</p>
+              {parsedSheet ? (
+                <>
+                  <p className="text-[0.85rem]" style={{ color: T.primary }}>{parsedSheet.fileName} 선택됨</p>
+                  <p className="text-[0.7rem] text-[#999] mt-1">
+                    {parsedSheet.rowCount}행 · {parsedSheet.headers.length}개 컬럼
+                  </p>
+                </>
+              ) : fileSelected ? (
+                <p className="text-[0.85rem]" style={{ color: T.primary }}>샘플 데이터 사용 (데모 모드)</p>
               ) : (
                 <>
                   <p className="text-[0.85rem] text-[#666] mb-1">여기에 파일을 끌어다 놓으세요</p>
@@ -996,7 +1144,31 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                 </>
               )}
             </div>
-            <p className="text-[0.75rem] text-[#BBB] mb-6">지원 형식: .xlsx, .xls, .csv · 최대 10MB</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (f) await handleFileSelect(f);
+                e.target.value = "";
+              }}
+            />
+            {parseError && (
+              <div className="w-full mb-3 px-3 py-2 rounded-lg text-[0.75rem]" style={{ background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA" }}>
+                {parseError}
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-6">
+              <p className="text-[0.75rem] text-[#BBB]">지원 형식: .xlsx, .xls, .csv · 최대 10MB</p>
+              <button
+                onClick={(e) => { e.stopPropagation(); setFileSelected(true); setParsedSheet(null); setParseError(null); }}
+                className="text-[0.7rem] text-[#999] hover:text-[#1A472A] transition-colors underline"
+              >
+                샘플 데이터로 체험하기
+              </button>
+            </div>
 
             <div className="flex items-center gap-4 w-full">
               <button
@@ -1201,6 +1373,42 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                     </div>
                   )}
 
+                  {/* Unknown stage value mapper — only when a stage column is mapped and there are unknowns */}
+                  {parsedSheet && stageMappingAudit.unknowns.length > 0 && (
+                    <div className="mb-4 rounded-xl border" style={{ borderColor: "#FDE68A", background: "#FFFBEB" }}>
+                      <div className="flex items-start gap-2.5 px-4 py-3 border-b" style={{ borderColor: "#FDE68A" }}>
+                        <AlertTriangle size={14} color="#D97706" className="shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-[0.8rem] text-[#92400E] font-medium">
+                            알 수 없는 진행상태 값 {stageMappingAudit.unknowns.length}개
+                          </p>
+                          <p className="text-[0.7rem] text-[#B45309] mt-0.5">
+                            각 값을 현재 파이프라인의 스테이지에 연결하세요. 선택하지 않으면 기본 스테이지로 들어갑니다.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 space-y-2">
+                        {stageMappingAudit.unknowns.map((uv) => (
+                          <div key={uv} className="flex items-center gap-3">
+                            <span className="text-[0.75rem] text-[#1A1A1A] flex-1 truncate">"{uv}"</span>
+                            <ArrowRight size={11} className="text-[#BBB]" />
+                            <select
+                              className="text-[0.75rem] px-2.5 py-1.5 rounded-lg border bg-white text-[#444] cursor-pointer min-w-[140px]"
+                              style={{ borderColor: T.border }}
+                              value={stageAliases[uv] || ""}
+                              onChange={(e) => setStageAliases((p) => ({ ...p, [uv]: e.target.value }))}
+                            >
+                              <option value="">(기본 스테이지)</option>
+                              {pipelineStages.map((s) => (
+                                <option key={s.id} value={s.name}>{s.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Section: 확인 필요 (priority — shown first) */}
                   {needsReview.length > 0 && (
                     <div className="mb-4">
@@ -1263,7 +1471,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                       className="px-6 py-2.5 rounded-lg text-[0.8rem] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ background: T.primary }}
                     >
-                      데이터 가져오기 ({SAMPLE_DEALS.length}건) <ArrowRight size={12} className="inline ml-1" />
+                      데이터 가져오기 ({parsedSheet ? parsedSheet.rowCount : SAMPLE_DEALS.length}건) <ArrowRight size={12} className="inline ml-1" />
                     </button>
                   </div>
                 </>
@@ -1282,7 +1490,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                 <LayoutGrid size={24} color={T.primary} className="animate-pulse" />
               </div>
               <h2 className="text-[1.1rem] text-[#1A1A1A] mb-2">AI가 대시보드를 구성하고 있습니다...</h2>
-              <p className="text-[0.8rem] text-[#999] mb-8">{SAMPLE_DEALS.length}건의 데이터를 분석하여 최적의 대시보드를 추천합니다</p>
+              <p className="text-[0.8rem] text-[#999] mb-8">{dealsForAnalysisRef.current.length}건의 데이터를 분석하여 최적의 대시보드를 추천합니다</p>
               <div className="w-full max-w-[360px] space-y-3">
                 {["데이터 분석", "시나리오 감지", "위젯 추천"].map((label, i) => (
                   <div key={label} className="flex items-center gap-3">
@@ -1314,7 +1522,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-[1.1rem] text-[#1A1A1A] mb-1">AI 대시보드 추천</h2>
-                  <p className="text-[0.8rem] text-[#999]">{SAMPLE_DEALS.length}건의 딜 데이터를 분석했습니다</p>
+                  <p className="text-[0.8rem] text-[#999]">{dealsForAnalysisRef.current.length}건의 딜 데이터를 분석했습니다</p>
                 </div>
                 <span className="px-3 py-1.5 rounded-full text-[0.75rem]" style={{ background: "#F0F4FF", color: T.primary }}>
                   {scenario.scenario}
@@ -1453,7 +1661,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                   <ChevronLeft size={13} /> 이전
                 </button>
                 <button
-                  onClick={() => onComplete(SAMPLE_DEALS, Array.from(selectedWidgets))}
+                  onClick={commitImportedDeals}
                   className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-[0.85rem] text-white transition-colors"
                   style={{ background: T.primary }}
                 >
@@ -3709,7 +3917,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const managers = useMemo(() => [...new Set(customerDeals.map((d) => d.manager))].sort(), [customerDeals]);
 
   if (showOnboarding) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+    return <OnboardingFlow onComplete={handleOnboardingComplete} customFields={customFields} pipelineStages={pipelineStages} />;
   }
   if (showWebFormOnboarding) {
     return <WebFormOnboarding onComplete={(deals) => { handleOnboardingComplete(deals); setShowWebFormOnboarding(false); }} />;
