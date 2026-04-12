@@ -1874,7 +1874,7 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className="flex items-center gap-1.5 px-3 py-2.5 text-[0.7rem] transition-colors rounded-t-lg"
+            className="flex items-center gap-1.5 px-3 py-2.5 text-[0.75rem] transition-colors rounded-t-lg"
             style={{
               color: tab === t.key ? T.primary : "#999",
               borderBottom: tab === t.key ? `2px solid ${T.primary}` : "2px solid transparent",
@@ -2882,7 +2882,7 @@ function KanbanCard({
 
       {/* Service */}
       {showField("service") && deal.service && (
-        <p className="text-[0.65rem] text-[#888] mb-2 leading-snug">{deal.service}</p>
+        <p className="text-[0.75rem] text-[#888] mb-2 leading-snug">{deal.service}</p>
       )}
 
       {/* Contact */}
@@ -2897,7 +2897,7 @@ function KanbanCard({
       {showField("status") && (
         <div className="mb-2">
           <span
-            className="inline-flex items-center text-[0.6rem] px-2 py-0.5 rounded-full"
+            className="inline-flex items-center text-[0.7rem] px-2 py-0.5 rounded-full"
             style={{
               background: statusColors[deal.status]?.bg || "#F1F5F9",
               color: statusColors[deal.status]?.text || "#64748B",
@@ -2911,7 +2911,7 @@ function KanbanCard({
       {/* Quantity */}
       {showField("quantity") && (
         <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[0.6rem] text-[#BBB]">수량</span>
+          <span className="text-[0.7rem] text-[#BBB]">수량</span>
           <span className="text-[0.65rem] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>
         </div>
       )}
@@ -2928,7 +2928,7 @@ function KanbanCard({
             </div>
           ) : <div />}
           {showField("date") && (
-            <span className="text-[0.6rem] text-[#BBB] tabular-nums">{deal.date.slice(5)}</span>
+            <span className="text-[0.7rem] text-[#BBB] tabular-nums">{deal.date.slice(5)}</span>
           )}
         </div>
       )}
@@ -3973,7 +3973,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                               {fieldOptions.map((opt) => {
                                 const selected = f.value.split(",").map((s) => s.trim()).includes(opt);
                                 return (
-                                  <button key={opt} onClick={() => { const arr = f.value ? f.value.split(",").map((s) => s.trim()).filter(Boolean) : []; const next = selected ? arr.filter((v) => v !== opt) : [...arr, opt]; updateFilter(f.id, { value: next.join(",") }); }} className="px-2 py-1 rounded-md text-[0.65rem] border transition-colors" style={{ borderColor: selected ? T.primary : T.border, background: selected ? "#F0F7F2" : "white", color: selected ? T.primary : "#666" }}>
+                                  <button key={opt} onClick={() => { const arr = f.value ? f.value.split(",").map((s) => s.trim()).filter(Boolean) : []; const next = selected ? arr.filter((v) => v !== opt) : [...arr, opt]; updateFilter(f.id, { value: next.join(",") }); }} className="px-2 py-1 rounded-md text-[0.75rem] border transition-colors" style={{ borderColor: selected ? T.primary : T.border, background: selected ? "#F0F7F2" : "white", color: selected ? T.primary : "#666" }}>
                                     {opt}
                                   </button>
                                 );
@@ -3982,7 +3982,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           ) : fType === "date" && f.op === "date_between" ? (
                             <div className="flex items-center gap-1.5">
                               <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
-                              <span className="text-[0.65rem] text-[#999]">~</span>
+                              <span className="text-[0.75rem] text-[#999]">~</span>
                               <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
                             </div>
                           ) : fType === "date" ? (
@@ -3990,7 +3990,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           ) : fType === "number" && f.op === "between" ? (
                             <div className="flex items-center gap-1.5">
                               <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최소" value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
-                              <span className="text-[0.65rem] text-[#999]">~</span>
+                              <span className="text-[0.75rem] text-[#999]">~</span>
                               <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최대" value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
                             </div>
                           ) : (
@@ -4012,7 +4012,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                 <div className="px-5 py-3 mb-4 rounded-xl border space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
                   {sorts.map((s, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <span className="text-[0.65rem] text-[#BBB] w-[28px] shrink-0">{idx === 0 ? "1차" : `${idx + 1}차`}</span>
+                      <span className="text-[0.75rem] text-[#BBB] w-[28px] shrink-0">{idx === 0 ? "1차" : `${idx + 1}차`}</span>
                       <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]" style={{ borderColor: T.border }} value={s.field} onChange={(e) => updateSort(idx, { field: e.target.value })}>
                         {SORTABLE_FIELDS.map((sf) => <option key={sf.key} value={sf.key}>{sf.label}</option>)}
                       </select>
