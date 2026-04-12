@@ -142,20 +142,24 @@ interface PipelineStage {
   type: "active" | "won" | "lost";
 }
 
+// Brand-aligned stage colors: green progression (light → deep) conveys
+// pipeline advancement. 수주확정 uses the deepest brand green.
 const DEFAULT_STAGES: PipelineStage[] = [
-  { id: "s1", name: "신규",        color: "#3B82F6", type: "active" },
-  { id: "s2", name: "유선상담",     color: "#06B6D4", type: "active" },
-  { id: "s3", name: "견적서 발송",  color: "#8B5CF6", type: "active" },
-  { id: "s4", name: "유선견적상담", color: "#6366F1", type: "active" },
-  { id: "s5", name: "가격조율",     color: "#F59E0B", type: "active" },
-  { id: "s6", name: "일정조율",     color: "#F97316", type: "active" },
-  { id: "s7", name: "수주확정",     color: "#10B981", type: "won" },
+  { id: "s1", name: "신규",        color: "#9BB4A5", type: "active" },
+  { id: "s2", name: "유선상담",     color: "#7FA28E", type: "active" },
+  { id: "s3", name: "견적서 발송",  color: "#5B9170", type: "active" },
+  { id: "s4", name: "유선견적상담", color: "#4A7B5A", type: "active" },
+  { id: "s5", name: "가격조율",     color: "#3F6D4F", type: "active" },
+  { id: "s6", name: "일정조율",     color: "#2D5F3F", type: "active" },
+  { id: "s7", name: "수주확정",     color: "#1A472A", type: "won" },
 ];
 
+// Muted palette — brand greens + restrained neutrals/warm tones for
+// extra stages. No saturated primaries.
 const STAGE_PALETTE = [
-  "#3B82F6", "#06B6D4", "#8B5CF6", "#6366F1", "#F59E0B",
-  "#F97316", "#10B981", "#EF4444", "#EC4899", "#14B8A6",
-  "#84CC16", "#A855F7", "#F43F5E", "#0EA5E9", "#D946EF",
+  "#1A472A", "#2D5F3F", "#3F6D4F", "#4A7B5A", "#5B9170",
+  "#7FA28E", "#9BB4A5", "#64748B", "#94A3B8", "#8B7355",
+  "#B08968", "#6B7280", "#475569", "#A0928A", "#D4A574",
 ];
 
 function buildStageColors(stages: PipelineStage[]): Record<string, string> {
@@ -1359,7 +1363,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                             });
                           }}
                         >
-                          <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#10B981] shrink-0" />
+                          <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#1A472A] shrink-0" />
                           <widget.icon size={14} color={isSelected ? T.primary : "#999"} />
                           <div className="flex-1 min-w-0">
                             <p className="text-[0.8rem] text-[#1A1A1A]">{widget.name}</p>
@@ -1408,7 +1412,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                                     });
                                   }}
                                 >
-                                  <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#10B981] shrink-0" />
+                                  <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#1A472A] shrink-0" />
                                   <widget.icon size={13} color="#999" />
                                   <div className="flex-1 min-w-0">
                                     <p className="text-[0.78rem] text-[#666]">{widget.name}</p>
@@ -1797,18 +1801,18 @@ function generateFiles(deal: Deal): AttachedFile[] {
 }
 
 const ACTIVITY_ICONS: Record<ActivityLog["type"], { icon: typeof Phone; color: string; bg: string }> = {
-  stage_change: { icon: ArrowRight, color: "#6366F1", bg: "#EEF2FF" },
-  memo: { icon: StickyNote, color: "#F59E0B", bg: "#FFFBEB" },
-  email: { icon: Mail, color: "#06B6D4", bg: "#ECFEFF" },
-  call: { icon: Phone, color: "#10B981", bg: "#ECFDF5" },
-  file: { icon: FileSpreadsheet, color: "#8B5CF6", bg: "#F5F3FF" },
+  stage_change: { icon: ArrowRight, color: "#1A472A", bg: "#EFF5F1" },
+  memo: { icon: StickyNote, color: "#6B7280", bg: "#F3F4F6" },
+  email: { icon: Mail, color: "#4A7B5A", bg: "#EDF3EE" },
+  call: { icon: Phone, color: "#4A7B5A", bg: "#EDF3EE" },
+  file: { icon: FileSpreadsheet, color: "#6B7280", bg: "#F3F4F6" },
   created: { icon: Plus, color: "#1A472A", bg: "#EFF5F1" },
 };
 
 const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  "견적서": { bg: "#ECFDF5", color: "#059669" },
-  "계약서": { bg: "#EEF2FF", color: "#4F46E5" },
-  "제안서": { bg: "#FFF7ED", color: "#C2410C" },
+  "견적서": { bg: "#EFF5F1", color: "#1A472A" },
+  "계약서": { bg: "#F1F5F9", color: "#475569" },
+  "제안서": { bg: "#F7F4EF", color: "#8B7355" },
   "기타": { bg: "#F3F4F6", color: "#6B7280" },
 };
 
@@ -1965,29 +1969,29 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
         {tab === "basic" && (
           <div className="px-6 py-5 space-y-1">
             {/* AI 인사이트 (접힌 카드) */}
-            <div className="mb-4 rounded-xl border overflow-hidden" style={{ borderColor: "#DDD6FE", background: aiCardOpen ? "#FAFAFF" : "#F5F3FF" }}>
+            <div className="mb-4 rounded-xl border overflow-hidden" style={{ borderColor: "#D9E5DD", background: aiCardOpen ? "#FAFCFB" : "#EFF5F1" }}>
               <button
                 onClick={() => setAiCardOpen(!aiCardOpen)}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-[#EDE9FE]/40 transition-colors"
+                className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-[#E3ECE6]/60 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <Sparkles size={13} color="#7C3AED" />
-                  <span className="text-[0.75rem] text-[#7C3AED] font-medium">AI 인사이트</span>
-                  <span className="text-[0.7rem] text-[#7C3AED]/70 tabular-nums">성사확률 {aiInsights.winProb}%</span>
+                  <Sparkles size={13} color={T.primary} />
+                  <span className="text-[0.75rem] font-medium" style={{ color: T.primary }}>AI 인사이트</span>
+                  <span className="text-[0.7rem] tabular-nums" style={{ color: T.primary, opacity: 0.7 }}>성사확률 {aiInsights.winProb}%</span>
                 </div>
-                {aiCardOpen ? <ChevronUp size={13} color="#7C3AED" /> : <ChevronDown size={13} color="#7C3AED" />}
+                {aiCardOpen ? <ChevronUp size={13} color={T.primary} /> : <ChevronDown size={13} color={T.primary} />}
               </button>
               {aiCardOpen && (
-                <div className="px-3.5 pb-3.5 pt-1 space-y-3 border-t" style={{ borderColor: "#DDD6FE" }}>
+                <div className="px-3.5 pb-3.5 pt-1 space-y-3 border-t" style={{ borderColor: "#D9E5DD" }}>
                   {/* Win Probability */}
                   <div className="flex items-center gap-3 pt-3">
                     <div className="relative w-[52px] h-[52px] shrink-0">
                       <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#EDE9FE" strokeWidth="3" />
-                        <circle cx="18" cy="18" r="14" fill="none" stroke="#7C3AED" strokeWidth="3" strokeDasharray={`${aiInsights.winProb * 0.88} 88`} strokeLinecap="round" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#D9E5DD" strokeWidth="3" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke={T.primary} strokeWidth="3" strokeDasharray={`${aiInsights.winProb * 0.88} 88`} strokeLinecap="round" />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[0.8rem] font-semibold text-[#7C3AED] tabular-nums">{aiInsights.winProb}%</span>
+                        <span className="text-[0.8rem] font-semibold tabular-nums" style={{ color: T.primary }}>{aiInsights.winProb}%</span>
                       </div>
                     </div>
                     <p className="text-[0.7rem] text-[#666] leading-relaxed flex-1">{aiInsights.companyInfo}</p>
@@ -2279,12 +2283,12 @@ function WidgetContent({ widgetId, deals, stageColorMap }: { widgetId: string; d
     const kpiMap: Record<string, KpiEntry> = {
       "kpi-deals":         { title: "총 딜 수",       value: `${total}건`,        sub: "전체 등록 딜",        trend: `활성 ${activeCount}건`,    trendColor: T.primary,    icon: BarChart3,    iconBg: "#EFF5F1" },
       "kpi-winrate":       { title: "수주율 (건수)",   value: total > 0 ? `${Math.round((wonCount / total) * 100)}%` : "0%", sub: `수주 ${wonCount}건`,     trend: `전체 ${total}건`,          trendColor: T.success,    icon: Target,       iconBg: "#ECFDF5" },
-      "kpi-amount":        { title: "총 견적 금액",    value: fmtAmt(totalAmt),   sub: "VAT 미포함",         trend: `수주 ${fmtAmt(wonAmt)}`,   trendColor: "#6366F1",    icon: DollarSign,   iconBg: "#EEF2FF" },
-      "kpi-winrate-amount":{ title: "수주율 (금액)",   value: totalAmt > 0 ? `${Math.round((wonAmt / totalAmt) * 100)}%` : "0%", sub: `수주액 ${fmtAmt(wonAmt)}`, trend: `총 ${fmtAmt(totalAmt)}`, trendColor: T.success, icon: TrendingUp, iconBg: "#ECFDF5" },
-      "kpi-active":        { title: "활성 딜",        value: `${activeCount}건`,  sub: "진행중 딜",          trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#06B6D4", icon: Activity, iconBg: "#ECFEFF" },
-      "kpi-avg-cycle":     { title: "평균 영업 주기", value: `${avgCycle}일`,     sub: "종료 딜 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#F59E0B", icon: Clock,      iconBg: "#FFFBEB" },
+      "kpi-amount":        { title: "총 견적 금액",    value: fmtAmt(totalAmt),   sub: "VAT 미포함",         trend: `수주 ${fmtAmt(wonAmt)}`,   trendColor: T.primary,    icon: DollarSign,   iconBg: "#EFF5F1" },
+      "kpi-winrate-amount":{ title: "수주율 (금액)",   value: totalAmt > 0 ? `${Math.round((wonAmt / totalAmt) * 100)}%` : "0%", sub: `수주액 ${fmtAmt(wonAmt)}`, trend: `총 ${fmtAmt(totalAmt)}`, trendColor: T.primary, icon: TrendingUp, iconBg: "#EFF5F1" },
+      "kpi-active":        { title: "활성 딜",        value: `${activeCount}건`,  sub: "진행중 딜",          trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#4A7B5A", icon: Activity, iconBg: "#EDF3EE" },
+      "kpi-avg-cycle":     { title: "평균 영업 주기", value: `${avgCycle}일`,     sub: "종료 딜 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#6B7280", icon: Clock,      iconBg: "#F3F4F6" },
       "kpi-at-risk":       { title: "위험 딜",        value: `${atRisk}건`,       sub: "30일+ 미진행",       trend: activeCount > 0 ? `활성의 ${Math.round((atRisk / activeCount) * 100)}%` : "0%", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
-      "kpi-new-month":     { title: "이달 신규",      value: `${newThisMonth}건`, sub: thisMonth,            trend: `전체의 ${total > 0 ? Math.round((newThisMonth / total) * 100) : 0}%`, trendColor: "#8B5CF6", icon: Plus, iconBg: "#F5F3FF" },
+      "kpi-new-month":     { title: "이달 신규",      value: `${newThisMonth}건`, sub: thisMonth,            trend: `전체의 ${total > 0 ? Math.round((newThisMonth / total) * 100) : 0}%`, trendColor: "#5B9170", icon: Plus, iconBg: "#EDF3EE" },
     };
     const kpi = kpiMap[widgetId];
     if (!kpi) return null;
@@ -2315,7 +2319,7 @@ function WidgetContent({ widgetId, deals, stageColorMap }: { widgetId: string; d
   /* ── Donut data ── */
   const statusCounts: Record<string, number> = { 진행중: 0, 성공: 0, 실패: 0 };
   deals.forEach((d) => { if (d.status in statusCounts) statusCounts[d.status]++; });
-  const donutColors: Record<string, string> = { 진행중: "#3B82F6", 성공: "#10B981", 실패: "#EF4444" };
+  const donutColors: Record<string, string> = { 진행중: "#7FA28E", 성공: "#1A472A", 실패: "#DC2626" };
   const donutData = Object.entries(statusCounts).map(([name, count]) => ({
     name, count, color: donutColors[name],
     value: total > 0 ? Math.round((count / total) * 100) : 0,
@@ -2397,7 +2401,7 @@ function WidgetContent({ widgetId, deals, stageColorMap }: { widgetId: string; d
     </>
   );
   if (widgetId === "shortcuts") {
-    const sc = [{ label: "딜 추가", icon: Plus, color: T.primary }, { label: "Excel 가져오기", icon: Upload, color: "#6366F1" }, { label: "보고서 내보내기", icon: Download, color: "#F59E0B" }, { label: "팀 성과 분석", icon: Users, color: "#06B6D4" }];
+    const sc = [{ label: "딜 추가", icon: Plus, color: T.primary }, { label: "Excel 가져오기", icon: Upload, color: "#4A7B5A" }, { label: "보고서 내보내기", icon: Download, color: "#6B7280" }, { label: "팀 성과 분석", icon: Users, color: "#5B9170" }];
     return (
       <>
         <p className="text-[0.85rem] text-[#1A1A1A] mb-3">빠른 실행</p>
@@ -2660,7 +2664,7 @@ function CustomKpiModal({ onAdd, onClose }: { onAdd: (kpi: CustomKpiDef) => void
             <label className="text-[0.75rem] text-[#666] mb-1.5 block">KPI 이름</label>
             <input
               autoFocus
-              className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#6366F1]"
+              className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#1A472A]"
               style={{ borderColor: T.border }}
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -2678,12 +2682,12 @@ function CustomKpiModal({ onAdd, onClose }: { onAdd: (kpi: CustomKpiDef) => void
                     onClick={() => setFormula(p.key)}
                     className="w-full flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all"
                     style={{
-                      borderColor: active ? "#6366F1" : T.border,
-                      background: active ? "#FAFAFE" : "#fff",
+                      borderColor: active ? "#1A472A" : T.border,
+                      background: active ? "#F0F7F2" : "#fff",
                     }}
                   >
-                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5" style={{ borderColor: active ? "#6366F1" : "#DDD" }}>
-                      {active && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#6366F1" }} />}
+                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5" style={{ borderColor: active ? "#1A472A" : "#DDD" }}>
+                      {active && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#1A472A" }} />}
                     </div>
                     <div>
                       <p className="text-[0.8rem] text-[#1A1A1A]">{p.label}</p>
@@ -2712,7 +2716,7 @@ function CustomKpiModal({ onAdd, onClose }: { onAdd: (kpi: CustomKpiDef) => void
           <button
             onClick={handleAdd}
             className="px-6 py-2.5 rounded-lg text-[0.75rem] text-white"
-            style={{ background: name.trim() ? "#6366F1" : "#CCC", cursor: name.trim() ? "pointer" : "not-allowed" }}
+            style={{ background: name.trim() ? "#1A472A" : "#CCC", cursor: name.trim() ? "pointer" : "not-allowed" }}
           >
             추가
           </button>

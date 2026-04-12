@@ -25,19 +25,19 @@ interface PipelineStage {
 }
 
 const STAGE_PALETTE = [
-  "#3B82F6", "#06B6D4", "#8B5CF6", "#6366F1", "#F59E0B",
-  "#F97316", "#10B981", "#EF4444", "#EC4899", "#14B8A6",
-  "#84CC16", "#A855F7", "#F43F5E", "#0EA5E9", "#D946EF",
+  "#1A472A", "#2D5F3F", "#3F6D4F", "#4A7B5A", "#5B9170",
+  "#7FA28E", "#9BB4A5", "#64748B", "#94A3B8", "#8B7355",
+  "#B08968", "#6B7280", "#475569", "#A0928A", "#D4A574",
 ];
 
 const DEFAULT_STAGES: PipelineStage[] = [
-  { id: "s1", name: "신규",        color: "#3B82F6", type: "active" },
-  { id: "s2", name: "유선상담",     color: "#06B6D4", type: "active" },
-  { id: "s3", name: "견적서 발송",  color: "#8B5CF6", type: "active" },
-  { id: "s4", name: "유선견적상담", color: "#6366F1", type: "active" },
-  { id: "s5", name: "가격조율",     color: "#F59E0B", type: "active" },
-  { id: "s6", name: "일정조율",     color: "#F97316", type: "active" },
-  { id: "s7", name: "수주확정",     color: "#10B981", type: "won" },
+  { id: "s1", name: "신규",        color: "#9BB4A5", type: "active" },
+  { id: "s2", name: "유선상담",     color: "#7FA28E", type: "active" },
+  { id: "s3", name: "견적서 발송",  color: "#5B9170", type: "active" },
+  { id: "s4", name: "유선견적상담", color: "#4A7B5A", type: "active" },
+  { id: "s5", name: "가격조율",     color: "#3F6D4F", type: "active" },
+  { id: "s6", name: "일정조율",     color: "#2D5F3F", type: "active" },
+  { id: "s7", name: "수주확정",     color: "#1A472A", type: "won" },
 ];
 
 /* ─── Page Component ─── */
