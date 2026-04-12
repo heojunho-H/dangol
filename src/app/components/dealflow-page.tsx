@@ -713,116 +713,482 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void })
 }
 
 /* ─── DETAIL DRAWER ─── */
+type DrawerTab = "basic" | "activity" | "files" | "related" | "ai";
+
+interface ActivityLog {
+  id: string;
+  type: "stage_change" | "memo" | "email" | "call" | "file" | "created";
+  title: string;
+  detail: string;
+  date: string;
+  user: string;
+}
+
+interface AttachedFile {
+  id: string;
+  name: string;
+  type: "견적서" | "계약서" | "제안서" | "기타";
+  size: string;
+  date: string;
+}
+
+function generateActivityLogs(deal: Deal): ActivityLog[] {
+  return [
+    { id: "a1", type: "created", title: "딜 생성됨", detail: `${deal.company} 딜이 생성되었습니다`, date: deal.date, user: deal.manager },
+    { id: "a2", type: "stage_change", title: `스테이지 변경: 신규 → ${deal.stage}`, detail: "파이프라인 스테이지가 변경되었습니다", date: deal.date, user: deal.manager },
+    { id: "a3", type: "call", title: `${deal.contact}에게 전화`, detail: "초기 컨택 완료. 서비스 소개 진행", date: deal.date, user: deal.manager },
+    { id: "a4", type: "email", title: "견적서 이메일 발송", detail: `${deal.contact}에게 견적서를 발송했습니다`, date: deal.date, user: deal.manager },
+    { id: "a5", type: "memo", title: "메모 추가", detail: "초기 미팅 후 긍정적 반응. 다음 주 데모 예정.", date: deal.date, user: deal.manager },
+  ];
+}
+
+function generateFiles(deal: Deal): AttachedFile[] {
+  return [
+    { id: "f1", name: `${deal.company}_견적서_v1.pdf`, type: "견적서", size: "2.4 MB", date: deal.date },
+    { id: "f2", name: `${deal.company}_제안서.pptx`, type: "제안서", size: "5.1 MB", date: deal.date },
+  ];
+}
+
+const ACTIVITY_ICONS: Record<ActivityLog["type"], { icon: typeof Phone; color: string; bg: string }> = {
+  stage_change: { icon: ArrowRight, color: "#6366F1", bg: "#EEF2FF" },
+  memo: { icon: StickyNote, color: "#F59E0B", bg: "#FFFBEB" },
+  email: { icon: Mail, color: "#06B6D4", bg: "#ECFEFF" },
+  call: { icon: Phone, color: "#10B981", bg: "#ECFDF5" },
+  file: { icon: FileSpreadsheet, color: "#8B5CF6", bg: "#F5F3FF" },
+  created: { icon: Plus, color: "#1A472A", bg: "#EFF5F1" },
+};
+
+const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
+  "견적서": { bg: "#ECFDF5", color: "#059669" },
+  "계약서": { bg: "#EEF2FF", color: "#4F46E5" },
+  "제안서": { bg: "#FFF7ED", color: "#C2410C" },
+  "기타": { bg: "#F3F4F6", color: "#6B7280" },
+};
+
 function DetailDrawer({ deal, onClose, stageColorMap }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string> }) {
-  const [tab, setTab] = useState<"basic" | "quantity" | "memo">("basic");
-  const tabs = [
-    { key: "basic" as const, label: "기본정보" },
-    { key: "quantity" as const, label: "상세수량" },
-    { key: "memo" as const, label: "관리메모" },
+  const [tab, setTab] = useState<DrawerTab>("basic");
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [newMemo, setNewMemo] = useState("");
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => generateActivityLogs(deal));
+  const [files] = useState<AttachedFile[]>(() => generateFiles(deal));
+  const [aiExpanded, setAiExpanded] = useState(false);
+
+  const tabs: { key: DrawerTab; label: string; icon: typeof Info }[] = [
+    { key: "basic", label: "기본정보", icon: Info },
+    { key: "activity", label: "활동", icon: Activity },
+    { key: "files", label: "파일", icon: FileSpreadsheet },
+    { key: "related", label: "관련", icon: Users },
+    { key: "ai", label: "AI", icon: Sparkles },
   ];
 
+  const basicFields = [
+    { key: "company", label: "기업명", value: deal.company, editable: true },
+    { key: "contact", label: "담당자", value: deal.contact, editable: true },
+    { key: "position", label: "직책", value: deal.position, editable: true },
+    { key: "phone", label: "전화번호", value: "010-1234-5678", editable: true },
+    { key: "email", label: "이메일", value: `${deal.contact.toLowerCase()}@company.com`, editable: true },
+    { key: "service", label: "희망서비스", value: deal.service, editable: true },
+    { key: "quantity", label: "총수량", value: `${deal.quantity}`, editable: true },
+    { key: "amount", label: "견적금액", value: deal.amount, editable: true },
+    { key: "manager", label: "고객책임자", value: deal.manager, editable: true },
+    { key: "stage", label: "진행상태", value: deal.stage, editable: false },
+    { key: "status", label: "성공여부", value: deal.status, editable: false },
+    { key: "date", label: "등록일", value: deal.date, editable: false },
+  ];
+
+  const startEdit = (key: string, value: string) => {
+    setEditingField(key);
+    setEditValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const finishEdit = () => setEditingField(null);
+
+  const addMemoLog = () => {
+    if (!newMemo.trim()) return;
+    const log: ActivityLog = {
+      id: `a-${Date.now()}`,
+      type: "memo",
+      title: "메모 추가",
+      detail: newMemo.trim(),
+      date: new Date().toISOString().slice(0, 10),
+      user: deal.manager,
+    };
+    setActivityLogs((prev) => [log, ...prev]);
+    setNewMemo("");
+  };
+
+  // AI insight mock data
+  const aiInsights = {
+    winProb: 72,
+    companyInfo: `${deal.company}은(는) ${deal.service} 분야의 잠재 고객으로, 최근 디지털 전환에 높은 관심을 보이고 있습니다.`,
+    actions: [
+      { text: "이번 주 내 후속 미팅 일정 확정 권장", priority: "high" as const },
+      { text: "경쟁사 대비 가격 우위 포인트 정리 필요", priority: "medium" as const },
+      { text: "기술 검증(PoC) 제안서 준비", priority: "medium" as const },
+      { text: "의사결정권자 직접 미팅 추진", priority: "low" as const },
+    ],
+    strengths: ["서비스 적합도 높음", "예산 확보 완료 추정", "의사결정 빠른 조직"],
+    risks: ["경쟁사 제안 진행 중", "내부 승인 절차 복잡"],
+  };
+
   return (
-    <div className="w-[384px] h-full bg-white border-l flex flex-col shrink-0" style={{ borderColor: T.border }}>
+    <div className="w-[400px] h-full bg-white border-l flex flex-col shrink-0" style={{ borderColor: T.border }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: T.border }}>
-        <div className="flex items-center gap-3">
-          <span className="text-[1rem] text-[#1A1A1A]">{deal.company}</span>
+      <div className="px-6 py-4 border-b" style={{ borderColor: T.border }}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-[0.7rem] text-white" style={{ background: stageColorMap[deal.stage] || T.primary }}>
+              {deal.company.replace(/[\(\)주]/g, "").charAt(0)}
+            </div>
+            <div>
+              <span className="text-[1rem] text-[#1A1A1A] block">{deal.company}</span>
+              <span className="text-[0.65rem] text-[#999]">{deal.contact} · {deal.position}</span>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F7F8FA] transition-colors">
+            <X size={14} color="#999" />
+          </button>
+        </div>
+        <div className="flex items-center gap-2 mt-2">
           <span
-            className="px-2.5 py-0.5 rounded-md text-[0.7rem]"
-            style={{ background: (stageColorMap[deal.stage] || "#999") + "18", color: stageColorMap[deal.stage] || "#999" }}
+            className="px-2.5 py-0.5 rounded-md text-[0.65rem]"
+            style={{ background: (stageColorMap[deal.stage] || "#999") + "14", color: stageColorMap[deal.stage] || "#999" }}
           >
             {deal.stage}
           </span>
+          <span
+            className="px-2.5 py-0.5 rounded-md text-[0.65rem]"
+            style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}
+          >
+            {deal.status}
+          </span>
+          <span className="text-[0.7rem] text-[#1A1A1A] tabular-nums ml-auto font-medium">{deal.amount}</span>
         </div>
-        <button onClick={onClose} className="p-1 rounded hover:bg-[#F7F8FA] transition-colors">
-          <X size={14} color="#999" />
-        </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-4 px-6 pt-4 border-b" style={{ borderColor: T.border }}>
+      <div className="flex px-2 pt-1 border-b" style={{ borderColor: T.border }}>
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className="pb-3 text-[0.8rem] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2.5 text-[0.7rem] transition-colors rounded-t-lg"
             style={{
               color: tab === t.key ? T.primary : "#999",
               borderBottom: tab === t.key ? `2px solid ${T.primary}` : "2px solid transparent",
             }}
           >
+            <t.icon size={11} />
             {t.label}
           </button>
         ))}
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+      <div className="flex-1 overflow-y-auto">
+        {/* ── 기본정보 ── */}
         {tab === "basic" && (
-          <>
-            {[
-              { label: "기업명", value: deal.company },
-              { label: "담당자", value: deal.contact },
-              { label: "직책", value: deal.position },
-              { label: "전화번호", value: "010-1234-5678" },
-              { label: "이메일", value: `${deal.contact.toLowerCase()}@company.com` },
-              { label: "희망서비스", value: deal.service },
-              { label: "총수량", value: `${deal.quantity}개` },
-              { label: "견적금액", value: deal.amount },
-              { label: "고객책임자", value: deal.manager },
-              { label: "진행상태", value: deal.stage },
-              { label: "성공여부", value: deal.status },
-              { label: "등록일", value: deal.date },
-            ].map((field) => (
-              <div key={field.label} className="grid grid-cols-[120px_1fr] gap-2 items-center">
-                <span className="text-[0.75rem] text-[#999]">{field.label}</span>
-                <span className="text-[0.8rem] text-[#1A1A1A]">{field.value}</span>
-              </div>
-            ))}
-            <div className="mt-4 p-4 rounded-xl" style={{ background: "#F5F3FF", border: "1px solid #DDD6FE" }}>
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={13} color="#7C3AED" />
-                <span className="text-[0.8rem] text-[#7C3AED]">AI 기업정보 조회</span>
-              </div>
-              <p className="text-[0.7rem] text-[#8B5CF6]">클릭하여 이 기업의 상세정보를 AI로 분석합니다.</p>
-            </div>
-          </>
-        )}
-        {tab === "quantity" && (
-          <div className="space-y-3">
-            <p className="text-[0.85rem] text-[#1A1A1A]">상세 수량 정보</p>
-            {[
-              { item: "기본 라이선스", qty: deal.quantity, unit: "₩250,000" },
-              { item: "추가 모듈", qty: Math.floor(deal.quantity * 0.3), unit: "₩180,000" },
-              { item: "교육 서비스", qty: 2, unit: "₩500,000" },
-            ].map((row) => (
-              <div key={row.item} className="flex items-center justify-between py-2.5 px-3 rounded-lg" style={{ background: "#F8F9FA" }}>
-                <span className="text-[0.8rem] text-[#444]">{row.item}</span>
-                <span className="text-[0.8rem] text-[#1A1A1A]">{row.qty}개 × {row.unit}</span>
+          <div className="px-6 py-5 space-y-1">
+            {basicFields.map((field) => (
+              <div
+                key={field.key}
+                className="grid grid-cols-[100px_1fr] gap-2 items-center py-2 rounded-lg px-2 -mx-2 transition-colors hover:bg-[#FAFBFC] group/field"
+              >
+                <span className="text-[0.7rem] text-[#999]">{field.label}</span>
+                {editingField === field.key ? (
+                  <input
+                    autoFocus
+                    className="text-[0.8rem] text-[#1A1A1A] bg-white border rounded-lg px-2.5 py-1 focus:outline-none focus:border-[#1A472A]"
+                    style={{ borderColor: T.border }}
+                    value={editValues[field.key] || ""}
+                    onChange={(e) => setEditValues((p) => ({ ...p, [field.key]: e.target.value }))}
+                    onBlur={finishEdit}
+                    onKeyDown={(e) => { if (e.key === "Enter") finishEdit(); if (e.key === "Escape") { setEditingField(null); } }}
+                  />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {field.key === "stage" ? (
+                      <span className="inline-flex items-center gap-1.5 text-[0.7rem] px-2 py-0.5 rounded-md" style={{ background: (stageColorMap[field.value] || "#999") + "14", color: stageColorMap[field.value] || "#999" }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColorMap[field.value] || "#999" }} />
+                        {field.value}
+                      </span>
+                    ) : field.key === "status" ? (
+                      <span className="text-[0.7rem] px-2 py-0.5 rounded-md" style={{ background: statusColors[field.value]?.bg, color: statusColors[field.value]?.text }}>{field.value}</span>
+                    ) : (
+                      <span className="text-[0.8rem] text-[#1A1A1A]">{editValues[field.key] || field.value}</span>
+                    )}
+                    {field.editable && (
+                      <button
+                        onClick={() => startEdit(field.key, editValues[field.key] || field.value)}
+                        className="p-0.5 rounded opacity-0 group-hover/field:opacity-100 hover:bg-[#EFF5F1] transition-all"
+                      >
+                        <Pencil size={10} color={T.primary} />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
-        {tab === "memo" && (
-          <div>
-            <p className="text-[0.75rem] text-[#999] mb-3">관리 메모</p>
-            <textarea
-              className="w-full h-40 p-3 rounded-lg text-[0.8rem] text-[#1A1A1A] resize-none focus:outline-none"
-              style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }}
-              placeholder="메모를 입력하세요..."
-              defaultValue="초기 미팅 후 긍정적 반응. 다음 주 데모 예정."
-            />
+
+        {/* ── 활동 로그 ── */}
+        {tab === "activity" && (
+          <div className="px-6 py-5">
+            {/* Add memo input */}
+            <div className="flex gap-2 mb-5">
+              <input
+                className="flex-1 px-3 py-2 rounded-lg border text-[0.75rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#1A472A]"
+                style={{ borderColor: T.border }}
+                placeholder="메모 또는 활동 내용 추가..."
+                value={newMemo}
+                onChange={(e) => setNewMemo(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") addMemoLog(); }}
+              />
+              <button
+                onClick={addMemoLog}
+                className="px-3 py-2 rounded-lg text-[0.7rem] text-white shrink-0"
+                style={{ background: newMemo.trim() ? T.primary : "#CCC" }}
+              >
+                추가
+              </button>
+            </div>
+            {/* Timeline */}
+            <div className="relative">
+              <div className="absolute left-[15px] top-0 bottom-0 w-px" style={{ background: T.border }} />
+              <div className="space-y-4">
+                {activityLogs.map((log) => {
+                  const iconDef = ACTIVITY_ICONS[log.type];
+                  const Icon = iconDef.icon;
+                  return (
+                    <div key={log.id} className="flex gap-3 relative">
+                      <div className="w-[31px] h-[31px] rounded-full flex items-center justify-center shrink-0 z-10" style={{ background: iconDef.bg }}>
+                        <Icon size={13} color={iconDef.color} />
+                      </div>
+                      <div className="flex-1 pt-0.5">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[0.75rem] text-[#1A1A1A]">{log.title}</span>
+                        </div>
+                        <p className="text-[0.65rem] text-[#888] leading-relaxed">{log.detail}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[0.6rem] text-[#BBB] tabular-nums">{log.date}</span>
+                          <span className="text-[0.6rem] text-[#CCC]">·</span>
+                          <span className="text-[0.6rem] text-[#BBB]">{log.user}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── 파일 ── */}
+        {tab === "files" && (
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[0.8rem] text-[#1A1A1A]">첨부 파일</span>
+              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[0.7rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
+                <Upload size={11} /> 파일 추가
+              </button>
+            </div>
+            <div className="space-y-2">
+              {files.map((f) => {
+                const typeColor = FILE_TYPE_COLORS[f.type] || FILE_TYPE_COLORS["기타"];
+                return (
+                  <div key={f.id} className="flex items-center gap-3 p-3 rounded-xl border hover:shadow-sm transition-all" style={{ borderColor: T.border }}>
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: typeColor.bg }}>
+                      <FileSpreadsheet size={15} color={typeColor.color} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[0.75rem] text-[#1A1A1A] truncate">{f.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[0.6rem] px-1.5 py-0.5 rounded" style={{ background: typeColor.bg, color: typeColor.color }}>{f.type}</span>
+                        <span className="text-[0.6rem] text-[#BBB]">{f.size}</span>
+                        <span className="text-[0.6rem] text-[#CCC]">·</span>
+                        <span className="text-[0.6rem] text-[#BBB] tabular-nums">{f.date}</span>
+                      </div>
+                    </div>
+                    <button className="p-1.5 rounded-lg hover:bg-[#F7F8FA] transition-colors shrink-0">
+                      <Download size={12} color="#999" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {files.length === 0 && (
+              <div className="flex flex-col items-center py-10 text-center">
+                <FileSpreadsheet size={24} color="#DDD" className="mb-3" />
+                <p className="text-[0.75rem] text-[#999]">첨부된 파일이 없습니다</p>
+                <p className="text-[0.65rem] text-[#CCC] mt-1">견적서, 계약서, 제안서 등을 추가하세요</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 관련 항목 ── */}
+        {tab === "related" && (
+          <div className="px-6 py-5 space-y-5">
+            {/* 연결된 기업 */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Target size={13} color={T.primary} />
+                <span className="text-[0.8rem] text-[#1A1A1A]">연결된 기업</span>
+              </div>
+              <div className="p-3.5 rounded-xl border" style={{ borderColor: T.border }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-[0.7rem] text-white" style={{ background: stageColorMap[deal.stage] || T.primary }}>
+                    {deal.company.replace(/[\(\)주]/g, "").charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-[0.8rem] text-[#1A1A1A]">{deal.company}</p>
+                    <p className="text-[0.6rem] text-[#999]">{deal.service} · {deal.stage}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 연결된 연락처 */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <User size={13} color="#6366F1" />
+                <span className="text-[0.8rem] text-[#1A1A1A]">연락처</span>
+              </div>
+              <div className="space-y-2">
+                {[
+                  { name: deal.contact, role: deal.position, type: "주요 담당자" },
+                  { name: deal.manager, role: "고객책임자", type: "내부 담당" },
+                ].map((person) => (
+                  <div key={person.name + person.role} className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: T.border }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[0.55rem] text-white" style={{ background: "#94A3B8" }}>
+                      {person.name.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[0.75rem] text-[#1A1A1A]">{person.name}</p>
+                      <p className="text-[0.6rem] text-[#999]">{person.role}</p>
+                    </div>
+                    <span className="text-[0.55rem] px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#666" }}>{person.type}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 관련 딜 */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <DollarSign size={13} color="#F59E0B" />
+                <span className="text-[0.8rem] text-[#1A1A1A]">같은 기업 딜</span>
+              </div>
+              <div className="p-4 rounded-xl text-center" style={{ background: "#F8F9FA" }}>
+                <p className="text-[0.7rem] text-[#BBB]">이 기업의 다른 딜이 없습니다</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── AI 인사이트 ── */}
+        {tab === "ai" && (
+          <div className="px-6 py-5 space-y-4">
+            {/* Win Probability */}
+            <div className="p-4 rounded-xl" style={{ background: "#F5F3FF", border: "1px solid #DDD6FE" }}>
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={14} color="#7C3AED" />
+                <span className="text-[0.8rem] text-[#7C3AED] font-medium">딜 성사 확률</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="relative w-[60px] h-[60px]">
+                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="#EDE9FE" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="#7C3AED" strokeWidth="3" strokeDasharray={`${aiInsights.winProb * 0.88} 88`} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[0.9rem] font-semibold text-[#7C3AED] tabular-nums">{aiInsights.winProb}%</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-[0.7rem] text-[#666] leading-relaxed">현재 단계와 활동 이력 기반으로 분석한 예상 수주 확률입니다.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Company Info */}
+            <div className="p-4 rounded-xl border" style={{ borderColor: T.border }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Info size={12} color="#6366F1" />
+                  <span className="text-[0.75rem] text-[#1A1A1A]">기업정보 요약</span>
+                </div>
+                <button onClick={() => setAiExpanded(!aiExpanded)} className="p-1 rounded hover:bg-[#F7F8FA]">
+                  {aiExpanded ? <ChevronUp size={12} color="#999" /> : <ChevronDown size={12} color="#999" />}
+                </button>
+              </div>
+              <p className="text-[0.7rem] text-[#666] leading-relaxed">{aiInsights.companyInfo}</p>
+              {aiExpanded && (
+                <div className="mt-3 pt-3 border-t space-y-2" style={{ borderColor: T.border }}>
+                  <div>
+                    <span className="text-[0.6rem] text-[#10B981] font-medium">강점</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {aiInsights.strengths.map((s) => (
+                        <span key={s} className="text-[0.6rem] px-2 py-0.5 rounded-full" style={{ background: "#ECFDF5", color: "#059669" }}>{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[0.6rem] text-[#EF4444] font-medium">리스크</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {aiInsights.risks.map((r) => (
+                        <span key={r} className="text-[0.6rem] px-2 py-0.5 rounded-full" style={{ background: "#FEF2F2", color: "#DC2626" }}>{r}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Recommended Actions */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={13} color="#F59E0B" />
+                <span className="text-[0.8rem] text-[#1A1A1A]">추천 액션</span>
+              </div>
+              <div className="space-y-2">
+                {aiInsights.actions.map((action, idx) => {
+                  const pColor = action.priority === "high" ? { bg: "#FEF2F2", color: "#DC2626", label: "긴급" } :
+                    action.priority === "medium" ? { bg: "#FFFBEB", color: "#B45309", label: "보통" } :
+                    { bg: "#F3F4F6", color: "#6B7280", label: "낮음" };
+                  return (
+                    <div key={idx} className="flex items-start gap-3 p-3 rounded-xl border" style={{ borderColor: T.border }}>
+                      <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 text-[0.55rem]" style={{ background: pColor.bg, color: pColor.color }}>
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[0.7rem] text-[#1A1A1A] leading-relaxed">{action.text}</p>
+                      </div>
+                      <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: pColor.bg, color: pColor.color }}>{pColor.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t" style={{ borderColor: T.border }}>
+      <div className="px-6 py-3 border-t flex items-center gap-2" style={{ borderColor: T.border }}>
         <button
-          className="w-full py-2.5 rounded-lg text-[0.8rem] text-white transition-colors"
+          className="flex-1 py-2.5 rounded-lg text-[0.75rem] text-white transition-colors"
           style={{ background: T.success }}
         >
           수주확정으로 변경
+        </button>
+        <button
+          className="px-3 py-2.5 rounded-lg text-[0.75rem] border transition-colors hover:bg-[#F7F8FA]"
+          style={{ borderColor: T.border, color: "#666" }}
+        >
+          <MoreHorizontal size={14} />
         </button>
       </div>
     </div>
