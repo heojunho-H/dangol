@@ -1761,7 +1761,7 @@ function StageDropdown({ currentStage, stageNames, stageColorMap, onChange, comp
 }
 
 /* ─── DETAIL DRAWER ─── */
-type DrawerTab = "basic" | "activity" | "files" | "related" | "ai";
+type DrawerTab = "basic" | "activity" | "files";
 
 interface ActivityLog {
   id: string;
@@ -1821,6 +1821,7 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => generateActivityLogs(deal));
   const [files] = useState<AttachedFile[]>(() => generateFiles(deal));
   const [aiExpanded, setAiExpanded] = useState(false);
+  const [aiCardOpen, setAiCardOpen] = useState(false);
   const [drawerWidth, setDrawerWidth] = useState(400);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -1847,8 +1848,6 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
     { key: "basic", label: "기본정보", icon: Info },
     { key: "activity", label: "활동", icon: Activity },
     { key: "files", label: "파일", icon: FileSpreadsheet },
-    { key: "related", label: "관련", icon: Users },
-    { key: "ai", label: "AI", icon: Sparkles },
   ];
 
   const basicFields = [
@@ -1966,6 +1965,82 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
         {/* ── 기본정보 ── */}
         {tab === "basic" && (
           <div className="px-6 py-5 space-y-1">
+            {/* AI 인사이트 (접힌 카드) */}
+            <div className="mb-4 rounded-xl border overflow-hidden" style={{ borderColor: "#DDD6FE", background: aiCardOpen ? "#FAFAFF" : "#F5F3FF" }}>
+              <button
+                onClick={() => setAiCardOpen(!aiCardOpen)}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-[#EDE9FE]/40 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles size={13} color="#7C3AED" />
+                  <span className="text-[0.75rem] text-[#7C3AED] font-medium">AI 인사이트</span>
+                  <span className="text-[0.7rem] text-[#7C3AED]/70 tabular-nums">성사확률 {aiInsights.winProb}%</span>
+                </div>
+                {aiCardOpen ? <ChevronUp size={13} color="#7C3AED" /> : <ChevronDown size={13} color="#7C3AED" />}
+              </button>
+              {aiCardOpen && (
+                <div className="px-3.5 pb-3.5 pt-1 space-y-3 border-t" style={{ borderColor: "#DDD6FE" }}>
+                  {/* Win Probability */}
+                  <div className="flex items-center gap-3 pt-3">
+                    <div className="relative w-[52px] h-[52px] shrink-0">
+                      <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#EDE9FE" strokeWidth="3" />
+                        <circle cx="18" cy="18" r="14" fill="none" stroke="#7C3AED" strokeWidth="3" strokeDasharray={`${aiInsights.winProb * 0.88} 88`} strokeLinecap="round" />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-[0.8rem] font-semibold text-[#7C3AED] tabular-nums">{aiInsights.winProb}%</span>
+                      </div>
+                    </div>
+                    <p className="text-[0.7rem] text-[#666] leading-relaxed flex-1">{aiInsights.companyInfo}</p>
+                  </div>
+
+                  {/* Strengths / Risks */}
+                  <div className="space-y-1.5">
+                    <div>
+                      <span className="text-[0.6rem] text-[#10B981] font-medium">강점</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {aiInsights.strengths.map((s) => (
+                          <span key={s} className="text-[0.6rem] px-2 py-0.5 rounded-full" style={{ background: "#ECFDF5", color: "#059669" }}>{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-[0.6rem] text-[#EF4444] font-medium">리스크</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {aiInsights.risks.map((r) => (
+                          <span key={r} className="text-[0.6rem] px-2 py-0.5 rounded-full" style={{ background: "#FEF2F2", color: "#DC2626" }}>{r}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recommended Actions */}
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Zap size={11} color="#F59E0B" />
+                      <span className="text-[0.7rem] text-[#1A1A1A]">추천 액션</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {aiInsights.actions.map((action, idx) => {
+                        const pColor = action.priority === "high" ? { bg: "#FEF2F2", color: "#DC2626", label: "긴급" } :
+                          action.priority === "medium" ? { bg: "#FFFBEB", color: "#B45309", label: "보통" } :
+                          { bg: "#F3F4F6", color: "#6B7280", label: "낮음" };
+                        return (
+                          <div key={idx} className="flex items-start gap-2 p-2 rounded-lg border bg-white" style={{ borderColor: T.border }}>
+                            <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 mt-0.5 text-[0.55rem]" style={{ background: pColor.bg, color: pColor.color }}>
+                              {idx + 1}
+                            </div>
+                            <p className="flex-1 text-[0.7rem] text-[#1A1A1A] leading-relaxed">{action.text}</p>
+                            <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: pColor.bg, color: pColor.color }}>{pColor.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {basicFields.map((field) => (
               <div
                 key={field.key}
@@ -2106,152 +2181,6 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
           </div>
         )}
 
-        {/* ── 관련 항목 ── */}
-        {tab === "related" && (
-          <div className="px-6 py-5 space-y-5">
-            {/* 연결된 기업 */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Target size={13} color={T.primary} />
-                <span className="text-[0.8rem] text-[#1A1A1A]">연결된 기업</span>
-              </div>
-              <div className="p-3.5 rounded-xl border" style={{ borderColor: T.border }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center text-[0.7rem] text-white" style={{ background: stageColorMap[deal.stage] || T.primary }}>
-                    {deal.company.replace(/[\(\)주]/g, "").charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-[0.8rem] text-[#1A1A1A]">{deal.company}</p>
-                    <p className="text-[0.6rem] text-[#999]">{deal.service} · {deal.stage}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 연결된 연락처 */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <User size={13} color="#6366F1" />
-                <span className="text-[0.8rem] text-[#1A1A1A]">연락처</span>
-              </div>
-              <div className="space-y-2">
-                {[
-                  { name: deal.contact, role: deal.position, type: "주요 담당자" },
-                  { name: deal.manager, role: "고객책임자", type: "내부 담당" },
-                ].map((person) => (
-                  <div key={person.name + person.role} className="flex items-center gap-3 p-3 rounded-xl border" style={{ borderColor: T.border }}>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[0.55rem] text-white" style={{ background: "#94A3B8" }}>
-                      {person.name.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-[0.75rem] text-[#1A1A1A]">{person.name}</p>
-                      <p className="text-[0.6rem] text-[#999]">{person.role}</p>
-                    </div>
-                    <span className="text-[0.55rem] px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#666" }}>{person.type}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 관련 딜 */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <DollarSign size={13} color="#F59E0B" />
-                <span className="text-[0.8rem] text-[#1A1A1A]">같은 기업 딜</span>
-              </div>
-              <div className="p-4 rounded-xl text-center" style={{ background: "#F8F9FA" }}>
-                <p className="text-[0.7rem] text-[#BBB]">이 기업의 다른 딜이 없습니다</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── AI 인사이트 ── */}
-        {tab === "ai" && (
-          <div className="px-6 py-5 space-y-4">
-            {/* Win Probability */}
-            <div className="p-4 rounded-xl" style={{ background: "#F5F3FF", border: "1px solid #DDD6FE" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={14} color="#7C3AED" />
-                <span className="text-[0.8rem] text-[#7C3AED] font-medium">딜 성사 확률</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="relative w-[60px] h-[60px]">
-                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#EDE9FE" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="14" fill="none" stroke="#7C3AED" strokeWidth="3" strokeDasharray={`${aiInsights.winProb * 0.88} 88`} strokeLinecap="round" />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-[0.9rem] font-semibold text-[#7C3AED] tabular-nums">{aiInsights.winProb}%</span>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-[0.7rem] text-[#666] leading-relaxed">현재 단계와 활동 이력 기반으로 분석한 예상 수주 확률입니다.</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Company Info */}
-            <div className="p-4 rounded-xl border" style={{ borderColor: T.border }}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Info size={12} color="#6366F1" />
-                  <span className="text-[0.75rem] text-[#1A1A1A]">기업정보 요약</span>
-                </div>
-                <button onClick={() => setAiExpanded(!aiExpanded)} className="p-1 rounded hover:bg-[#F7F8FA]">
-                  {aiExpanded ? <ChevronUp size={12} color="#999" /> : <ChevronDown size={12} color="#999" />}
-                </button>
-              </div>
-              <p className="text-[0.7rem] text-[#666] leading-relaxed">{aiInsights.companyInfo}</p>
-              {aiExpanded && (
-                <div className="mt-3 pt-3 border-t space-y-2" style={{ borderColor: T.border }}>
-                  <div>
-                    <span className="text-[0.6rem] text-[#10B981] font-medium">강점</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {aiInsights.strengths.map((s) => (
-                        <span key={s} className="text-[0.6rem] px-2 py-0.5 rounded-full" style={{ background: "#ECFDF5", color: "#059669" }}>{s}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-[0.6rem] text-[#EF4444] font-medium">리스크</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {aiInsights.risks.map((r) => (
-                        <span key={r} className="text-[0.6rem] px-2 py-0.5 rounded-full" style={{ background: "#FEF2F2", color: "#DC2626" }}>{r}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Recommended Actions */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <Zap size={13} color="#F59E0B" />
-                <span className="text-[0.8rem] text-[#1A1A1A]">추천 액션</span>
-              </div>
-              <div className="space-y-2">
-                {aiInsights.actions.map((action, idx) => {
-                  const pColor = action.priority === "high" ? { bg: "#FEF2F2", color: "#DC2626", label: "긴급" } :
-                    action.priority === "medium" ? { bg: "#FFFBEB", color: "#B45309", label: "보통" } :
-                    { bg: "#F3F4F6", color: "#6B7280", label: "낮음" };
-                  return (
-                    <div key={idx} className="flex items-start gap-3 p-3 rounded-xl border" style={{ borderColor: T.border }}>
-                      <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 mt-0.5 text-[0.55rem]" style={{ background: pColor.bg, color: pColor.color }}>
-                        {idx + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[0.7rem] text-[#1A1A1A] leading-relaxed">{action.text}</p>
-                      </div>
-                      <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: pColor.bg, color: pColor.color }}>{pColor.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Footer */}
