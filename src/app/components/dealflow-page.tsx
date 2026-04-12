@@ -437,6 +437,53 @@ function fmtAmt(manWon: number): string {
 
 const DEFAULT_ACTIVE_WIDGETS = ["kpi-deals", "kpi-winrate", "kpi-amount", "kpi-winrate-amount", "funnel", "donut"];
 
+/* ─── CUSTOM KPI / GOAL TYPES ─── */
+interface CustomKpiDef {
+  id: string;
+  name: string;
+  formula: "won_amount_ratio" | "avg_deal_amount" | "conversion_rate" | "custom_ratio";
+  // for custom_ratio: numerator_field / denominator_field × 100
+  numerator?: "wonAmt" | "totalAmt" | "wonCount" | "totalCount" | "activeCount";
+  denominator?: "wonAmt" | "totalAmt" | "wonCount" | "totalCount" | "activeCount";
+  suffix: string;
+}
+
+const FORMULA_PRESETS: { key: CustomKpiDef["formula"]; label: string; desc: string }[] = [
+  { key: "won_amount_ratio", label: "수주금액 / 견적금액", desc: "수주 금액 대비 전체 견적 금액 비율" },
+  { key: "avg_deal_amount", label: "평균 딜 금액", desc: "전체 딜의 평균 견적 금액" },
+  { key: "conversion_rate", label: "전환율", desc: "성공 딜 수 / 전체 딜 수 × 100" },
+  { key: "custom_ratio", label: "직접 정의", desc: "분자/분모를 직접 선택하여 비율 계산" },
+];
+
+const KPI_VARS: { key: string; label: string }[] = [
+  { key: "wonAmt", label: "수주 금액" },
+  { key: "totalAmt", label: "총 견적금액" },
+  { key: "wonCount", label: "수주 건수" },
+  { key: "totalCount", label: "총 딜 수" },
+  { key: "activeCount", label: "활성 딜 수" },
+];
+
+interface GoalDef {
+  id: string;
+  name: string;
+  targetAmount: number; // 만원 단위
+  period: "monthly" | "quarterly";
+}
+
+function computeCustomKpi(kpi: CustomKpiDef, vars: Record<string, number>): number {
+  switch (kpi.formula) {
+    case "won_amount_ratio": return vars.totalAmt > 0 ? Math.round((vars.wonAmt / vars.totalAmt) * 100) : 0;
+    case "avg_deal_amount": return vars.totalCount > 0 ? Math.round(vars.totalAmt / vars.totalCount) : 0;
+    case "conversion_rate": return vars.totalCount > 0 ? Math.round((vars.wonCount / vars.totalCount) * 100) : 0;
+    case "custom_ratio": {
+      const num = vars[kpi.numerator || "wonAmt"] || 0;
+      const den = vars[kpi.denominator || "totalAmt"] || 1;
+      return den > 0 ? Math.round((num / den) * 100) : 0;
+    }
+    default: return 0;
+  }
+}
+
 /* ─── ONBOARDING FLOW ─── */
 function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void }) {
   const [step, setStep] = useState(1);
@@ -1495,6 +1542,195 @@ function AddViewModal({
 /* ─── VIEW TYPE ─── */
 type ViewType = "table" | "kanban" | "timeline";
 
+/* ─── CUSTOM KPI MODAL ─── */
+function CustomKpiModal({ onAdd, onClose }: { onAdd: (kpi: CustomKpiDef) => void; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [formula, setFormula] = useState<CustomKpiDef["formula"]>("won_amount_ratio");
+  const [numerator, setNumerator] = useState<string>("wonAmt");
+  const [denominator, setDenominator] = useState<string>("totalAmt");
+
+  const handleAdd = () => {
+    if (!name.trim()) return;
+    const preset = FORMULA_PRESETS.find((p) => p.key === formula);
+    onAdd({
+      id: `ckpi-${Date.now()}`,
+      name: name.trim(),
+      formula,
+      numerator: numerator as CustomKpiDef["numerator"],
+      denominator: denominator as CustomKpiDef["denominator"],
+      suffix: preset?.desc || "",
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-[440px] flex flex-col" style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-7 py-5 border-b" style={{ borderColor: T.border }}>
+          <div>
+            <h2 className="text-[1.1rem] text-[#1A1A1A]">커스텀 KPI 추가</h2>
+            <p className="text-[0.7rem] text-[#999] mt-1">나만의 KPI 수식을 정의하세요</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#F7F8FA]"><X size={16} color="#999" /></button>
+        </div>
+        <div className="px-7 py-5 space-y-4">
+          <div>
+            <label className="text-[0.75rem] text-[#666] mb-1.5 block">KPI 이름</label>
+            <input
+              autoFocus
+              className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#6366F1]"
+              style={{ borderColor: T.border }}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 수주 전환율"
+            />
+          </div>
+          <div>
+            <label className="text-[0.75rem] text-[#666] mb-2 block">수식 선택</label>
+            <div className="space-y-2">
+              {FORMULA_PRESETS.map((p) => {
+                const active = formula === p.key;
+                return (
+                  <button
+                    key={p.key}
+                    onClick={() => setFormula(p.key)}
+                    className="w-full flex items-start gap-3 p-3 rounded-xl border-2 text-left transition-all"
+                    style={{
+                      borderColor: active ? "#6366F1" : T.border,
+                      background: active ? "#FAFAFE" : "#fff",
+                    }}
+                  >
+                    <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5" style={{ borderColor: active ? "#6366F1" : "#DDD" }}>
+                      {active && <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#6366F1" }} />}
+                    </div>
+                    <div>
+                      <p className="text-[0.8rem] text-[#1A1A1A]">{p.label}</p>
+                      <p className="text-[0.65rem] text-[#999] mt-0.5">{p.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {formula === "custom_ratio" && (
+            <div className="flex items-center gap-3 p-3 rounded-xl" style={{ background: "#F8F9FA" }}>
+              <select className="px-3 py-2 rounded-lg border text-[0.75rem] bg-white flex-1" style={{ borderColor: T.border }} value={numerator} onChange={(e) => setNumerator(e.target.value)}>
+                {KPI_VARS.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
+              </select>
+              <span className="text-[0.8rem] text-[#999]">÷</span>
+              <select className="px-3 py-2 rounded-lg border text-[0.75rem] bg-white flex-1" style={{ borderColor: T.border }} value={denominator} onChange={(e) => setDenominator(e.target.value)}>
+                {KPI_VARS.map((v) => <option key={v.key} value={v.key}>{v.label}</option>)}
+              </select>
+              <span className="text-[0.8rem] text-[#999]">× 100</span>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-end gap-3 px-7 py-4 border-t" style={{ borderColor: T.border }}>
+          <button onClick={onClose} className="px-5 py-2.5 rounded-lg text-[0.75rem] text-[#666] border hover:bg-[#F7F8FA]" style={{ borderColor: T.border }}>취소</button>
+          <button
+            onClick={handleAdd}
+            className="px-6 py-2.5 rounded-lg text-[0.75rem] text-white"
+            style={{ background: name.trim() ? "#6366F1" : "#CCC", cursor: name.trim() ? "pointer" : "not-allowed" }}
+          >
+            추가
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── GOAL MODAL ─── */
+function GoalModal({ onAdd, onClose }: { onAdd: (goal: GoalDef) => void; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [target, setTarget] = useState("");
+  const [period, setPeriod] = useState<"monthly" | "quarterly">("monthly");
+
+  const handleAdd = () => {
+    if (!name.trim() || !target) return;
+    onAdd({
+      id: `goal-${Date.now()}`,
+      name: name.trim(),
+      targetAmount: parseFloat(target) || 0,
+      period,
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-[400px] flex flex-col" style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-7 py-5 border-b" style={{ borderColor: T.border }}>
+          <div>
+            <h2 className="text-[1.1rem] text-[#1A1A1A]">목표 설정</h2>
+            <p className="text-[0.7rem] text-[#999] mt-1">월간/분기 수주 목표 금액을 설정하세요</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#F7F8FA]"><X size={16} color="#999" /></button>
+        </div>
+        <div className="px-7 py-5 space-y-4">
+          <div>
+            <label className="text-[0.75rem] text-[#666] mb-1.5 block">목표 이름</label>
+            <input
+              autoFocus
+              className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#B45309]"
+              style={{ borderColor: T.border }}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="예: 4월 수주 목표"
+            />
+          </div>
+          <div>
+            <label className="text-[0.75rem] text-[#666] mb-1.5 block">기간</label>
+            <div className="flex gap-2">
+              {([{ key: "monthly" as const, label: "월간" }, { key: "quarterly" as const, label: "분기" }]).map((p) => (
+                <button
+                  key={p.key}
+                  onClick={() => setPeriod(p.key)}
+                  className="flex-1 py-2.5 rounded-lg border-2 text-[0.8rem] transition-all"
+                  style={{
+                    borderColor: period === p.key ? "#F59E0B" : T.border,
+                    background: period === p.key ? "#FFFBEB" : "#fff",
+                    color: period === p.key ? "#B45309" : "#666",
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-[0.75rem] text-[#666] mb-1.5 block">목표 금액 (만원)</label>
+            <div className="relative">
+              <input
+                type="number"
+                className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#B45309] pr-12"
+                style={{ borderColor: T.border }}
+                value={target}
+                onChange={(e) => setTarget(e.target.value)}
+                placeholder="예: 50000"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[0.7rem] text-[#BBB]">만원</span>
+            </div>
+            {target && (
+              <p className="text-[0.65rem] text-[#999] mt-1.5">= {fmtAmt(parseFloat(target) || 0)}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-3 px-7 py-4 border-t" style={{ borderColor: T.border }}>
+          <button onClick={onClose} className="px-5 py-2.5 rounded-lg text-[0.75rem] text-[#666] border hover:bg-[#F7F8FA]" style={{ borderColor: T.border }}>취소</button>
+          <button
+            onClick={handleAdd}
+            className="px-6 py-2.5 rounded-lg text-[0.75rem] text-white"
+            style={{ background: name.trim() && target ? "#F59E0B" : "#CCC", cursor: name.trim() && target ? "pointer" : "not-allowed" }}
+          >
+            추가
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── KANBAN: DRAG ITEM TYPE ─── */
 const DEAL_DRAG_TYPE = "DEAL_CARD";
 
@@ -2014,7 +2250,13 @@ function DealflowPageInner() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showSortPanel, setShowSortPanel] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-  const [activeWidgets, setActiveWidgets] = useState<Set<string>>(new Set(DEFAULT_ACTIVE_WIDGETS));
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(DEFAULT_ACTIVE_WIDGETS);
+  const [widgetSizes, setWidgetSizes] = useState<Record<string, number>>({});
+  const [customKpis, setCustomKpis] = useState<CustomKpiDef[]>([]);
+  const [goals, setGoals] = useState<GoalDef[]>([]);
+  const [showCustomKpiModal, setShowCustomKpiModal] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [widgetDragIdx, setWidgetDragIdx] = useState<number | null>(null);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [customerDeals, setCustomerDeals] = useState<Deal[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
@@ -2062,21 +2304,37 @@ function DealflowPageInner() {
     if (activeViewId === id) setActiveViewId(savedViews[0].id);
   };
 
+  const activeWidgets = useMemo(() => new Set(widgetOrder), [widgetOrder]);
+
   const toggleWidget = (id: string) => {
-    setActiveWidgets((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setWidgetOrder((prev) =>
+      prev.includes(id) ? prev.filter((w) => w !== id) : [...prev, id]
+    );
   };
 
   const removeWidget = (id: string) => {
-    setActiveWidgets((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
+    setWidgetOrder((prev) => prev.filter((w) => w !== id));
+  };
+
+  const resizeWidget = (id: string, newSpan: number) => {
+    setWidgetSizes((prev) => ({ ...prev, [id]: newSpan }));
+  };
+
+  const handleWidgetDragStart = (idx: number) => setWidgetDragIdx(idx);
+  const handleWidgetDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (widgetDragIdx === null || widgetDragIdx === idx) return;
+    setWidgetOrder((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(widgetDragIdx, 1);
+      next.splice(idx, 0, item);
       return next;
     });
+    setWidgetDragIdx(idx);
   };
+  const handleWidgetDragEnd = () => setWidgetDragIdx(null);
+
+  const getWidgetSpan = (w: WidgetDef) => widgetSizes[w.id] ?? w.colSpan;
 
   const filteredDeals = useMemo(() => {
     const filtered = applyFilters(customerDeals, filters, searchQuery);
@@ -2192,9 +2450,23 @@ function DealflowPageInner() {
                     <div className="flex items-center gap-3">
                       <LayoutGrid size={16} color={T.primary} />
                       <span className="text-[1.1rem] text-[#1A1A1A]">대시보드</span>
-                      <span className="text-[0.7rem] text-[#999]">{activeWidgets.size}개 위젯</span>
+                      <span className="text-[0.7rem] text-[#999]">{widgetOrder.length}개 위젯</span>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowCustomKpiModal(true)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#EEF2FF]"
+                        style={{ color: "#6366F1", border: `1px solid ${T.border}` }}
+                      >
+                        <Zap size={12} /> 커스텀 KPI
+                      </button>
+                      <button
+                        onClick={() => setShowGoalModal(true)}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#FFFBEB]"
+                        style={{ color: "#B45309", border: `1px solid ${T.border}` }}
+                      >
+                        <Gauge size={12} /> 목표 설정
+                      </button>
                       <button
                         onClick={() => setCustomizeMode(true)}
                         className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#EFF5F1]"
@@ -2214,30 +2486,126 @@ function DealflowPageInner() {
 
                   {!dashboardCollapsed && (
                     <>
-                      {activeWidgets.size > 0 ? (
+                      {(widgetOrder.length > 0 || customKpis.length > 0 || goals.length > 0) ? (
                         <div className="grid grid-cols-4 gap-4">
-                          {allWidgets
-                            .filter((w) => activeWidgets.has(w.id))
-                            .map((w) => (
+                          {/* Custom KPI widgets */}
+                          {customKpis.map((kpi) => {
+                            const vars = {
+                              wonAmt: customerDeals.filter((d) => d.status === "성공").reduce((s, d) => s + parseAmt(d.amount), 0),
+                              totalAmt: customerDeals.reduce((s, d) => s + parseAmt(d.amount), 0),
+                              wonCount: customerDeals.filter((d) => d.status === "성공").length,
+                              totalCount: customerDeals.length,
+                              activeCount: customerDeals.filter((d) => d.status === "진행중").length,
+                            };
+                            const result = computeCustomKpi(kpi, vars);
+                            const isPercent = kpi.formula !== "avg_deal_amount";
+                            return (
+                              <div key={kpi.id} className="bg-white rounded-xl p-5 border relative group" style={{ borderColor: "#6366F1", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                <button onClick={() => setCustomKpis((prev) => prev.filter((k) => k.id !== kpi.id))} className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FEF2F2] z-10"><X size={10} color={T.danger} /></button>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#EEF2FF" }}><Zap size={14} color="#6366F1" /></div>
+                                  <span className="text-[0.7rem] text-[#888]">{kpi.name}</span>
+                                </div>
+                                <p className="text-[1.5rem] text-[#1A1A1A] tabular-nums font-semibold">{isPercent ? `${result}%` : fmtAmt(result)}</p>
+                                <p className="text-[0.6rem] text-[#BBB] mt-1">{kpi.suffix}</p>
+                              </div>
+                            );
+                          })}
+
+                          {/* Goal gauge widgets */}
+                          {goals.map((goal) => {
+                            const wonAmt = customerDeals.filter((d) => d.status === "성공").reduce((s, d) => s + parseAmt(d.amount), 0);
+                            const pct = goal.targetAmount > 0 ? Math.min(Math.round((wonAmt / goal.targetAmount) * 100), 100) : 0;
+                            const gaugeColor = pct >= 80 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
+                            return (
+                              <div key={goal.id} className="bg-white rounded-xl p-5 border relative group" style={{ borderColor: "#F59E0B", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                                <button onClick={() => setGoals((prev) => prev.filter((g) => g.id !== goal.id))} className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FEF2F2] z-10"><X size={10} color={T.danger} /></button>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#FFFBEB" }}><Gauge size={14} color="#B45309" /></div>
+                                  <span className="text-[0.7rem] text-[#888]">{goal.name}</span>
+                                  <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "#FFFBEB", color: "#B45309" }}>{goal.period === "monthly" ? "월간" : "분기"}</span>
+                                </div>
+                                {/* Gauge */}
+                                <div className="flex items-center gap-4">
+                                  <div className="relative w-[72px] h-[72px]">
+                                    <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                                      <circle cx="18" cy="18" r="14" fill="none" stroke="#F0F0F0" strokeWidth="3.5" />
+                                      <circle cx="18" cy="18" r="14" fill="none" stroke={gaugeColor} strokeWidth="3.5" strokeDasharray={`${pct * 0.88} 88`} strokeLinecap="round" />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className="text-[0.9rem] font-semibold tabular-nums" style={{ color: gaugeColor }}>{pct}%</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-baseline gap-1.5 mb-1">
+                                      <span className="text-[1rem] text-[#1A1A1A] font-semibold tabular-nums">{fmtAmt(wonAmt)}</span>
+                                      <span className="text-[0.65rem] text-[#BBB]">/ {fmtAmt(goal.targetAmount)}</span>
+                                    </div>
+                                    <div className="w-full h-[6px] rounded-full bg-[#F0F0F0]">
+                                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: gaugeColor }} />
+                                    </div>
+                                    <p className="text-[0.6rem] text-[#999] mt-1.5">잔여 {fmtAmt(Math.max(goal.targetAmount - wonAmt, 0))}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Standard widgets — draggable & resizable */}
+                          {widgetOrder.map((wId, idx) => {
+                            const w = allWidgets.find((x) => x.id === wId);
+                            if (!w) return null;
+                            const span = getWidgetSpan(w);
+                            return (
                               <div
                                 key={w.id}
-                                className="bg-white rounded-xl p-5 border relative group"
+                                draggable
+                                onDragStart={() => handleWidgetDragStart(idx)}
+                                onDragOver={(e) => handleWidgetDragOver(e, idx)}
+                                onDragEnd={handleWidgetDragEnd}
+                                className="bg-white rounded-xl p-5 border relative group transition-all"
                                 style={{
-                                  borderColor: T.border,
-                                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-                                  gridColumn: `span ${w.colSpan}`,
+                                  borderColor: widgetDragIdx === idx ? T.primary : T.border,
+                                  boxShadow: widgetDragIdx === idx ? "0 4px 16px rgba(0,0,0,0.1)" : "0 1px 3px rgba(0,0,0,0.04)",
+                                  gridColumn: `span ${span}`,
+                                  cursor: "grab",
+                                  opacity: widgetDragIdx === idx ? 0.7 : 1,
                                 }}
                               >
-                                <button
-                                  onClick={() => removeWidget(w.id)}
-                                  className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FEF2F2] z-10"
-                                  title="위젯 제거"
-                                >
-                                  <X size={10} color={T.danger} />
-                                </button>
+                                {/* Drag handle indicator */}
+                                <div className="absolute top-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <GripVertical size={12} className="text-[#CCC]" />
+                                </div>
+                                {/* Controls */}
+                                <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                  {/* Resize buttons */}
+                                  {[1, 2, 3].map((s) => (
+                                    <button
+                                      key={s}
+                                      onClick={(e) => { e.stopPropagation(); resizeWidget(w.id, s); }}
+                                      className="w-5 h-5 rounded flex items-center justify-center text-[0.5rem] transition-colors"
+                                      style={{
+                                        background: span === s ? T.primary : "#F3F4F6",
+                                        color: span === s ? "#fff" : "#999",
+                                      }}
+                                      title={`${s}칸`}
+                                    >
+                                      {s}
+                                    </button>
+                                  ))}
+                                  <div className="w-px h-4 mx-0.5" style={{ background: T.border }} />
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); removeWidget(w.id); }}
+                                    className="w-5 h-5 rounded flex items-center justify-center hover:bg-[#FEF2F2] transition-colors"
+                                    title="위젯 제거"
+                                  >
+                                    <X size={9} color={T.danger} />
+                                  </button>
+                                </div>
                                 <WidgetContent widgetId={w.id} deals={customerDeals} stageColorMap={stageColors} />
                               </div>
-                            ))}
+                            );
+                          })}
                         </div>
                       ) : (
                         <div
@@ -2877,6 +3245,22 @@ function DealflowPageInner() {
         <AddViewModal
           onAdd={addView}
           onClose={() => setShowAddView(false)}
+        />
+      )}
+
+      {/* Custom KPI Modal */}
+      {showCustomKpiModal && (
+        <CustomKpiModal
+          onAdd={(kpi) => setCustomKpis((prev) => [...prev, kpi])}
+          onClose={() => setShowCustomKpiModal(false)}
+        />
+      )}
+
+      {/* Goal Modal */}
+      {showGoalModal && (
+        <GoalModal
+          onAdd={(goal) => setGoals((prev) => [...prev, goal])}
+          onClose={() => setShowGoalModal(false)}
         />
       )}
     </div>
