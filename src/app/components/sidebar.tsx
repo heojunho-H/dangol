@@ -57,7 +57,7 @@ const navSections: NavSection[] = [
   {
     label: "영업관리",
     items: [
-      { id: "pipeline", icon: FileText, label: "파이프라인", to: "/dealflow/pipeline" },
+      { id: "pipeline", icon: FileText, label: "새 영업관리 페이지", to: "/dealflow/pipeline" },
     ],
   },
   {
