@@ -3956,6 +3956,35 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       const newDeals = importedDeals.filter((d) => !existingIds.has(d.id));
       return [...newDeals, ...prev];
     });
+
+    // Hide columns that have no data across imported rows
+    if (importedDeals.length > 0) {
+      const isEmpty = (v: unknown) =>
+        v === undefined || v === null || v === "" || v === 0 || v === "0";
+      const hasData = new Set<string>();
+      for (const d of importedDeals) {
+        for (const k in d) {
+          if (k === "id") continue;
+          if (!isEmpty((d as Record<string, unknown>)[k])) hasData.add(k);
+        }
+      }
+      setVisibleColumns((prev) => {
+        const next = new Set<string>();
+        for (const k of prev) if (hasData.has(k)) next.add(k);
+        next.add("company"); // required — always visible
+        return next;
+      });
+      // Flip empty custom fields to visible:false so the auto-reveal
+      // effect doesn't re-add them and the field-settings UI reflects it.
+      setCustomFields((prev) =>
+        prev.map((f) => {
+          if (f.locked || f.required) return f;
+          if (hasData.has(f.key)) return f;
+          return { ...f, visible: false };
+        })
+      );
+    }
+
     if (recommendedWidgets?.length) {
       setWidgetOrder(recommendedWidgets);
     }
