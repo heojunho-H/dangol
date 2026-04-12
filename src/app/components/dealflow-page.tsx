@@ -3888,6 +3888,10 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
   );
 
+  /* ── Column order (user-defined via column config) ── */
+  const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  const [colDragKey, setColDragKey] = useState<string | null>(null);
+
   /* ── Merge ALL_COLUMNS with dynamic customFields (auto-created on import) ── */
   const mergedColumns = useMemo<ColumnDef[]>(() => {
     const builtInKeys = new Set(ALL_COLUMNS.map((c) => c.key));
@@ -3903,6 +3907,55 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       }));
     return [...ALL_COLUMNS, ...extras];
   }, [customFields]);
+
+  /* ── Ordered columns: columnOrder first (if set), then natural order;
+        active columns surface on top, inactive at the bottom. ── */
+  const orderedColumns = useMemo<ColumnDef[]>(() => {
+    const byKey = new Map(mergedColumns.map((c) => [c.key, c]));
+    const seen = new Set<string>();
+    const out: ColumnDef[] = [];
+    for (const k of columnOrder) {
+      const c = byKey.get(k);
+      if (c && !seen.has(k)) { out.push(c); seen.add(k); }
+    }
+    for (const c of mergedColumns) {
+      if (!seen.has(c.key)) { out.push(c); seen.add(c.key); }
+    }
+    const active = out.filter((c) => visibleColumns.has(c.key));
+    const inactive = out.filter((c) => !visibleColumns.has(c.key));
+    return [...active, ...inactive];
+  }, [mergedColumns, columnOrder, visibleColumns]);
+
+  const activeColumns = useMemo(
+    () => orderedColumns.filter((c) => visibleColumns.has(c.key)),
+    [orderedColumns, visibleColumns]
+  );
+  const inactiveColumns = useMemo(
+    () => orderedColumns.filter((c) => !visibleColumns.has(c.key)),
+    [orderedColumns, visibleColumns]
+  );
+
+  /* ── Drag to reorder active columns in config dialog ── */
+  const handleColDragOver = (e: React.DragEvent, targetKey: string) => {
+    e.preventDefault();
+    if (!colDragKey || colDragKey === targetKey) return;
+    // only reorder within the active section
+    if (!visibleColumns.has(targetKey) || !visibleColumns.has(colDragKey)) return;
+    setColumnOrder((prev) => {
+      // materialize current ordered key list as the baseline
+      const base = prev.length > 0
+        ? [...prev.filter((k) => mergedColumns.some((c) => c.key === k)),
+           ...mergedColumns.map((c) => c.key).filter((k) => !prev.includes(k))]
+        : mergedColumns.map((c) => c.key);
+      const from = base.indexOf(colDragKey);
+      const to = base.indexOf(targetKey);
+      if (from === -1 || to === -1) return prev;
+      const next = [...base];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  };
 
   // Auto-reveal newly-added custom field columns (post-import) in the table
   useEffect(() => {
@@ -4763,7 +4816,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           <th className="py-3 px-4 w-12 border-b" style={{ borderColor: T.border }}>
                             <input type="checkbox" checked={selectedIds.size === paginatedDeals.length && paginatedDeals.length > 0} onChange={toggleAll} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                           </th>
-                          {mergedColumns.filter((c) => visibleColumns.has(c.key)).map((h) => {
+                          {activeColumns.map((h) => {
                             const sortIdx = sorts.findIndex((s) => s.field === h.key);
                             const sortDir = sortIdx >= 0 ? sorts[sortIdx].dir : null;
                             const isNumeric = h.key === "amount" || h.key === "quantity";
@@ -4949,7 +5002,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                                         <input type="checkbox" checked={isSelected} onChange={() => toggleOne(deal.id)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                                       </td>
-                                      {mergedColumns.filter((c) => visibleColumns.has(c.key)).map((col) => {
+                                      {activeColumns.map((col) => {
                                         const rendered =
                                           cellMap[col.key] ??
                                           (() => {
@@ -5088,26 +5141,57 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
               {/* Column Config Dialog */}
               {showColumnConfig && (
                 <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.2)" }} onClick={() => setShowColumnConfig(false)}>
-                  <div className="bg-white rounded-xl border w-[224px]" style={{ borderColor: T.border, boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }} onClick={(e) => e.stopPropagation()}>
+                  <div className="bg-white rounded-xl border w-[260px]" style={{ borderColor: T.border, boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }} onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: T.border }}>
                       <p className="text-[0.8rem] text-[#1A1A1A]">컬럼 설정</p>
                       <button onClick={() => setShowColumnConfig(false)} className="p-1 rounded hover:bg-[#F7F8FA]"><X size={13} color="#999" /></button>
                     </div>
-                    <div className="p-3 max-h-[304px] overflow-y-auto">
-                      {mergedColumns.map((col) => {
-                        const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
-                        return (
-                          <label key={col.key} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#F8F9FA] cursor-pointer transition-colors">
-                            <input type="checkbox" checked={visibleColumns.has(col.key)} disabled={col.required} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
-                            <span className="text-[0.75rem] text-[#333] flex-1">{col.label}</span>
-                            {col.required ? (
-                              <span className="text-[0.6rem] text-[#BBB]">필수</span>
-                            ) : isCustom ? (
-                              <span className="text-[0.6rem] text-[#059669]">커스텀</span>
-                            ) : null}
-                          </label>
-                        );
-                      })}
+                    <div className="p-3 max-h-[360px] overflow-y-auto">
+                      {activeColumns.length > 0 && (
+                        <>
+                          <p className="text-[0.6rem] text-[#999] px-3 pb-1.5 uppercase tracking-wide">활성 · 드래그로 순서 변경</p>
+                          {activeColumns.map((col) => {
+                            const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
+                            const dragging = colDragKey === col.key;
+                            return (
+                              <div
+                                key={col.key}
+                                draggable
+                                onDragStart={() => setColDragKey(col.key)}
+                                onDragOver={(e) => handleColDragOver(e, col.key)}
+                                onDragEnd={() => setColDragKey(null)}
+                                className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[#F8F9FA] transition-colors"
+                                style={{ opacity: dragging ? 0.5 : 1, cursor: "grab", borderColor: dragging ? T.primary : "transparent" }}
+                              >
+                                <GripVertical size={12} className="text-[#CCC] shrink-0" />
+                                <input type="checkbox" checked disabled={col.required} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
+                                <span className="text-[0.75rem] text-[#333] flex-1 truncate">{col.label}</span>
+                                {col.required ? (
+                                  <span className="text-[0.6rem] text-[#BBB]">필수</span>
+                                ) : isCustom ? (
+                                  <span className="text-[0.6rem] text-[#059669]">커스텀</span>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                        </>
+                      )}
+                      {inactiveColumns.length > 0 && (
+                        <>
+                          <p className="text-[0.6rem] text-[#999] px-3 pt-3 pb-1.5 uppercase tracking-wide">비활성</p>
+                          {inactiveColumns.map((col) => {
+                            const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
+                            return (
+                              <label key={col.key} className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[#F8F9FA] cursor-pointer transition-colors">
+                                <span className="w-3 shrink-0" />
+                                <input type="checkbox" checked={false} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
+                                <span className="text-[0.75rem] text-[#999] flex-1 truncate">{col.label}</span>
+                                {isCustom && <span className="text-[0.6rem] text-[#059669]">커스텀</span>}
+                              </label>
+                            );
+                          })}
+                        </>
+                      )}
                     </div>
                     <div className="px-5 py-3 border-t flex justify-end" style={{ borderColor: T.border }}>
                       <button onClick={() => setShowColumnConfig(false)} className="px-4 py-1.5 rounded-lg text-[0.7rem] text-white" style={{ background: T.primary }}>완료</button>
