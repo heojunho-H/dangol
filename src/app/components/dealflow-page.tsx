@@ -1816,7 +1816,7 @@ const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   "기타": { bg: "#F3F4F6", color: "#6B7280" },
 };
 
-function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void }) {
+function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void }) {
   const [tab, setTab] = useState<DrawerTab>("basic");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -2057,6 +2057,17 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
                     stageColorMap={stageColorMap}
                     onChange={(s) => onChangeStage(deal.id, s)}
                   />
+                ) : field.key === "status" ? (
+                  <select
+                    value={deal.status}
+                    onChange={(e) => onChangeStatus(deal.id, e.target.value)}
+                    className="text-[0.7rem] px-2 py-0.5 rounded-md border-0 focus:outline-none cursor-pointer w-fit"
+                    style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}
+                  >
+                    <option value="진행중">진행중</option>
+                    <option value="성공">성공</option>
+                    <option value="실패">실패</option>
+                  </select>
                 ) : editingField === field.key ? (
                   <input
                     autoFocus
@@ -3383,8 +3394,22 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   };
 
   const moveDealStage = useCallback((dealId: number, toStage: string) => {
+    const targetStage = pipelineStages.find((s) => s.name === toStage);
     setCustomerDeals((prev) =>
-      prev.map((d) => (d.id === dealId ? { ...d, stage: toStage } : d))
+      prev.map((d) => {
+        if (d.id !== dealId) return d;
+        let nextStatus = d.status;
+        if (targetStage?.type === "won") nextStatus = "성공";
+        else if (targetStage?.type === "lost") nextStatus = "실패";
+        else if (d.status !== "진행중") nextStatus = "진행중";
+        return { ...d, stage: toStage, status: nextStatus };
+      })
+    );
+  }, [pipelineStages]);
+
+  const updateDealStatus = useCallback((dealId: number, status: string) => {
+    setCustomerDeals((prev) =>
+      prev.map((d) => (d.id === dealId ? { ...d, status } : d))
     );
   }, []);
 
@@ -4286,9 +4311,17 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                       </div>
                                     ),
                                     status: (
-                                      <span className="inline-flex items-center text-[0.65rem] px-2.5 py-1 rounded-full" style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}>
-                                        {deal.status}
-                                      </span>
+                                      <select
+                                        value={deal.status}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onChange={(e) => { e.stopPropagation(); updateDealStatus(deal.id, e.target.value); }}
+                                        className="text-[0.65rem] px-2.5 py-1 rounded-full border-0 focus:outline-none cursor-pointer"
+                                        style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}
+                                      >
+                                        <option value="진행중">진행중</option>
+                                        <option value="성공">성공</option>
+                                        <option value="실패">실패</option>
+                                      </select>
                                     ),
                                     date: <span className="text-[0.7rem] text-[#999] whitespace-nowrap tabular-nums">{deal.date}</span>,
                                     phone: <span className="text-[0.7rem] text-[#555]">—</span>,
@@ -4468,8 +4501,12 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
             </div>
           </div>
 
-          {/* Detail Drawer */}
-          {selectedDeal && <DetailDrawer deal={selectedDeal} onClose={() => setSelectedDeal(null)} stageColorMap={stageColors} stageNames={pipelineStages.map((s) => s.name)} onChangeStage={moveDealStage} />}
+          {/* Detail Drawer — pull fresh deal from customerDeals so status/stage updates reflect immediately */}
+          {selectedDeal && (() => {
+            const liveDeal = customerDeals.find((d) => d.id === selectedDeal.id);
+            if (!liveDeal) return null;
+            return <DetailDrawer deal={liveDeal} onClose={() => setSelectedDeal(null)} stageColorMap={stageColors} stageNames={pipelineStages.map((s) => s.name)} onChangeStage={moveDealStage} onChangeStatus={updateDealStatus} />;
+          })()}
         </div>
       </div>
 
