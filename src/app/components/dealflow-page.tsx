@@ -976,7 +976,7 @@ function OnboardingFlow({ onComplete, customFields, pipelineStages }: { onComple
     setTimeout(() => { if (!controller.signal.aborted) setDashboardProgress(2); }, 750);
 
     try {
-      const response = await fetch("/api/ai/dashboard-recommendation", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/ai/dashboard-recommendation`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1032,7 +1032,7 @@ function OnboardingFlow({ onComplete, customFields, pipelineStages }: { onComple
     setTimeout(() => { if (!controller.signal.aborted) setAnalysisProgress(2); }, 900);
 
     try {
-      const response = await fetch("/api/ai/column-mapping", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/ai/column-mapping`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ excelColumns, dealflowFields }),
