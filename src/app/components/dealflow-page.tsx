@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
   parseFile,
@@ -3858,8 +3858,38 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
   );
 
+  /* ── Merge ALL_COLUMNS with dynamic customFields (auto-created on import) ── */
+  const mergedColumns = useMemo<ColumnDef[]>(() => {
+    const builtInKeys = new Set(ALL_COLUMNS.map((c) => c.key));
+    const extras: ColumnDef[] = customFields
+      .filter((f) => !builtInKeys.has(f.key))
+      .map((f) => ({
+        key: f.key,
+        label: f.label,
+        required: f.required,
+        filter: f.type === "select" || f.type === "person",
+        sort: f.type !== "file",
+        defaultVisible: f.visible,
+      }));
+    return [...ALL_COLUMNS, ...extras];
+  }, [customFields]);
+
+  // Auto-reveal newly-added custom field columns (post-import) in the table
+  useEffect(() => {
+    const builtInKeys = new Set(ALL_COLUMNS.map((c) => c.key));
+    setVisibleColumns((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const f of customFields) {
+        if (builtInKeys.has(f.key)) continue;
+        if (f.visible && !next.has(f.key)) { next.add(f.key); changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [customFields]);
+
   const toggleColumn = (key: string) => {
-    const col = ALL_COLUMNS.find((c) => c.key === key);
+    const col = mergedColumns.find((c) => c.key === key);
     if (col?.required) return;
     setVisibleColumns((prev) => {
       const next = new Set(prev);
@@ -4656,11 +4686,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           <th className="py-3 px-4 w-12 border-b" style={{ borderColor: T.border }}>
                             <input type="checkbox" checked={selectedIds.size === paginatedDeals.length && paginatedDeals.length > 0} onChange={toggleAll} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                           </th>
-                          {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((h) => {
+                          {mergedColumns.filter((c) => visibleColumns.has(c.key)).map((h) => {
                             const sortIdx = sorts.findIndex((s) => s.field === h.key);
                             const sortDir = sortIdx >= 0 ? sorts[sortIdx].dir : null;
                             const isNumeric = h.key === "amount" || h.key === "quantity";
-                            const behavior = COLUMN_BEHAVIOR[h.key] || "none";
+                            const behavior = COLUMN_BEHAVIOR[h.key] || (h.filter ? "filter" : h.sort ? "sort" : "none");
                             const colFilter = getColFilter(h.key);
                             const filterCount = colFilter?.value ? colFilter.value.split(",").filter(Boolean).length : 0;
                             const isActive = behavior === "filter" ? filterCount > 0 : sortDir !== null;
@@ -4842,9 +4872,21 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                                         <input type="checkbox" checked={isSelected} onChange={() => toggleOne(deal.id)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                                       </td>
-                                      {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((col) => (
-                                        <td key={col.key} className="py-3.5 px-4" style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}>{cellMap[col.key]}</td>
-                                      ))}
+                                      {mergedColumns.filter((c) => visibleColumns.has(c.key)).map((col) => {
+                                        const rendered =
+                                          cellMap[col.key] ??
+                                          (() => {
+                                            const raw = (deal as Record<string, unknown>)[col.key];
+                                            if (raw === undefined || raw === null || raw === "") {
+                                              return <span className="text-[0.7rem] text-[#BBB]">—</span>;
+                                            }
+                                            const text = typeof raw === "number" ? raw.toLocaleString() : String(raw);
+                                            return <span className="text-[0.7rem] text-[#555] truncate block">{text}</span>;
+                                          })();
+                                        return (
+                                          <td key={col.key} className="py-3.5 px-4" style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}>{rendered}</td>
+                                        );
+                                      })}
                                     </tr>
                                   );
                                 })}
@@ -4975,13 +5017,20 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                       <button onClick={() => setShowColumnConfig(false)} className="p-1 rounded hover:bg-[#F7F8FA]"><X size={13} color="#999" /></button>
                     </div>
                     <div className="p-3 max-h-[304px] overflow-y-auto">
-                      {ALL_COLUMNS.map((col) => (
-                        <label key={col.key} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#F8F9FA] cursor-pointer transition-colors">
-                          <input type="checkbox" checked={visibleColumns.has(col.key)} disabled={col.required} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
-                          <span className="text-[0.75rem] text-[#333] flex-1">{col.label}</span>
-                          {col.required && <span className="text-[0.6rem] text-[#BBB]">필수</span>}
-                        </label>
-                      ))}
+                      {mergedColumns.map((col) => {
+                        const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
+                        return (
+                          <label key={col.key} className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#F8F9FA] cursor-pointer transition-colors">
+                            <input type="checkbox" checked={visibleColumns.has(col.key)} disabled={col.required} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
+                            <span className="text-[0.75rem] text-[#333] flex-1">{col.label}</span>
+                            {col.required ? (
+                              <span className="text-[0.6rem] text-[#BBB]">필수</span>
+                            ) : isCustom ? (
+                              <span className="text-[0.6rem] text-[#059669]">커스텀</span>
+                            ) : null}
+                          </label>
+                        );
+                      })}
                     </div>
                     <div className="px-5 py-3 border-t flex justify-end" style={{ borderColor: T.border }}>
                       <button onClick={() => setShowColumnConfig(false)} className="px-4 py-1.5 rounded-lg text-[0.7rem] text-white" style={{ background: T.primary }}>완료</button>
@@ -5015,7 +5064,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         const opts = uniqueValues(customerDeals, filterPopover.key);
         const colFilter = getColFilter(filterPopover.key);
         const selected = new Set(colFilter?.value ? colFilter.value.split(",").map((s) => s.trim()).filter(Boolean) : []);
-        const colDef = ALL_COLUMNS.find((c) => c.key === filterPopover.key);
+        const colDef = mergedColumns.find((c) => c.key === filterPopover.key);
         return (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setFilterPopover(null)} />
