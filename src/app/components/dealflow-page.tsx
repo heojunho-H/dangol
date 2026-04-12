@@ -1441,7 +1441,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h2 className="text-[1.1rem] text-[#1A1A1A] mb-1">AI 매핑 결과</h2>
-                      <p className="text-[0.75rem] text-[#999]">전체 {dealflowFields.length}개 필드 중 {autoMapped.length}개 자동 매핑 · {needsReview.length}개 확인 필요 · {unmapped.length}개 미매핑</p>
+                      <p className="text-[0.75rem] text-[#999]">{autoMapped.length + needsReview.length}개 매핑됨 · {autoMapped.length}개 자동 매핑 · {needsReview.length}개 확인 필요</p>
                     </div>
                     <button
                       onClick={autoMap}
@@ -1452,13 +1452,18 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
                     </button>
                   </div>
 
-                  {/* Required unmapped warning */}
+                  {/* Required unmapped warning — surfaces required fields that still need a column */}
                   {requiredUnmapped > 0 && (
-                    <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg mb-4" style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
-                      <AlertTriangle size={14} color="#DC2626" className="shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[0.8rem] text-[#991B1B] font-medium">필수 필드 {requiredUnmapped}개가 매핑되지 않았습니다</p>
-                        <p className="text-[0.7rem] text-[#B91C1C] mt-0.5">아래 "미매핑" 섹션에서 엑셀 컬럼을 선택해주세요.</p>
+                    <div className="mb-4 rounded-xl border" style={{ borderColor: "#FECACA", background: "#FEF2F2" }}>
+                      <div className="flex items-start gap-2.5 px-4 py-3 border-b" style={{ borderColor: "#FECACA" }}>
+                        <AlertTriangle size={14} color="#DC2626" className="shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-[0.8rem] text-[#991B1B] font-medium">필수 필드 {requiredUnmapped}개가 매핑되지 않았습니다</p>
+                          <p className="text-[0.7rem] text-[#B91C1C] mt-0.5">아래에서 엑셀 컬럼을 직접 선택해주세요.</p>
+                        </div>
+                      </div>
+                      <div className="px-4 py-3 space-y-2">
+                        {unmapped.filter((f) => f.required && !mappings[f.name]).map(renderFieldRow)}
                       </div>
                     </div>
                   )}
@@ -1511,22 +1516,6 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
                       </div>
                       <div className="space-y-2">
                         {needsReview.map(renderFieldRow)}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Section: 미매핑 */}
-                  {unmapped.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "#F3F4F6" }}>
-                          <X size={12} color="#9CA3AF" />
-                        </div>
-                        <span className="text-[0.85rem] text-[#1A1A1A] font-medium">미매핑</span>
-                        <span className="text-[0.7rem] text-[#999]">{unmapped.length}개 · 필요한 필드를 직접 선택하세요</span>
-                      </div>
-                      <div className="space-y-2">
-                        {unmapped.map(renderFieldRow)}
                       </div>
                     </div>
                   )}
