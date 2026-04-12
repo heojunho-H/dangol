@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { useDrag, useDrop, DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -999,7 +999,22 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
             <p className="text-[0.75rem] text-[#BBB] mb-6">지원 형식: .xlsx, .xls, .csv · 최대 10MB</p>
 
             <div className="flex items-center gap-4 w-full">
-              <button className="flex items-center gap-2 px-4 py-2.5 border rounded-lg text-[0.8rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
+              <button
+                onClick={() => {
+                  const csv = "\uFEFF기업명,담당자,희망서비스,견적금액(원),총수량,등록일\n,,,,,\n";
+                  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "dangol_sample.csv";
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                className="flex items-center gap-2 px-4 py-2.5 border rounded-lg text-[0.8rem] text-[#666] hover:bg-[#F7F8FA] transition-colors"
+                style={{ borderColor: T.border }}
+              >
                 <Download size={13} /> 샘플 파일 다운로드
               </button>
               <button
@@ -1865,7 +1880,8 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [newMemo, setNewMemo] = useState("");
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => generateActivityLogs(deal));
-  const [files] = useState<AttachedFile[]>(() => generateFiles(deal));
+  const [files, setFiles] = useState<AttachedFile[]>(() => generateFiles(deal));
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [aiExpanded, setAiExpanded] = useState(false);
   const [aiCardOpen, setAiCardOpen] = useState(false);
   const [drawerWidth, setDrawerWidth] = useState(400);
@@ -2194,9 +2210,40 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
           <div className="px-6 py-5">
             <div className="flex items-center justify-between mb-4">
               <span className="text-[0.8rem] text-[#1A1A1A]">첨부 파일</span>
-              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[0.7rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[0.7rem] text-[#666] hover:bg-[#F7F8FA] transition-colors"
+                style={{ borderColor: T.border }}
+              >
                 <Upload size={11} /> 파일 추가
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                multiple
+                onChange={(e) => {
+                  const list = e.target.files;
+                  if (!list) return;
+                  const added: AttachedFile[] = Array.from(list).map((f, i) => {
+                    const ext = f.name.split(".").pop()?.toLowerCase() || "";
+                    const type: AttachedFile["type"] =
+                      f.name.includes("견적") ? "견적서" :
+                      f.name.includes("계약") ? "계약서" :
+                      f.name.includes("제안") ? "제안서" : "기타";
+                    const sizeMb = (f.size / (1024 * 1024)).toFixed(1);
+                    return {
+                      id: `f-${Date.now()}-${i}`,
+                      name: f.name,
+                      type,
+                      size: `${sizeMb} MB`,
+                      date: new Date().toISOString().slice(0, 10),
+                    };
+                  });
+                  setFiles((prev) => [...added, ...prev]);
+                  e.target.value = "";
+                }}
+              />
             </div>
             <div className="space-y-2">
               {files.map((f) => {
@@ -2215,8 +2262,29 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
                         <span className="text-[0.6rem] text-[#BBB] tabular-nums">{f.date}</span>
                       </div>
                     </div>
-                    <button className="p-1.5 rounded-lg hover:bg-[#F7F8FA] transition-colors shrink-0">
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([`${f.name}\n(mock download placeholder)`], { type: "text/plain;charset=utf-8;" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = f.name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-[#F7F8FA] transition-colors shrink-0"
+                      title="다운로드"
+                    >
                       <Download size={12} color="#999" />
+                    </button>
+                    <button
+                      onClick={() => setFiles((prev) => prev.filter((x) => x.id !== f.id))}
+                      className="p-1.5 rounded-lg hover:bg-[#FEF2F2] transition-colors shrink-0"
+                      title="삭제"
+                    >
+                      <Trash2 size={12} color={T.danger} />
                     </button>
                   </div>
                 );
@@ -2235,20 +2303,17 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 border-t flex items-center gap-2" style={{ borderColor: T.border }}>
-        <button
-          className="flex-1 py-2.5 rounded-lg text-[0.75rem] text-white transition-colors"
-          style={{ background: T.success }}
-        >
-          수주확정으로 변경
-        </button>
-        <button
-          className="px-3 py-2.5 rounded-lg text-[0.75rem] border transition-colors hover:bg-[#F7F8FA]"
-          style={{ borderColor: T.border, color: "#666" }}
-        >
-          <MoreHorizontal size={14} />
-        </button>
-      </div>
+      {deal.status !== "성공" && deal.status !== "실패" && (
+        <div className="px-6 py-3 border-t" style={{ borderColor: T.border }}>
+          <button
+            onClick={() => onChangeStage(deal.id, "수주확정")}
+            className="w-full py-2.5 rounded-lg text-[0.75rem] text-white transition-colors"
+            style={{ background: T.success }}
+          >
+            수주확정으로 변경
+          </button>
+        </div>
+      )}
       </div>
     </div>
   );
@@ -2303,7 +2368,7 @@ function WidgetPalette({ onClose, activeWidgets, onToggleWidget }: { onClose: ()
 }
 
 /* ─── WIDGET CONTENT RENDERER ─── */
-function WidgetContent({ widgetId, deals, stageColorMap }: { widgetId: string; deals: Deal[]; stageColorMap: Record<string, string> }) {
+function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExcel, onExport, onAnalytics }: { widgetId: string; deals: Deal[]; stageColorMap: Record<string, string>; onAddDeal?: () => void; onImportExcel?: () => void; onExport?: () => void; onAnalytics?: () => void }) {
   /* ── KPI computations ── */
   const total = deals.length;
   const wonDeals = deals.filter((d) => d.status === "성공");
@@ -2449,11 +2514,16 @@ function WidgetContent({ widgetId, deals, stageColorMap }: { widgetId: string; d
     </>
   );
   if (widgetId === "shortcuts") {
-    const sc = [{ label: "딜 추가", icon: Plus, color: T.primary }, { label: "Excel 가져오기", icon: Upload, color: "#4A7B5A" }, { label: "보고서 내보내기", icon: Download, color: "#6B7280" }, { label: "팀 성과 분석", icon: Users, color: "#5B9170" }];
+    const sc = [
+      { label: "딜 추가", icon: Plus, color: T.primary, onClick: onAddDeal },
+      { label: "Excel 가져오기", icon: Upload, color: "#4A7B5A", onClick: onImportExcel },
+      { label: "보고서 내보내기", icon: Download, color: "#6B7280", onClick: onExport },
+      { label: "팀 성과 분석", icon: Users, color: "#5B9170", onClick: onAnalytics },
+    ];
     return (
       <>
         <p className="text-[0.85rem] text-[#1A1A1A] mb-3">빠른 실행</p>
-        <div className="grid grid-cols-2 gap-2">{sc.map((s) => <button key={s.label} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border text-[0.7rem] text-[#555] hover:bg-[#FAFBFC] transition-colors" style={{ borderColor: T.border }}><s.icon size={13} color={s.color} />{s.label}</button>)}</div>
+        <div className="grid grid-cols-2 gap-2">{sc.map((s) => <button key={s.label} onClick={s.onClick} className="flex items-center gap-2 px-3 py-2.5 rounded-lg border text-[0.7rem] text-[#555] hover:bg-[#FAFBFC] transition-colors" style={{ borderColor: T.border }}><s.icon size={13} color={s.color} />{s.label}</button>)}</div>
       </>
     );
   }
@@ -2925,9 +2995,6 @@ function KanbanCard({
       {/* Company name — always shown */}
       <div className="flex items-start justify-between mb-1.5">
         <span className="text-[0.8rem] text-[#1A1A1A] leading-snug font-medium">{deal.company}</span>
-        <button className="p-0.5 rounded opacity-0 group-hover/card:opacity-100 hover:bg-[#F7F8FA] transition-all shrink-0 ml-2">
-          <MoreHorizontal size={12} className="text-[#BBB]" />
-        </button>
       </div>
 
       {/* Amount */}
@@ -3352,6 +3419,23 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   /* ── Navigation ── */
   const navigate = useNavigate();
   const { pageId } = useParams<{ pageId: string }>();
+
+  /* ── CSV Export ── */
+  const exportDealsCsv = useCallback((list: Deal[]) => {
+    const headers = ["기업명", "진행상태", "담당자", "희망서비스", "견적금액", "총수량", "고객책임자", "성공여부", "등록일", "전화번호", "이메일"];
+    const rows = list.map((d) => [d.company, d.stage, d.contact, d.service, d.amount, d.quantity, d.manager, d.status, d.date, String(d.phone ?? ""), String(d.email ?? "")]);
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = "\uFEFF" + [headers, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dangol_deals_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, []);
 
   /* ── Modal Toggles ── */
   const [showAddView, setShowAddView] = useState(false);
@@ -3897,7 +3981,15 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                     <X size={9} color={T.danger} />
                                   </button>
                                 </div>
-                                <WidgetContent widgetId={w.id} deals={dateFilteredDeals} stageColorMap={stageColors} />
+                                <WidgetContent
+                                  widgetId={w.id}
+                                  deals={dateFilteredDeals}
+                                  stageColorMap={stageColors}
+                                  onAddDeal={() => setShowAddDeal(true)}
+                                  onImportExcel={() => setShowOnboarding(true)}
+                                  onExport={() => exportDealsCsv(dateFilteredDeals)}
+                                  onAnalytics={() => navigate("/sales")}
+                                />
                               </div>
                             );
                           })}
