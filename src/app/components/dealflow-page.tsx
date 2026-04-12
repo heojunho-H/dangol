@@ -758,6 +758,44 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void })
   );
 }
 
+/* ─── STAGE DROPDOWN (reusable) ─── */
+function StageDropdown({ currentStage, stageNames, stageColorMap, onChange }: { currentStage: string; stageNames: string[]; stageColorMap: Record<string, string>; onChange: (stage: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const color = stageColorMap[currentStage] || "#999";
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="inline-flex items-center gap-1.5 text-[0.65rem] px-2.5 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
+        style={{ background: color + "14", color }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+        {currentStage}
+        <ChevronDown size={9} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-50 py-1 w-[160px] max-h-[240px] overflow-y-auto" style={{ borderColor: T.border }}>
+            {stageNames.map((s) => (
+              <button
+                key={s}
+                onClick={() => { onChange(s); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-[0.75rem] flex items-center gap-2 transition-colors hover:bg-[#F7F8FA] ${s === currentStage ? "font-medium" : ""}`}
+                style={{ color: s === currentStage ? stageColorMap[s] || T.primary : "#444" }}
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: stageColorMap[s] || "#999" }} />
+                {s}
+                {s === currentStage && <CheckCircle2 size={11} className="ml-auto text-[#2CBF60]" />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── DETAIL DRAWER ─── */
 type DrawerTab = "basic" | "activity" | "files" | "related" | "ai";
 
@@ -811,7 +849,7 @@ const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   "기타": { bg: "#F3F4F6", color: "#6B7280" },
 };
 
-function DetailDrawer({ deal, onClose, stageColorMap }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string> }) {
+function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void }) {
   const [tab, setTab] = useState<DrawerTab>("basic");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -838,7 +876,7 @@ function DetailDrawer({ deal, onClose, stageColorMap }: { deal: Deal; onClose: (
     { key: "quantity", label: "총수량", value: `${deal.quantity}`, editable: true },
     { key: "amount", label: "견적금액", value: deal.amount, editable: true },
     { key: "manager", label: "고객책임자", value: deal.manager, editable: true },
-    { key: "stage", label: "진행상태", value: deal.stage, editable: false },
+    { key: "stage", label: "진행상태", value: deal.stage, editable: true },
     { key: "status", label: "성공여부", value: deal.status, editable: false },
     { key: "date", label: "등록일", value: deal.date, editable: false },
   ];
@@ -897,12 +935,12 @@ function DetailDrawer({ deal, onClose, stageColorMap }: { deal: Deal; onClose: (
           </button>
         </div>
         <div className="flex items-center gap-2 mt-2">
-          <span
-            className="px-2.5 py-0.5 rounded-md text-[0.65rem]"
-            style={{ background: (stageColorMap[deal.stage] || "#999") + "14", color: stageColorMap[deal.stage] || "#999" }}
-          >
-            {deal.stage}
-          </span>
+          <StageDropdown
+            currentStage={deal.stage}
+            stageNames={stageNames}
+            stageColorMap={stageColorMap}
+            onChange={(s) => onChangeStage(deal.id, s)}
+          />
           <span
             className="px-2.5 py-0.5 rounded-md text-[0.65rem]"
             style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}
@@ -942,7 +980,14 @@ function DetailDrawer({ deal, onClose, stageColorMap }: { deal: Deal; onClose: (
                 className="grid grid-cols-[100px_1fr] gap-2 items-center py-2 rounded-lg px-2 -mx-2 transition-colors hover:bg-[#FAFBFC] group/field"
               >
                 <span className="text-[0.7rem] text-[#999]">{field.label}</span>
-                {editingField === field.key ? (
+                {field.key === "stage" ? (
+                  <StageDropdown
+                    currentStage={deal.stage}
+                    stageNames={stageNames}
+                    stageColorMap={stageColorMap}
+                    onChange={(s) => onChangeStage(deal.id, s)}
+                  />
+                ) : editingField === field.key ? (
                   <input
                     autoFocus
                     className="text-[0.8rem] text-[#1A1A1A] bg-white border rounded-lg px-2.5 py-1 focus:outline-none focus:border-[#1A472A]"
@@ -954,12 +999,7 @@ function DetailDrawer({ deal, onClose, stageColorMap }: { deal: Deal; onClose: (
                   />
                 ) : (
                   <div className="flex items-center gap-2">
-                    {field.key === "stage" ? (
-                      <span className="inline-flex items-center gap-1.5 text-[0.7rem] px-2 py-0.5 rounded-md" style={{ background: (stageColorMap[field.value] || "#999") + "14", color: stageColorMap[field.value] || "#999" }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColorMap[field.value] || "#999" }} />
-                        {field.value}
-                      </span>
-                    ) : field.key === "status" ? (
+                    {field.key === "status" ? (
                       <span className="text-[0.7rem] px-2 py-0.5 rounded-md" style={{ background: statusColors[field.value]?.bg, color: statusColors[field.value]?.text }}>{field.value}</span>
                     ) : (
                       <span className="text-[0.8rem] text-[#1A1A1A]">{editValues[field.key] || field.value}</span>
@@ -3564,10 +3604,12 @@ function DealflowPageInner() {
                                       </div>
                                     ),
                                     stage: (
-                                      <span className="inline-flex items-center gap-1.5 text-[0.65rem] px-2.5 py-1 rounded-full" style={{ background: (stageColors[deal.stage] || "#999") + "14", color: stageColors[deal.stage] || "#999" }}>
-                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] || "#999" }} />
-                                        {deal.stage}
-                                      </span>
+                                      <StageDropdown
+                                        currentStage={deal.stage}
+                                        stageNames={pipelineStages.map((s) => s.name)}
+                                        stageColorMap={stageColors}
+                                        onChange={(s) => moveDealStage(deal.id, s)}
+                                      />
                                     ),
                                     contact: (
                                       <div className="flex flex-col">
@@ -3722,7 +3764,7 @@ function DealflowPageInner() {
           </div>
 
           {/* Detail Drawer */}
-          {selectedDeal && <DetailDrawer deal={selectedDeal} onClose={() => setSelectedDeal(null)} stageColorMap={stageColors} />}
+          {selectedDeal && <DetailDrawer deal={selectedDeal} onClose={() => setSelectedDeal(null)} stageColorMap={stageColors} stageNames={pipelineStages.map((s) => s.name)} onChangeStage={moveDealStage} />}
         </div>
       </div>
 
