@@ -3078,45 +3078,8 @@ function DealflowPageInner() {
             {/* ZONE 2: 고객 데이터 */}
             <div>
               {/* Section Header with View Tabs */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  {/* Saved Views Tabs */}
-                  <div className="flex items-center bg-white border rounded-lg overflow-hidden" style={{ borderColor: T.border }}>
-                    {savedViews.map((v) => {
-                      const isActive = activeViewId === v.id;
-                      const ViewIcon = v.viewType === "table" ? Table2 : v.viewType === "kanban" ? Columns3 : CalendarRange;
-                      return (
-                        <div
-                          key={v.id}
-                          className="flex items-center gap-1.5 px-3.5 py-2 text-[0.75rem] transition-colors border-r last:border-r-0 cursor-pointer group relative"
-                          style={{
-                            borderColor: T.border,
-                            background: isActive ? T.primary : "transparent",
-                            color: isActive ? "#fff" : "#666",
-                          }}
-                          onClick={() => setActiveViewId(v.id)}
-                        >
-                          <ViewIcon size={13} />
-                          {v.name}
-                          {savedViews.length > 1 && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); removeView(v.id); }}
-                              className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-black/10"
-                              title="뷰 삭제"
-                            >
-                              <X size={9} />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                    <button
-                      onClick={() => setShowAddView(true)}
-                      className="flex items-center gap-1 px-2.5 py-2 text-[0.7rem] text-[#999] hover:text-[#666] hover:bg-[#F7F8FA] transition-colors"
-                    >
-                      <Plus size={11} />
-                    </button>
-                  </div>
+              <div className="mb-5">
+                <div className="flex items-center gap-2 mb-2">
                   <span className="text-[1.1rem] text-[#1A1A1A]">딜 데이터</span>
                   {customerDeals.length > 0 && (
                     <span className="px-2.5 py-0.5 rounded-full text-[0.7rem]" style={{ background: "#EFF5F1", color: T.primary }}>
@@ -3124,15 +3087,42 @@ function DealflowPageInner() {
                     </span>
                   )}
                 </div>
-                {customerDeals.length > 0 && (
+                <div className="flex items-center bg-white border rounded-lg overflow-hidden w-fit" style={{ borderColor: T.border }}>
+                  {savedViews.map((v) => {
+                    const isActive = activeViewId === v.id;
+                    const ViewIcon = v.viewType === "table" ? Table2 : v.viewType === "kanban" ? Columns3 : CalendarRange;
+                    return (
+                      <div
+                        key={v.id}
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-[0.75rem] transition-colors border-r last:border-r-0 cursor-pointer group relative"
+                        style={{
+                          borderColor: T.border,
+                          background: isActive ? T.primary : "transparent",
+                          color: isActive ? "#fff" : "#666",
+                        }}
+                        onClick={() => setActiveViewId(v.id)}
+                      >
+                        <ViewIcon size={13} />
+                        {v.name}
+                        {savedViews.length > 1 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeView(v.id); }}
+                            className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-black/10"
+                            title="뷰 삭제"
+                          >
+                            <X size={9} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                   <button
-                    onClick={() => setShowAddDeal(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] text-white transition-colors hover:opacity-90"
-                    style={{ background: T.primary }}
+                    onClick={() => setShowAddView(true)}
+                    className="flex items-center gap-1 px-2.5 py-2 text-[0.7rem] text-[#999] hover:text-[#666] hover:bg-[#F7F8FA] transition-colors"
                   >
-                    <Plus size={12} /> 딜 추가
+                    <Plus size={11} />
                   </button>
-                )}
+                </div>
               </div>
 
               {customerDeals.length === 0 ? (
