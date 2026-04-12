@@ -3621,10 +3621,15 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                   <div className="border-t mx-3 my-1" style={{ borderColor: T.border }} />
                   <div className="px-4 py-2">
                     <p className="text-[0.7rem] text-[#999] mb-2">직접 설정</p>
-                    <div className="flex items-center gap-2">
-                      <input type="date" value={dateRange.preset === "custom" ? dateRange.from : ""} onChange={(e) => { const from = e.target.value; setDateRange((prev) => ({ preset: "custom", from, to: prev.preset === "custom" ? prev.to : "" })); }} className="flex-1 border rounded-md px-2 py-1.5 text-[0.75rem] text-[#444] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} />
-                      <span className="text-[0.7rem] text-[#999]">~</span>
-                      <input type="date" value={dateRange.preset === "custom" ? dateRange.to : ""} onChange={(e) => { const to = e.target.value; setDateRange((prev) => ({ preset: "custom", from: prev.preset === "custom" ? prev.from : "", to })); }} className="flex-1 border rounded-md px-2 py-1.5 text-[0.75rem] text-[#444] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} />
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[0.65rem] text-[#999] w-7 shrink-0">시작</span>
+                        <input type="date" value={dateRange.preset === "custom" ? dateRange.from : ""} onChange={(e) => { const from = e.target.value; setDateRange((prev) => ({ preset: "custom", from, to: prev.preset === "custom" ? prev.to : "" })); }} className="flex-1 min-w-0 border rounded-md px-2 py-1.5 text-[0.75rem] text-[#444] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[0.65rem] text-[#999] w-7 shrink-0">종료</span>
+                        <input type="date" value={dateRange.preset === "custom" ? dateRange.to : ""} onChange={(e) => { const to = e.target.value; setDateRange((prev) => ({ preset: "custom", from: prev.preset === "custom" ? prev.from : "", to })); }} className="flex-1 min-w-0 border rounded-md px-2 py-1.5 text-[0.75rem] text-[#444] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} />
+                      </div>
                     </div>
                     {dateRange.preset === "custom" && (dateRange.from || dateRange.to) && (
                       <button onClick={() => setShowDateRangePicker(false)} className="w-full mt-2 py-1.5 rounded-md text-[0.75rem] text-white transition-colors" style={{ background: T.primary }}>적용</button>
