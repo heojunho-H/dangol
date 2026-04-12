@@ -990,7 +990,10 @@ function OnboardingFlow({ onComplete, customFields, pipelineStages }: { onComple
 
       const data = await response.json();
       setDashboardProgress(3);
-      setDealAnalysis(data.analysis);
+      // Backend returns a flat `dateRangeSpanDays` — rebuild the full analysis
+      // locally so the shape matches `DealAnalysis` (dateRange is an object).
+      const analysis = analyzeDealData(dealsForAnalysisRef.current);
+      setDealAnalysis(analysis);
       setScenario(data.scenario);
       setRecommendations(data.recommendations);
       setSelectedWidgets(new Set(data.recommendations.map((r: WidgetRecommendation) => r.widgetId)));
