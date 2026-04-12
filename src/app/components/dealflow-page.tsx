@@ -1608,157 +1608,232 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
             </div>
           ) : dealAnalysis && scenario ? (
             /* ── 대시보드 추천 결과 ── */
-            <>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-[1.1rem] text-[#1A1A1A] mb-1">AI 대시보드 추천</h2>
-                  <p className="text-[0.8rem] text-[#999]">{dealsForAnalysisRef.current.length}건의 딜 데이터를 분석했습니다</p>
-                </div>
-                <span className="px-3 py-1.5 rounded-full text-[0.75rem]" style={{ background: "#F0F4FF", color: T.primary }}>
-                  {scenario.scenario}
-                </span>
-              </div>
+            (() => {
+              const toggleWidget = (id: string) =>
+                setSelectedWidgets((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                });
 
-              <div className="grid grid-cols-[1fr_1.2fr] gap-6">
-                {/* 왼쪽: 데이터 분석 요약 */}
-                <div>
-                  <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">데이터 분석 결과</p>
-                  <div className="p-3 rounded-lg mb-4 text-[0.8rem]" style={{ background: "#F8FAFC", border: `1px solid ${T.border}` }}>
-                    <p className="text-[#666]">{scenario.reason}</p>
+              const categoryLabels: Record<string, string> = {
+                kpi: "핵심 지표",
+                chart: "차트",
+                table: "테이블",
+                utility: "유틸",
+              };
+              const categoryOrder = ["kpi", "chart", "table", "utility"];
+
+              // Group recommendations by category, preserving priority order within each
+              const sortedRecs = [...recommendations].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+              const recsByCategory = new Map<string, typeof sortedRecs>();
+              for (const rec of sortedRecs) {
+                const w = allWidgets.find((x) => x.id === rec.widgetId);
+                if (!w) continue;
+                const cat = w.category || "utility";
+                if (!recsByCategory.has(cat)) recsByCategory.set(cat, []);
+                recsByCategory.get(cat)!.push(rec);
+              }
+
+              const recIds = new Set(recommendations.map((r) => r.widgetId));
+              const otherWidgets = allWidgets.filter((w) => !recIds.has(w.id));
+
+              const selectAll = () => setSelectedWidgets(new Set(allWidgets.map((w) => w.id)));
+              const selectRecommended = () => setSelectedWidgets(new Set(recommendations.map((r) => r.widgetId)));
+              const clearAll = () => setSelectedWidgets(new Set());
+
+              const stats = [
+                { label: "총 딜 수", value: `${dealAnalysis.totalDeals}건`, icon: BarChart3 },
+                { label: "스테이지", value: `${dealAnalysis.uniqueStages}개`, icon: Filter },
+                { label: "담당자", value: `${dealAnalysis.uniqueManagers}명`, icon: Users },
+                { label: "총 금액", value: fmtAmt(dealAnalysis.totalAmount), icon: DollarSign },
+                { label: "수주율", value: `${Math.round(dealAnalysis.winRate * 100)}%`, icon: Target },
+                { label: "기간", value: dealAnalysis.dateRange.spanDays > 0 ? `${dealAnalysis.dateRange.spanDays}일` : "-", icon: Calendar },
+              ];
+
+              return (
+                <>
+                  {/* 헤더 */}
+                  <div className="mb-5">
+                    <h2 className="text-[1.1rem] text-[#1A1A1A] mb-1">AI 대시보드 추천</h2>
+                    <p className="text-[0.8rem] text-[#999]">{dealsForAnalysisRef.current.length}건의 딜 데이터를 분석했습니다</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: "총 딜 수", value: `${dealAnalysis.totalDeals}건`, icon: BarChart3 },
-                      { label: "스테이지", value: `${dealAnalysis.uniqueStages}개`, icon: Filter },
-                      { label: "담당자", value: `${dealAnalysis.uniqueManagers}명`, icon: Users },
-                      { label: "총 금액", value: fmtAmt(dealAnalysis.totalAmount), icon: DollarSign },
-                      { label: "수주율", value: `${Math.round(dealAnalysis.winRate * 100)}%`, icon: Target },
-                      { label: "기간", value: dealAnalysis.dateRange.spanDays > 0 ? `${dealAnalysis.dateRange.spanDays}일` : "-", icon: Calendar },
-                    ].map((stat) => (
-                      <div key={stat.label} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg" style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }}>
-                        <stat.icon size={14} color={T.primary} />
-                        <div>
-                          <p className="text-[0.65rem] text-[#999]">{stat.label}</p>
-                          <p className="text-[0.85rem] text-[#1A1A1A]">{stat.value}</p>
+
+                  {/* 시나리오 히어로 카드 */}
+                  <div
+                    className="rounded-xl p-5 mb-5"
+                    style={{
+                      background: "linear-gradient(135deg, #F0F4FF 0%, #F8FAFC 100%)",
+                      border: `1px solid ${T.border}`,
+                    }}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: "#fff", border: `1px solid ${T.border}` }}
+                      >
+                        <LayoutGrid size={18} color={T.primary} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-[0.65rem] text-[#999] uppercase tracking-wider">감지된 시나리오</span>
+                          <span className="px-2 py-0.5 rounded-full text-[0.7rem]" style={{ background: "#fff", color: T.primary, border: `1px solid ${T.border}` }}>
+                            {scenario.scenario}
+                          </span>
                         </div>
+                        <p className="text-[0.85rem] text-[#1A1A1A] leading-relaxed">{scenario.reason}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 데이터 요약 스트립 */}
+                  <div className="grid grid-cols-6 gap-2 mb-6">
+                    {stats.map((stat) => (
+                      <div
+                        key={stat.label}
+                        className="flex flex-col items-start px-3 py-2.5 rounded-lg"
+                        style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }}
+                      >
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <stat.icon size={11} color="#999" />
+                          <p className="text-[0.62rem] text-[#999]">{stat.label}</p>
+                        </div>
+                        <p className="text-[0.88rem] text-[#1A1A1A]">{stat.value}</p>
                       </div>
                     ))}
                   </div>
-                </div>
 
-                {/* 오른쪽: 추천 위젯 목록 */}
-                <div>
+                  {/* 추천 위젯 헤더 */}
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-[0.75rem] text-[#999] uppercase tracking-wider">추천 위젯</p>
-                    <span className="text-[0.7rem] px-2 py-0.5 rounded-full" style={{ background: "#ECFDF5", color: "#059669" }}>
-                      {selectedWidgets.size}개 선택됨
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[0.8rem] text-[#1A1A1A]">추천 위젯</p>
+                      <span className="text-[0.7rem] px-2 py-0.5 rounded-full" style={{ background: "#F3F4F6", color: "#666" }}>
+                        {selectedWidgets.size} / {allWidgets.length}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[0.72rem]">
+                      <button onClick={selectRecommended} className="px-2 py-1 rounded hover:bg-[#F3F4F6] transition-colors" style={{ color: T.primary }}>
+                        추천만
+                      </button>
+                      <span className="text-[#E0E3E8]">·</span>
+                      <button onClick={selectAll} className="px-2 py-1 rounded hover:bg-[#F3F4F6] transition-colors" style={{ color: "#666" }}>
+                        모두
+                      </button>
+                      <span className="text-[#E0E3E8]">·</span>
+                      <button onClick={clearAll} className="px-2 py-1 rounded hover:bg-[#F3F4F6] transition-colors" style={{ color: "#666" }}>
+                        해제
+                      </button>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    {recommendations.map((rec) => {
-                      const widget = allWidgets.find(w => w.id === rec.widgetId);
-                      if (!widget) return null;
-                      const isSelected = selectedWidgets.has(rec.widgetId);
+
+                  {/* 추천 위젯 — 카테고리 그룹 */}
+                  <div className="space-y-4">
+                    {categoryOrder.map((cat) => {
+                      const items = recsByCategory.get(cat);
+                      if (!items || items.length === 0) return null;
                       return (
-                        <div
-                          key={rec.widgetId}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all"
-                          style={{
-                            background: isSelected ? "#F0FFF4" : "#F9FAFB",
-                            border: `1px solid ${isSelected ? "#86EFAC" : "#E5E7EB"}`,
-                          }}
-                          onClick={() => {
-                            setSelectedWidgets(prev => {
-                              const next = new Set(prev);
-                              if (next.has(rec.widgetId)) next.delete(rec.widgetId);
-                              else next.add(rec.widgetId);
-                              return next;
-                            });
-                          }}
-                        >
-                          <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#1A472A] shrink-0" />
-                          <widget.icon size={14} color={isSelected ? T.primary : "#999"} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[0.8rem] text-[#1A1A1A]">{widget.name}</p>
-                            <p className="text-[0.68rem] text-[#999] truncate">{rec.reason}</p>
+                        <div key={cat}>
+                          <p className="text-[0.68rem] text-[#999] uppercase tracking-wider mb-2">
+                            {categoryLabels[cat] || cat} <span className="text-[#CCC]">· {items.length}</span>
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {items.map((rec) => {
+                              const widget = allWidgets.find((w) => w.id === rec.widgetId);
+                              if (!widget) return null;
+                              const isSelected = selectedWidgets.has(rec.widgetId);
+                              const isTopPick = (rec.priority ?? 0) >= 90;
+                              return (
+                                <div
+                                  key={rec.widgetId}
+                                  className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer transition-all"
+                                  style={{
+                                    background: isSelected ? "#F0FFF4" : "#fff",
+                                    border: `1px solid ${isSelected ? "#86EFAC" : T.border}`,
+                                  }}
+                                  onClick={() => toggleWidget(rec.widgetId)}
+                                >
+                                  <input type="checkbox" checked={isSelected} readOnly className="mt-0.5 w-3.5 h-3.5 accent-[#1A472A] shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                      <widget.icon size={13} color={isSelected ? T.primary : "#999"} />
+                                      <p className="text-[0.8rem] text-[#1A1A1A] truncate">{widget.name}</p>
+                                      {isTopPick && (
+                                        <span className="text-[0.58rem] px-1 py-0.5 rounded shrink-0" style={{ background: "#FEF3C7", color: "#D97706" }}>
+                                          추천
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[0.68rem] text-[#999] leading-snug" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                      {rec.reason}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                          <span className="text-[0.6rem] px-1.5 py-0.5 rounded shrink-0" style={{ background: "#F3F4F6", color: "#666" }}>
-                            {widget.category === "kpi" ? "KPI" : widget.category === "chart" ? "차트" : widget.category === "table" ? "테이블" : "유틸"}
-                          </span>
                         </div>
                       );
                     })}
                   </div>
 
                   {/* 기타 위젯 */}
-                  {(() => {
-                    const otherWidgets = allWidgets.filter(w => !recommendations.some(r => r.widgetId === w.id));
-                    if (otherWidgets.length === 0) return null;
-                    return (
-                      <div className="mt-3">
-                        <button
-                          onClick={() => setShowOtherWidgets(!showOtherWidgets)}
-                          className="flex items-center gap-1.5 text-[0.75rem] mb-2 transition-colors"
-                          style={{ color: T.primary }}
-                        >
-                          <ChevronDown size={12} className={`transition-transform ${showOtherWidgets ? "rotate-180" : ""}`} />
-                          기타 위젯 ({otherWidgets.length}개)
-                        </button>
-                        {showOtherWidgets && (
-                          <div className="space-y-1.5">
-                            {otherWidgets.map(widget => {
-                              const isSelected = selectedWidgets.has(widget.id);
-                              return (
-                                <div
-                                  key={widget.id}
-                                  className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all"
-                                  style={{
-                                    background: isSelected ? "#F0FFF4" : "#FAFAFA",
-                                    border: `1px solid ${isSelected ? "#86EFAC" : "#F3F4F6"}`,
-                                  }}
-                                  onClick={() => {
-                                    setSelectedWidgets(prev => {
-                                      const next = new Set(prev);
-                                      if (next.has(widget.id)) next.delete(widget.id);
-                                      else next.add(widget.id);
-                                      return next;
-                                    });
-                                  }}
-                                >
-                                  <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#1A472A] shrink-0" />
-                                  <widget.icon size={13} color="#999" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-[0.78rem] text-[#666]">{widget.name}</p>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
+                  {otherWidgets.length > 0 && (
+                    <div className="mt-5 pt-4" style={{ borderTop: `1px dashed ${T.border}` }}>
+                      <button
+                        onClick={() => setShowOtherWidgets(!showOtherWidgets)}
+                        className="flex items-center gap-1.5 text-[0.75rem] mb-2 transition-colors"
+                        style={{ color: "#666" }}
+                      >
+                        <ChevronDown size={12} className={`transition-transform ${showOtherWidgets ? "rotate-180" : ""}`} />
+                        기타 위젯 추가하기 ({otherWidgets.length}개)
+                      </button>
+                      {showOtherWidgets && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {otherWidgets.map((widget) => {
+                            const isSelected = selectedWidgets.has(widget.id);
+                            return (
+                              <div
+                                key={widget.id}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all"
+                                style={{
+                                  background: isSelected ? "#F0FFF4" : "#FAFAFA",
+                                  border: `1px solid ${isSelected ? "#86EFAC" : T.border}`,
+                                }}
+                                onClick={() => toggleWidget(widget.id)}
+                              >
+                                <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#1A472A] shrink-0" />
+                                <widget.icon size={12} color="#999" />
+                                <p className="text-[0.75rem] text-[#666] truncate">{widget.name}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-              {/* 하단 버튼 */}
-              <div className="flex items-center justify-between mt-6 pt-5" style={{ borderTop: `1px solid ${T.border}` }}>
-                <button
-                  onClick={() => setStep(2)}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[0.8rem] transition-colors"
-                  style={{ border: `1px solid ${T.border}`, color: "#666" }}
-                >
-                  <ChevronLeft size={13} /> 이전
-                </button>
-                <button
-                  onClick={commitImportedDeals}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-[0.85rem] text-white transition-colors"
-                  style={{ background: T.primary }}
-                >
-                  대시보드로 이동하기 <ArrowRight size={13} />
-                </button>
-              </div>
-            </>
+                  {/* 하단 버튼 */}
+                  <div className="flex items-center justify-between mt-6 pt-5" style={{ borderTop: `1px solid ${T.border}` }}>
+                    <button
+                      onClick={() => setStep(2)}
+                      className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[0.8rem] transition-colors"
+                      style={{ border: `1px solid ${T.border}`, color: "#666" }}
+                    >
+                      <ChevronLeft size={13} /> 이전
+                    </button>
+                    <button
+                      onClick={commitImportedDeals}
+                      className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-[0.85rem] text-white transition-colors"
+                      style={{ background: T.primary }}
+                      disabled={selectedWidgets.size === 0}
+                    >
+                      {selectedWidgets.size}개 위젯으로 시작하기 <ArrowRight size={13} />
+                    </button>
+                  </div>
+                </>
+              );
+            })()
           ) : null}
         </div>
       )}
