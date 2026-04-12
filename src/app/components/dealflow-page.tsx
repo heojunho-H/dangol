@@ -1606,11 +1606,12 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
 }
 
 /* ─── STAGE DROPDOWN (reusable) ─── */
-function StageDropdown({ currentStage, stageNames, stageColorMap, onChange }: { currentStage: string; stageNames: string[]; stageColorMap: Record<string, string>; onChange: (stage: string) => void }) {
+function StageDropdown({ currentStage, stageNames, stageColorMap, onChange, compact }: { currentStage: string; stageNames: string[]; stageColorMap: Record<string, string>; onChange: (stage: string) => void; compact?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const color = stageColorMap[currentStage] || "#999";
   return (
-    <div className="relative" onClick={(e) => e.stopPropagation()}>
+    <div className="relative" onClick={(e) => e.stopPropagation()} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <button
         onClick={() => setOpen((p) => !p)}
         className="inline-flex items-center gap-1.5 text-[0.65rem] px-2.5 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
@@ -1618,7 +1619,7 @@ function StageDropdown({ currentStage, stageNames, stageColorMap, onChange }: { 
       >
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
         {currentStage}
-        <ChevronDown size={9} />
+        {(!compact || hovered || open) && <ChevronDown size={9} />}
       </button>
       {open && (
         <>
@@ -3299,6 +3300,10 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [dateRange, setDateRange] = useState<DateRange>({ preset: "all", from: "", to: "" });
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [showHeaderMore, setShowHeaderMore] = useState(false);
+  const [hoveredDeal, setHoveredDeal] = useState<Deal | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [customerDeals, setCustomerDeals] = useState<Deal[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
@@ -4157,11 +4162,12 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((h) => {
                             const sortIdx = sorts.findIndex((s) => s.field === h.key);
                             const sortDir = sortIdx >= 0 ? sorts[sortIdx].dir : null;
+                            const isNumeric = h.key === "amount" || h.key === "quantity";
                             return (
                               <th
                                 key={h.key}
-                                className="text-left py-3 px-4 whitespace-nowrap border-b cursor-pointer select-none"
-                                style={{ borderColor: T.border }}
+                                className={`${isNumeric ? "text-right" : "text-left"} py-3 px-4 whitespace-nowrap border-b cursor-pointer select-none relative`}
+                                style={{ borderColor: T.border, ...(columnWidths[h.key] ? { width: columnWidths[h.key], minWidth: columnWidths[h.key] } : {}) }}
                                 onClick={() => {
                                   if (!h.sort) return;
                                   if (sortIdx >= 0) {
@@ -4173,7 +4179,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                   setShowSortPanel(true);
                                 }}
                               >
-                                <div className="flex items-center gap-1.5">
+                                <div className={`flex items-center gap-1.5 ${isNumeric ? "justify-end" : ""}`}>
                                   <span className="text-[0.65rem] text-[#888] tracking-wide">{h.label}</span>
                                   {h.sort && (
                                     <span className={`text-[0.55rem] ${sortDir ? "text-[#1A472A]" : "text-[#CCC]"}`}>
@@ -4182,6 +4188,28 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                     </span>
                                   )}
                                 </div>
+                                {/* Column resize handle */}
+                                <div
+                                  className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[#1A472A]/20 transition-colors z-10"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const startX = e.clientX;
+                                    const startWidth = (e.currentTarget.parentElement?.getBoundingClientRect().width) || 120;
+                                    const onMove = (ev: MouseEvent) => {
+                                      const delta = ev.clientX - startX;
+                                      const next = Math.max(60, startWidth + delta);
+                                      setColumnWidths((prev) => ({ ...prev, [h.key]: next }));
+                                    };
+                                    const onUp = () => {
+                                      document.removeEventListener("mousemove", onMove);
+                                      document.removeEventListener("mouseup", onUp);
+                                    };
+                                    document.addEventListener("mousemove", onMove);
+                                    document.addEventListener("mouseup", onUp);
+                                  }}
+                                />
                               </th>
                             );
                           })}
@@ -4243,6 +4271,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                         stageNames={pipelineStages.map((s) => s.name)}
                                         stageColorMap={stageColors}
                                         onChange={(s) => moveDealStage(deal.id, s)}
+                                        compact
                                       />
                                     ),
                                     contact: (
@@ -4253,8 +4282,8 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                     ),
                                     position: <span className="text-[0.7rem] text-[#666]">{deal.position}</span>,
                                     service: <span className="text-[0.7rem] text-[#555]">{deal.service}</span>,
-                                    amount: <span className="text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.amount}</span>,
-                                    quantity: <span className="text-[0.7rem] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>,
+                                    amount: <span className="block text-right text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.amount}</span>,
+                                    quantity: <span className="block text-right text-[0.7rem] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>,
                                     manager: (
                                       <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-full flex items-center justify-center text-[0.55rem] text-white" style={{ background: "#94A3B8" }}>
@@ -4278,14 +4307,26 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                       key={deal.id}
                                       className="border-b transition-colors"
                                       style={{ borderColor: T.border, background: isSelected ? "#F0F7F2" : "#fff" }}
-                                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#FAFBFC"; }}
-                                      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "#fff"; }}
+                                      onMouseEnter={(e) => {
+                                        if (!isSelected) e.currentTarget.style.background = "#FAFBFC";
+                                        if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                                        hoverTimer.current = setTimeout(() => {
+                                          const rect = e.currentTarget.getBoundingClientRect();
+                                          setHoverPos({ x: rect.right + 8, y: rect.top });
+                                          setHoveredDeal(deal);
+                                        }, 400);
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (!isSelected) e.currentTarget.style.background = "#fff";
+                                        if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                                        setHoveredDeal(null);
+                                      }}
                                     >
                                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                                         <input type="checkbox" checked={isSelected} onChange={() => toggleOne(deal.id)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                                       </td>
                                       {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((col) => (
-                                        <td key={col.key} className="py-3.5 px-4">{cellMap[col.key]}</td>
+                                        <td key={col.key} className="py-3.5 px-4" style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}>{cellMap[col.key]}</td>
                                       ))}
                                     </tr>
                                   );
@@ -4366,6 +4407,43 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     )}
                   </div>
                 </div>
+                )}
+
+                {/* Row Hover Preview Tooltip */}
+                {activeView === "table" && hoveredDeal && !selectedDeal && (
+                  <div
+                    className="fixed z-50 bg-white border rounded-xl shadow-lg px-4 py-3 pointer-events-none"
+                    style={{
+                      borderColor: T.border,
+                      left: Math.min(hoverPos.x, window.innerWidth - 220),
+                      top: Math.max(8, Math.min(hoverPos.y, window.innerHeight - 120)),
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                      width: 200,
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[0.6rem] text-white shrink-0" style={{ background: stageColors[hoveredDeal.stage] || T.primary }}>
+                        {hoveredDeal.company.replace(/[\(\)주]/g, "").charAt(0)}
+                      </div>
+                      <span className="text-[0.8rem] text-[#1A1A1A] font-medium truncate">{hoveredDeal.company}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.65rem] text-[#999]">금액</span>
+                        <span className="text-[0.7rem] text-[#1A1A1A] tabular-nums font-medium">{hoveredDeal.amount}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.65rem] text-[#999]">스테이지</span>
+                        <span className="text-[0.65rem] px-2 py-0.5 rounded-full" style={{ background: (stageColors[hoveredDeal.stage] || "#999") + "14", color: stageColors[hoveredDeal.stage] || "#999" }}>
+                          {hoveredDeal.stage}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[0.65rem] text-[#999]">담당자</span>
+                        <span className="text-[0.7rem] text-[#555]">{hoveredDeal.contact}</span>
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 </>
