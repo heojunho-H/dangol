@@ -996,7 +996,12 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
       setDealAnalysis(analysis);
       setScenario(data.scenario);
       setRecommendations(data.recommendations);
-      setSelectedWidgets(new Set(data.recommendations.map((r: WidgetRecommendation) => r.widgetId)));
+      // Pre-select only the essential widgets (priority >= 85) — start tight,
+      // user can expand via "추천 전체" button.
+      const essentials = (data.recommendations as WidgetRecommendation[])
+        .filter((r) => (r.priority ?? 0) >= 85)
+        .map((r) => r.widgetId);
+      setSelectedWidgets(new Set(essentials));
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       // Fallback: 로컬 규칙 기반 추천
@@ -1008,7 +1013,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
       setDealAnalysis(analysis);
       setScenario(detected);
       setRecommendations(recs);
-      setSelectedWidgets(new Set(recs.map(r => r.widgetId)));
+      setSelectedWidgets(new Set(recs.filter((r) => (r.priority ?? 0) >= 85).map((r) => r.widgetId)));
     } finally {
       if (!controller.signal.aborted) setIsAnalyzingDashboard(false);
     }
@@ -1628,8 +1633,9 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
               const recIds = new Set(recommendations.map((r) => r.widgetId));
               const otherWidgets = allWidgets.filter((w) => !recIds.has(w.id));
 
-              const selectAll = () => setSelectedWidgets(new Set(allWidgets.map((w) => w.id)));
-              const selectRecommended = () => setSelectedWidgets(new Set(recommendations.map((r) => r.widgetId)));
+              const selectEssentials = () =>
+                setSelectedWidgets(new Set(recommendations.filter((r) => (r.priority ?? 0) >= 85).map((r) => r.widgetId)));
+              const selectAllRecommended = () => setSelectedWidgets(new Set(recommendations.map((r) => r.widgetId)));
               const clearAll = () => setSelectedWidgets(new Set());
 
               const stats = [
@@ -1702,12 +1708,12 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
                       </span>
                     </div>
                     <div className="flex items-center gap-1 text-[0.72rem]">
-                      <button onClick={selectRecommended} className="px-2 py-1 rounded hover:bg-[#F3F4F6] transition-colors" style={{ color: T.primary }}>
-                        추천만
+                      <button onClick={selectEssentials} className="px-2 py-1 rounded hover:bg-[#F3F4F6] transition-colors" style={{ color: T.primary }}>
+                        필수만
                       </button>
                       <span className="text-[#E0E3E8]">·</span>
-                      <button onClick={selectAll} className="px-2 py-1 rounded hover:bg-[#F3F4F6] transition-colors" style={{ color: "#666" }}>
-                        모두
+                      <button onClick={selectAllRecommended} className="px-2 py-1 rounded hover:bg-[#F3F4F6] transition-colors" style={{ color: "#666" }}>
+                        추천 전체
                       </button>
                       <span className="text-[#E0E3E8]">·</span>
                       <button onClick={clearAll} className="px-2 py-1 rounded hover:bg-[#F3F4F6] transition-colors" style={{ color: "#666" }}>
