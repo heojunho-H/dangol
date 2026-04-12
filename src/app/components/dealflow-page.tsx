@@ -4270,11 +4270,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           {/* Custom KPI widgets */}
                           {customKpis.map((kpi) => {
                             const vars = {
-                              wonAmt: customerDeals.filter((d) => d.status === "성공").reduce((s, d) => s + parseAmt(d.amount), 0),
-                              totalAmt: customerDeals.reduce((s, d) => s + parseAmt(d.amount), 0),
-                              wonCount: customerDeals.filter((d) => d.status === "성공").length,
-                              totalCount: customerDeals.length,
-                              activeCount: customerDeals.filter((d) => d.status === "진행중").length,
+                              wonAmt: dateFilteredDeals.filter((d) => d.status === "성공").reduce((s, d) => s + parseAmt(d.amount), 0),
+                              totalAmt: dateFilteredDeals.reduce((s, d) => s + parseAmt(d.amount), 0),
+                              wonCount: dateFilteredDeals.filter((d) => d.status === "성공").length,
+                              totalCount: dateFilteredDeals.length,
+                              activeCount: dateFilteredDeals.filter((d) => d.status === "진행중").length,
                             };
                             const result = computeCustomKpi(kpi, vars);
                             const isPercent = kpi.formula !== "avg_deal_amount";
@@ -4293,7 +4293,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
                           {/* Goal gauge widgets */}
                           {goals.map((goal) => {
-                            const wonAmt = customerDeals.filter((d) => d.status === "성공").reduce((s, d) => s + parseAmt(d.amount), 0);
+                            const wonAmt = dateFilteredDeals.filter((d) => d.status === "성공").reduce((s, d) => s + parseAmt(d.amount), 0);
                             const pct = goal.targetAmount > 0 ? Math.min(Math.round((wonAmt / goal.targetAmount) * 100), 100) : 0;
                             const gaugeColor = pct >= 80 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
                             return (
