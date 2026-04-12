@@ -1704,6 +1704,27 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(() => generateActivityLogs(deal));
   const [files] = useState<AttachedFile[]>(() => generateFiles(deal));
   const [aiExpanded, setAiExpanded] = useState(false);
+  const [drawerWidth, setDrawerWidth] = useState(400);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startWidth = drawerWidth;
+    const onMouseMove = (ev: MouseEvent) => {
+      const delta = startX - ev.clientX;
+      const next = Math.min(480, Math.max(360, startWidth + delta));
+      setDrawerWidth(next);
+    };
+    const onMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [drawerWidth]);
 
   const tabs: { key: DrawerTab; label: string; icon: typeof Info }[] = [
     { key: "basic", label: "기본정보", icon: Info },
@@ -1764,7 +1785,14 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
   };
 
   return (
-    <div className="w-[400px] h-full bg-white border-l flex flex-col shrink-0" style={{ borderColor: T.border }}>
+    <div className="h-full bg-white border-l flex shrink-0 relative" style={{ borderColor: T.border, width: drawerWidth }}>
+      {/* Resize handle */}
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-[#1A472A]/20 transition-colors"
+        style={{ background: isResizing ? "rgba(26,71,42,0.15)" : "transparent" }}
+      />
+      <div className="flex-1 flex flex-col min-w-0">
       {/* Header */}
       <div className="px-6 py-4 border-b" style={{ borderColor: T.border }}>
         <div className="flex items-center justify-between mb-2">
@@ -2123,6 +2151,7 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage 
         >
           <MoreHorizontal size={14} />
         </button>
+      </div>
       </div>
     </div>
   );
@@ -3269,6 +3298,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange>({ preset: "all", from: "", to: "" });
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
+  const [showHeaderMore, setShowHeaderMore] = useState(false);
   const [customerDeals, setCustomerDeals] = useState<Deal[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
@@ -3514,12 +3544,36 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
               </>
             )}
           </div>
-          <button onClick={() => setShowOnboarding(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] transition-colors hover:bg-[#F7F8FA]" style={{ borderColor: T.border, color: "#666" }}>
-            <Upload size={12} /> Excel 가져오기
-          </button>
-          <button onClick={() => setShowWebFormOnboarding(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] transition-colors hover:bg-[#F7F8FA]" style={{ borderColor: T.border, color: "#666" }}>
-            <Globe size={12} /> 웹 폼 연동
-          </button>
+          {/* 더보기 메뉴 */}
+          <div className="relative">
+            <button
+              onClick={() => setShowHeaderMore((p) => !p)}
+              className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] transition-colors hover:bg-[#F7F8FA]"
+              style={{ borderColor: T.border }}
+              title="더보기"
+            >
+              <MoreHorizontal size={14} />
+            </button>
+            {showHeaderMore && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowHeaderMore(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-white border rounded-xl shadow-lg z-50 w-[180px] py-1.5" style={{ borderColor: T.border }}>
+                  <button
+                    onClick={() => { setShowOnboarding(true); setShowHeaderMore(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[0.8rem] text-[#444] hover:bg-[#F7F8FA] transition-colors"
+                  >
+                    <Upload size={13} color="#888" /> Excel 가져오기
+                  </button>
+                  <button
+                    onClick={() => { setShowWebFormOnboarding(true); setShowHeaderMore(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-[0.8rem] text-[#444] hover:bg-[#F7F8FA] transition-colors"
+                  >
+                    <Globe size={13} color="#888" /> 웹 폼 연동
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <button onClick={() => setShowAddDeal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: T.primary }}>
             <Plus size={12} /> 딜 추가
           </button>
