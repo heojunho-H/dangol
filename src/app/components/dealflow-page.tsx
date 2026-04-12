@@ -86,6 +86,52 @@ const T = {
   widgetBg: "#F1F5F9",
 };
 
+/* ─── DATE RANGE HELPERS ─── */
+type DateRangePreset = "all" | "this_month" | "last_month" | "this_quarter" | "last_quarter" | "this_year" | "custom";
+interface DateRange { preset: DateRangePreset; from: string; to: string; }
+const DATE_RANGE_PRESETS: { key: DateRangePreset; label: string }[] = [
+  { key: "all", label: "전체 기간" },
+  { key: "this_month", label: "이번 달" },
+  { key: "last_month", label: "지난 달" },
+  { key: "this_quarter", label: "이번 분기" },
+  { key: "last_quarter", label: "지난 분기" },
+  { key: "this_year", label: "올해" },
+  { key: "custom", label: "직접 설정" },
+];
+function computeDateRange(preset: DateRangePreset): { from: string; to: string } {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  switch (preset) {
+    case "this_month": return { from: `${y}-${pad(m + 1)}-01`, to: fmt(new Date(y, m + 1, 0)) };
+    case "last_month": return { from: `${y}-${pad(m)}-01`, to: fmt(new Date(y, m, 0)) };
+    case "this_quarter": { const qs = Math.floor(m / 3) * 3; return { from: `${y}-${pad(qs + 1)}-01`, to: fmt(new Date(y, qs + 3, 0)) }; }
+    case "last_quarter": { const qs = Math.floor(m / 3) * 3 - 3; const ly = qs < 0 ? y - 1 : y; const lqs = ((qs % 12) + 12) % 12; return { from: `${ly}-${pad(lqs + 1)}-01`, to: fmt(new Date(ly, lqs + 3, 0)) }; }
+    case "this_year": return { from: `${y}-01-01`, to: `${y}-12-31` };
+    default: return { from: "", to: "" };
+  }
+}
+function dateRangeLabel(dr: DateRange): string {
+  if (dr.preset === "all") return "전체 기간";
+  const p = DATE_RANGE_PRESETS.find((x) => x.key === dr.preset);
+  if (dr.preset !== "custom" && p) return p.label;
+  if (dr.from && dr.to) return `${dr.from.slice(5)} ~ ${dr.to.slice(5)}`;
+  if (dr.from) return `${dr.from.slice(5)} ~`;
+  if (dr.to) return `~ ${dr.to.slice(5)}`;
+  return "기간 선택";
+}
+function filterByDateRange(deals: Deal[], dr: DateRange): Deal[] {
+  if (dr.preset === "all") return deals;
+  if (!dr.from && !dr.to) return deals;
+  return deals.filter((d) => {
+    if (dr.from && d.date < dr.from) return false;
+    if (dr.to && d.date > dr.to) return false;
+    return true;
+  });
+}
+
 /* ─── PIPELINE STAGE TYPE ─── */
 interface PipelineStage {
   id: string;
@@ -2624,6 +2670,8 @@ function DealflowPageInner() {
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [widgetDragIdx, setWidgetDragIdx] = useState<number | null>(null);
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange>({ preset: "all", from: "", to: "" });
+  const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [customerDeals, setCustomerDeals] = useState<Deal[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
@@ -2702,10 +2750,12 @@ function DealflowPageInner() {
 
   const getWidgetSpan = (w: WidgetDef) => widgetSizes[w.id] ?? w.colSpan;
 
+  const dateFilteredDeals = useMemo(() => filterByDateRange(customerDeals, dateRange), [customerDeals, dateRange]);
+
   const filteredDeals = useMemo(() => {
-    const filtered = applyFilters(customerDeals, filters, searchQuery);
+    const filtered = applyFilters(dateFilteredDeals, filters, searchQuery);
     return applySorts(filtered, sorts);
-  }, [searchQuery, filters, sorts, customerDeals]);
+  }, [searchQuery, filters, sorts, dateFilteredDeals]);
 
   const groupedDeals = useMemo(() => groupDeals(filteredDeals, groupBy), [filteredDeals, groupBy]);
 
@@ -2776,8 +2826,45 @@ function DealflowPageInner() {
             <Grid3X3 size={12} /> 필드
           </button>
           <div className="w-px h-5" style={{ background: T.border }} />
-          <div className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666]" style={{ borderColor: T.border }}>
-            <Calendar size={12} /> 2026년 4월
+          {/* Date Range Picker */}
+          <div className="relative">
+            <button onClick={() => setShowDateRangePicker((p) => !p)} className={`flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] transition-colors hover:bg-[#F7F8FA] ${dateRange.preset !== "all" ? "text-[#1A472A] border-[#1A472A] bg-[#F0FDF4]" : "text-[#666]"}`} style={{ borderColor: dateRange.preset !== "all" ? T.primary : T.border }}>
+              <Calendar size={12} /> {dateRangeLabel(dateRange)}
+              <ChevronDown size={10} />
+            </button>
+            {showDateRangePicker && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowDateRangePicker(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-white border rounded-xl shadow-lg z-50 w-[280px] py-2" style={{ borderColor: T.border }}>
+                  {DATE_RANGE_PRESETS.filter((p) => p.key !== "custom").map((p) => (
+                    <button key={p.key} onClick={() => { const range = p.key === "all" ? { from: "", to: "" } : computeDateRange(p.key); setDateRange({ preset: p.key, ...range }); setShowDateRangePicker(false); }} className={`w-full text-left px-4 py-2 text-[0.8rem] transition-colors hover:bg-[#F7F8FA] ${dateRange.preset === p.key ? "text-[#1A472A] font-medium bg-[#F0FDF4]" : "text-[#444]"}`}>
+                      {p.label}
+                      {dateRange.preset === p.key && <CheckCircle2 size={12} className="inline ml-2 text-[#2CBF60]" />}
+                    </button>
+                  ))}
+                  <div className="border-t mx-3 my-1" style={{ borderColor: T.border }} />
+                  <div className="px-4 py-2">
+                    <p className="text-[0.7rem] text-[#999] mb-2">직접 설정</p>
+                    <div className="flex items-center gap-2">
+                      <input type="date" value={dateRange.preset === "custom" ? dateRange.from : ""} onChange={(e) => { const from = e.target.value; setDateRange((prev) => ({ preset: "custom", from, to: prev.preset === "custom" ? prev.to : "" })); }} className="flex-1 border rounded-md px-2 py-1.5 text-[0.75rem] text-[#444] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} />
+                      <span className="text-[0.7rem] text-[#999]">~</span>
+                      <input type="date" value={dateRange.preset === "custom" ? dateRange.to : ""} onChange={(e) => { const to = e.target.value; setDateRange((prev) => ({ preset: "custom", from: prev.preset === "custom" ? prev.from : "", to })); }} className="flex-1 border rounded-md px-2 py-1.5 text-[0.75rem] text-[#444] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} />
+                    </div>
+                    {dateRange.preset === "custom" && (dateRange.from || dateRange.to) && (
+                      <button onClick={() => setShowDateRangePicker(false)} className="w-full mt-2 py-1.5 rounded-md text-[0.75rem] text-white transition-colors" style={{ background: T.primary }}>적용</button>
+                    )}
+                  </div>
+                  {dateRange.preset !== "all" && (
+                    <>
+                      <div className="border-t mx-3 my-1" style={{ borderColor: T.border }} />
+                      <button onClick={() => { setDateRange({ preset: "all", from: "", to: "" }); setShowDateRangePicker(false); }} className="w-full text-left px-4 py-2 text-[0.8rem] text-[#E8453A] hover:bg-[#FEF2F2] transition-colors">
+                        <X size={11} className="inline mr-1.5" />기간 필터 초기화
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
           <button onClick={() => setShowOnboarding(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] transition-colors hover:bg-[#F7F8FA]" style={{ borderColor: T.border, color: "#666" }}>
             <Upload size={12} /> Excel 가져오기
@@ -2965,7 +3052,7 @@ function DealflowPageInner() {
                                     <X size={9} color={T.danger} />
                                   </button>
                                 </div>
-                                <WidgetContent widgetId={w.id} deals={customerDeals} stageColorMap={stageColors} />
+                                <WidgetContent widgetId={w.id} deals={dateFilteredDeals} stageColorMap={stageColors} />
                               </div>
                             );
                           })}
