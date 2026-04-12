@@ -1753,7 +1753,11 @@ function StageDropdown({ currentStage, stageNames, stageColorMap, onChange, comp
       >
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
         {currentStage}
-        {(!compact || hovered || open) && <ChevronDown size={9} />}
+        <ChevronDown
+          size={9}
+          className="transition-opacity"
+          style={{ opacity: !compact || hovered || open ? 1 : 0 }}
+        />
       </button>
       {open && (
         <>
@@ -1793,7 +1797,11 @@ function StatusDropdown({ currentStatus, onChange, compact }: { currentStatus: s
       >
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: palette.text }} />
         {currentStatus}
-        {(!compact || hovered || open) && <ChevronDown size={9} />}
+        <ChevronDown
+          size={9}
+          className="transition-opacity"
+          style={{ opacity: !compact || hovered || open ? 1 : 0 }}
+        />
       </button>
       {open && (
         <>
