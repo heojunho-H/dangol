@@ -2940,22 +2940,22 @@ function DealflowPageInner() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setShowCustomKpiModal(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#EEF2FF]"
-                        style={{ color: "#6366F1", border: `1px solid ${T.border}` }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] text-[#666] transition-colors hover:bg-[#F7F8FA]"
+                        style={{ border: `1px solid ${T.border}` }}
                       >
                         <Zap size={12} /> 커스텀 KPI
                       </button>
                       <button
                         onClick={() => setShowGoalModal(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#FFFBEB]"
-                        style={{ color: "#B45309", border: `1px solid ${T.border}` }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] text-[#666] transition-colors hover:bg-[#F7F8FA]"
+                        style={{ border: `1px solid ${T.border}` }}
                       >
                         <Gauge size={12} /> 목표 설정
                       </button>
                       <button
                         onClick={() => setCustomizeMode(true)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] transition-colors hover:bg-[#EFF5F1]"
-                        style={{ color: T.primary, border: `1px solid ${T.border}` }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[0.75rem] text-[#666] transition-colors hover:bg-[#F7F8FA]"
+                        style={{ border: `1px solid ${T.border}` }}
                       >
                         <Plus size={12} /> 위젯 추가
                       </button>
@@ -2985,10 +2985,10 @@ function DealflowPageInner() {
                             const result = computeCustomKpi(kpi, vars);
                             const isPercent = kpi.formula !== "avg_deal_amount";
                             return (
-                              <div key={kpi.id} className="bg-white rounded-xl p-5 border relative group" style={{ borderColor: "#6366F1", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                              <div key={kpi.id} className="bg-white rounded-xl p-5 border relative group" style={{ borderColor: T.border, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                                 <button onClick={() => setCustomKpis((prev) => prev.filter((k) => k.id !== kpi.id))} className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FEF2F2] z-10"><X size={10} color={T.danger} /></button>
                                 <div className="flex items-center gap-2 mb-3">
-                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#EEF2FF" }}><Zap size={14} color="#6366F1" /></div>
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#EFF5F1" }}><Zap size={14} color={T.primary} /></div>
                                   <span className="text-[0.7rem] text-[#888]">{kpi.name}</span>
                                 </div>
                                 <p className="text-[1.5rem] text-[#1A1A1A] tabular-nums font-semibold">{isPercent ? `${result}%` : fmtAmt(result)}</p>
@@ -3003,12 +3003,12 @@ function DealflowPageInner() {
                             const pct = goal.targetAmount > 0 ? Math.min(Math.round((wonAmt / goal.targetAmount) * 100), 100) : 0;
                             const gaugeColor = pct >= 80 ? "#10B981" : pct >= 50 ? "#F59E0B" : "#EF4444";
                             return (
-                              <div key={goal.id} className="bg-white rounded-xl p-5 border relative group" style={{ borderColor: "#F59E0B", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+                              <div key={goal.id} className="bg-white rounded-xl p-5 border relative group" style={{ borderColor: T.border, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                                 <button onClick={() => setGoals((prev) => prev.filter((g) => g.id !== goal.id))} className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#FEF2F2] z-10"><X size={10} color={T.danger} /></button>
                                 <div className="flex items-center gap-2 mb-3">
-                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#FFFBEB" }}><Gauge size={14} color="#B45309" /></div>
+                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#EFF5F1" }}><Gauge size={14} color={T.primary} /></div>
                                   <span className="text-[0.7rem] text-[#888]">{goal.name}</span>
-                                  <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "#FFFBEB", color: "#B45309" }}>{goal.period === "monthly" ? "월간" : "분기"}</span>
+                                  <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full" style={{ background: "#EFF5F1", color: T.primary }}>{goal.period === "monthly" ? "월간" : "분기"}</span>
                                 </div>
                                 {/* Gauge */}
                                 <div className="flex items-center gap-4">
@@ -3189,9 +3189,9 @@ function DealflowPageInner() {
                     onClick={() => setShowSortPanel(!showSortPanel)}
                     className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
                     style={{
-                      borderColor: sorts.length > 0 ? "#6366F1" : T.border,
-                      color: sorts.length > 0 ? "#6366F1" : "#666",
-                      background: sorts.length > 0 ? "#EEF2FF" : "#fff",
+                      borderColor: sorts.length > 0 ? T.primary : T.border,
+                      color: sorts.length > 0 ? T.primary : "#666",
+                      background: sorts.length > 0 ? "#F0F7F2" : "#fff",
                     }}
                   >
                     <ArrowUpDown size={11} /> 정렬{sorts.length > 0 && ` (${sorts.length})`}
@@ -3199,9 +3199,9 @@ function DealflowPageInner() {
                   <select
                     className="px-3 py-[6px] rounded-lg border text-[0.7rem] focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
                     style={{
-                      borderColor: groupBy ? "#F59E0B" : T.border,
-                      color: groupBy ? "#B45309" : "#666",
-                      background: groupBy ? "#FFFBEB" : "white",
+                      borderColor: groupBy ? T.primary : T.border,
+                      color: groupBy ? T.primary : "#666",
+                      background: groupBy ? "#F0F7F2" : "white",
                     }}
                     value={groupBy}
                     onChange={(e) => { setGroupBy(e.target.value as GroupByField); setCollapsedGroups(new Set()); }}
@@ -3307,7 +3307,7 @@ function DealflowPageInner() {
                       <button onClick={() => removeSort(idx)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0"><X size={12} color={T.danger} /></button>
                     </div>
                   ))}
-                  <button onClick={addSort} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: "#6366F1" }}>
+                  <button onClick={addSort} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: T.primary }}>
                     <Plus size={11} /> 정렬 추가
                   </button>
                 </div>
@@ -3493,7 +3493,7 @@ function DealflowPageInner() {
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-[0.65rem] text-[#888] tracking-wide">{h.label}</span>
                                   {h.sort && (
-                                    <span className={`text-[0.55rem] ${sortDir ? "text-[#6366F1]" : "text-[#CCC]"}`}>
+                                    <span className={`text-[0.55rem] ${sortDir ? "text-[#1A472A]" : "text-[#CCC]"}`}>
                                       {sortDir === "asc" ? "▲" : sortDir === "desc" ? "▼" : "⇅"}
                                       {sortIdx >= 0 && sorts.length > 1 && <sup className="text-[0.45rem] ml-0.5">{sortIdx + 1}</sup>}
                                     </span>
