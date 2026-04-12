@@ -47,7 +47,6 @@ import {
   Phone,
   Mail,
   Info,
-  ArrowUpDown,
   ListFilter,
   Users,
   Target,
@@ -3328,8 +3327,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [sorts, setSorts] = useState<SortRule[]>([]);
   const [groupBy, setGroupBy] = useState<GroupByField>("");
-  const [showFilterPanel, setShowFilterPanel] = useState(false);
-  const [showSortPanel, setShowSortPanel] = useState(false);
+  const [filterPopover, setFilterPopover] = useState<{ key: string; top: number; left: number } | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [bulkActionMenu, setBulkActionMenu] = useState<"" | "status" | "manager" | "delete">("");
@@ -3460,30 +3458,51 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     });
   };
 
-  const addFilter = () => {
-    setFilters((prev) => [...prev, { id: `fl-${Date.now()}`, field: "stage", op: "in", value: "" }]);
-    setShowFilterPanel(true);
-  };
-
-  const updateFilter = (id: string, patch: Partial<FilterRule>) => {
-    setFilters((prev) => prev.map((f) => f.id === id ? { ...f, ...patch } : f));
-  };
-
-  const removeFilter = (id: string) => {
-    setFilters((prev) => prev.filter((f) => f.id !== id));
-  };
-
-  const addSort = () => {
-    setSorts((prev) => [...prev, { field: "date", dir: "desc" }]);
-    setShowSortPanel(true);
-  };
-
   const updateSort = (idx: number, patch: Partial<SortRule>) => {
     setSorts((prev) => prev.map((s, i) => i === idx ? { ...s, ...patch } : s));
   };
 
   const removeSort = (idx: number) => {
     setSorts((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  /* ── Column-based filter helpers (categorical) ── */
+  const getColFilter = (key: string) => filters.find((f) => f.field === key && f.op === "in");
+
+  const toggleColFilterValue = (key: string, val: string) => {
+    const existing = getColFilter(key);
+    const arr = existing?.value
+      ? existing.value.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+    const next = arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
+    if (!existing) {
+      setFilters((prev) => [...prev, { id: `fl-${Date.now()}`, field: key, op: "in", value: next.join(",") }]);
+    } else if (next.length === 0) {
+      setFilters((prev) => prev.filter((f) => f.id !== existing.id));
+    } else {
+      setFilters((prev) => prev.map((f) => (f.id === existing.id ? { ...f, value: next.join(",") } : f)));
+    }
+  };
+
+  const clearColFilter = (key: string) => {
+    setFilters((prev) => prev.filter((f) => f.field !== key));
+  };
+
+  /* ── Column behavior classification ── */
+  const COLUMN_BEHAVIOR: Record<string, "filter" | "sort" | "none"> = {
+    company: "sort",
+    stage: "filter",
+    contact: "sort",
+    position: "sort",
+    service: "filter",
+    amount: "sort",
+    quantity: "sort",
+    manager: "filter",
+    status: "filter",
+    date: "sort",
+    phone: "none",
+    email: "sort",
+    memo: "none",
   };
 
   /* ── Pagination ── */
@@ -3894,28 +3913,13 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     />
                   </div>
                   <div className="w-px h-5" style={{ background: T.border }} />
-                  <button
-                    onClick={() => setShowFilterPanel(!showFilterPanel)}
-                    className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
-                    style={{
-                      borderColor: filters.length > 0 ? T.primary : T.border,
-                      color: filters.length > 0 ? T.primary : "#666",
-                      background: filters.length > 0 ? "#F0F7F2" : "#fff",
-                    }}
-                  >
-                    <ListFilter size={11} /> 필터{filters.length > 0 && ` (${filters.length})`}
-                  </button>
-                  <button
-                    onClick={() => setShowSortPanel(!showSortPanel)}
-                    className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
-                    style={{
-                      borderColor: sorts.length > 0 ? T.primary : T.border,
-                      color: sorts.length > 0 ? T.primary : "#666",
-                      background: sorts.length > 0 ? "#F0F7F2" : "#fff",
-                    }}
-                  >
-                    <ArrowUpDown size={11} /> 정렬{sorts.length > 0 && ` (${sorts.length})`}
-                  </button>
+                  {activeView === "table" && (
+                    <span className="text-[0.65rem] text-[#999] px-1">
+                      {filters.length + sorts.length > 0
+                        ? `컬럼에서 필터·정렬 적용됨 (${filters.length + sorts.length})`
+                        : "컬럼 헤더 클릭으로 필터·정렬"}
+                    </span>
+                  )}
                   <select
                     className="px-3 py-[6px] rounded-lg border text-[0.7rem] focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
                     style={{
@@ -3952,84 +3956,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                       </button>
                     </>
                   )}
-                </div>
-              )}
-
-              {/* Shared Filter Panel */}
-              {customerDeals.length > 0 && showFilterPanel && (
-                <div className="px-5 py-3 mb-4 rounded-xl border space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
-                  {filters.map((f) => {
-                    const fType = FIELD_FILTER_TYPE[f.field] || "text";
-                    const ops = FILTER_OPS_BY_TYPE[fType] || FILTER_OPS_BY_TYPE.text;
-                    const isSelectType = fType === "select" || fType === "person";
-                    const fieldOptions = isSelectType ? uniqueValues(customerDeals, f.field) : [];
-                    return (
-                      <div key={f.id} className="flex items-center gap-2">
-                        <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]" style={{ borderColor: T.border }} value={f.field} onChange={(e) => { const newType = FIELD_FILTER_TYPE[e.target.value] || "text"; const newOps = FILTER_OPS_BY_TYPE[newType] || FILTER_OPS_BY_TYPE.text; updateFilter(f.id, { field: e.target.value, op: newOps[0].op, value: "" }); }}>
-                          {FILTERABLE_FIELDS.map((ff) => <option key={ff.key} value={ff.key}>{ff.label}</option>)}
-                        </select>
-                        <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[80px]" style={{ borderColor: T.border }} value={f.op} onChange={(e) => updateFilter(f.id, { op: e.target.value as FilterOp })}>
-                          {ops.map((o) => <option key={o.op} value={o.op}>{o.label}</option>)}
-                        </select>
-                        {f.op !== "is_empty" && f.op !== "is_not_empty" && (
-                          isSelectType ? (
-                            <div className="flex items-center gap-1 flex-wrap flex-1">
-                              {fieldOptions.map((opt) => {
-                                const selected = f.value.split(",").map((s) => s.trim()).includes(opt);
-                                return (
-                                  <button key={opt} onClick={() => { const arr = f.value ? f.value.split(",").map((s) => s.trim()).filter(Boolean) : []; const next = selected ? arr.filter((v) => v !== opt) : [...arr, opt]; updateFilter(f.id, { value: next.join(",") }); }} className="px-2 py-1 rounded-md text-[0.75rem] border transition-colors" style={{ borderColor: selected ? T.primary : T.border, background: selected ? "#F0F7F2" : "white", color: selected ? T.primary : "#666" }}>
-                                    {opt}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : fType === "date" && f.op === "date_between" ? (
-                            <div className="flex items-center gap-1.5">
-                              <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
-                              <span className="text-[0.75rem] text-[#999]">~</span>
-                              <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
-                            </div>
-                          ) : fType === "date" ? (
-                            <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white flex-1 max-w-[160px]" style={{ borderColor: T.border }} value={f.value} onChange={(e) => updateFilter(f.id, { value: e.target.value })} />
-                          ) : fType === "number" && f.op === "between" ? (
-                            <div className="flex items-center gap-1.5">
-                              <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최소" value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
-                              <span className="text-[0.75rem] text-[#999]">~</span>
-                              <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최대" value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
-                            </div>
-                          ) : (
-                            <input className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white flex-1 max-w-[200px] placeholder-[#CCC]" style={{ borderColor: T.border }} placeholder={fType === "number" ? "숫자 입력 (만원 단위)" : "값 입력"} value={f.value} onChange={(e) => updateFilter(f.id, { value: e.target.value })} />
-                          )
-                        )}
-                        <button onClick={() => removeFilter(f.id)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0"><X size={12} color={T.danger} /></button>
-                      </div>
-                    );
-                  })}
-                  <button onClick={addFilter} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: T.primary }}>
-                    <Plus size={11} /> 필터 추가
-                  </button>
-                </div>
-              )}
-
-              {/* Shared Sort Panel */}
-              {customerDeals.length > 0 && showSortPanel && (
-                <div className="px-5 py-3 mb-4 rounded-xl border space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
-                  {sorts.map((s, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className="text-[0.75rem] text-[#BBB] w-[28px] shrink-0">{idx === 0 ? "1차" : `${idx + 1}차`}</span>
-                      <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]" style={{ borderColor: T.border }} value={s.field} onChange={(e) => updateSort(idx, { field: e.target.value })}>
-                        {SORTABLE_FIELDS.map((sf) => <option key={sf.key} value={sf.key}>{sf.label}</option>)}
-                      </select>
-                      <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={s.dir} onChange={(e) => updateSort(idx, { dir: e.target.value as "asc" | "desc" })}>
-                        <option value="asc">오름차순</option>
-                        <option value="desc">내림차순</option>
-                      </select>
-                      <button onClick={() => removeSort(idx)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0"><X size={12} color={T.danger} /></button>
-                    </div>
-                  ))}
-                  <button onClick={addSort} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: T.primary }}>
-                    <Plus size={11} /> 정렬 추가
-                  </button>
                 </div>
               )}
 
@@ -4208,28 +4134,46 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                             const sortIdx = sorts.findIndex((s) => s.field === h.key);
                             const sortDir = sortIdx >= 0 ? sorts[sortIdx].dir : null;
                             const isNumeric = h.key === "amount" || h.key === "quantity";
+                            const behavior = COLUMN_BEHAVIOR[h.key] || "none";
+                            const colFilter = getColFilter(h.key);
+                            const filterCount = colFilter?.value ? colFilter.value.split(",").filter(Boolean).length : 0;
+                            const isActive = behavior === "filter" ? filterCount > 0 : sortDir !== null;
                             return (
                               <th
                                 key={h.key}
-                                className={`${isNumeric ? "text-right" : "text-left"} py-3 px-4 whitespace-nowrap border-b cursor-pointer select-none relative`}
-                                style={{ borderColor: T.border, ...(columnWidths[h.key] ? { width: columnWidths[h.key], minWidth: columnWidths[h.key] } : {}) }}
-                                onClick={() => {
-                                  if (!h.sort) return;
-                                  if (sortIdx >= 0) {
-                                    if (sortDir === "asc") updateSort(sortIdx, { dir: "desc" });
-                                    else removeSort(sortIdx);
-                                  } else {
-                                    setSorts((prev) => [...prev, { field: h.key, dir: "asc" }]);
+                                className={`${isNumeric ? "text-right" : "text-left"} py-3 px-4 whitespace-nowrap border-b ${behavior !== "none" ? "cursor-pointer" : ""} select-none relative group/th`}
+                                style={{ borderColor: T.border, background: isActive ? "#F0F7F2" : undefined, ...(columnWidths[h.key] ? { width: columnWidths[h.key], minWidth: columnWidths[h.key] } : {}) }}
+                                onClick={(e) => {
+                                  if (behavior === "none") return;
+                                  if (behavior === "sort") {
+                                    if (sortIdx >= 0) {
+                                      if (sortDir === "asc") updateSort(sortIdx, { dir: "desc" });
+                                      else removeSort(sortIdx);
+                                    } else {
+                                      setSorts((prev) => [...prev, { field: h.key, dir: "asc" }]);
+                                    }
+                                  } else if (behavior === "filter") {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setFilterPopover(
+                                      filterPopover?.key === h.key
+                                        ? null
+                                        : { key: h.key, top: rect.bottom + 4, left: rect.left }
+                                    );
                                   }
-                                  setShowSortPanel(true);
                                 }}
                               >
                                 <div className={`flex items-center gap-1.5 ${isNumeric ? "justify-end" : ""}`}>
-                                  <span className="text-[0.65rem] text-[#888] tracking-wide">{h.label}</span>
-                                  {h.sort && (
-                                    <span className={`text-[0.55rem] ${sortDir ? "text-[#1A472A]" : "text-[#CCC]"}`}>
+                                  <span className={`text-[0.65rem] tracking-wide ${isActive ? "text-[#1A472A] font-medium" : "text-[#888]"}`}>{h.label}</span>
+                                  {behavior === "sort" && (
+                                    <span className={`text-[0.55rem] ${sortDir ? "text-[#1A472A]" : "text-[#CCC] opacity-0 group-hover/th:opacity-100"} transition-opacity`}>
                                       {sortDir === "asc" ? "▲" : sortDir === "desc" ? "▼" : "⇅"}
                                       {sortIdx >= 0 && sorts.length > 1 && <sup className="text-[0.45rem] ml-0.5">{sortIdx + 1}</sup>}
+                                    </span>
+                                  )}
+                                  {behavior === "filter" && (
+                                    <span className={`flex items-center gap-0.5 ${filterCount > 0 ? "text-[#1A472A]" : "text-[#CCC] opacity-0 group-hover/th:opacity-100"} transition-opacity`}>
+                                      <ListFilter size={9} />
+                                      {filterCount > 0 && <span className="text-[0.55rem] tabular-nums">{filterCount}</span>}
                                     </span>
                                   )}
                                 </div>
@@ -4533,6 +4477,58 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           onToggleWidget={toggleWidget}
         />
       )}
+
+      {/* Column Filter Popover */}
+      {filterPopover && (() => {
+        const opts = uniqueValues(customerDeals, filterPopover.key);
+        const colFilter = getColFilter(filterPopover.key);
+        const selected = new Set(colFilter?.value ? colFilter.value.split(",").map((s) => s.trim()).filter(Boolean) : []);
+        const colDef = ALL_COLUMNS.find((c) => c.key === filterPopover.key);
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setFilterPopover(null)} />
+            <div
+              className="fixed z-50 bg-white rounded-xl border shadow-lg py-2 min-w-[200px] max-w-[280px]"
+              style={{ top: filterPopover.top, left: filterPopover.left, borderColor: T.border, boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}
+            >
+              <div className="flex items-center justify-between px-3 py-1.5 border-b" style={{ borderColor: T.border }}>
+                <span className="text-[0.7rem] text-[#666] font-medium">{colDef?.label} 필터</span>
+                {selected.size > 0 && (
+                  <button
+                    onClick={() => { clearColFilter(filterPopover.key); }}
+                    className="text-[0.65rem] text-[#999] hover:text-[#666] transition-colors"
+                  >
+                    초기화
+                  </button>
+                )}
+              </div>
+              <div className="max-h-[260px] overflow-y-auto py-1">
+                {opts.length === 0 ? (
+                  <div className="px-3 py-4 text-center text-[0.7rem] text-[#BBB]">값 없음</div>
+                ) : (
+                  opts.map((opt) => {
+                    const isSel = selected.has(opt);
+                    return (
+                      <label
+                        key={opt}
+                        className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-[#F7F8FA] transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSel}
+                          onChange={() => toggleColFilterValue(filterPopover.key, opt)}
+                          className="w-3.5 h-3.5 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer"
+                        />
+                        <span className={`text-[0.75rem] truncate ${isSel ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>{opt}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </>
+        );
+      })()}
 
       {/* Add Deal Modal */}
       {showAddDeal && (
