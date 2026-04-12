@@ -247,7 +247,18 @@ function applyFilters(deals: Deal[], filters: FilterRule[], searchQuery: string)
   let result = deals;
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
-    result = result.filter((d) => d.company.toLowerCase().includes(q) || d.contact.toLowerCase().includes(q));
+    // Scan all string/number values on the deal so search works across built-in + custom fields
+    result = result.filter((d) => {
+      for (const k in d) {
+        if (k === "id") continue;
+        const v = (d as Record<string, unknown>)[k];
+        if (v == null) continue;
+        if (typeof v === "string" || typeof v === "number") {
+          if (String(v).toLowerCase().includes(q)) return true;
+        }
+      }
+      return false;
+    });
   }
   for (const f of filters) {
     result = result.filter((d) => {
@@ -2250,7 +2261,7 @@ const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   "기타": { bg: "#F3F4F6", color: "#6B7280" },
 };
 
-function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void }) {
+function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void; customFields: CustomField[] }) {
   const [tab, setTab] = useState<DrawerTab>("basic");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -2288,20 +2299,15 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
     { key: "files", label: "파일", icon: FileSpreadsheet },
   ];
 
-  const basicFields = [
-    { key: "company", label: "기업명", value: deal.company, editable: true },
-    { key: "contact", label: "담당자", value: deal.contact, editable: true },
-    { key: "position", label: "직책", value: deal.position, editable: true },
-    { key: "phone", label: "전화번호", value: "010-1234-5678", editable: true },
-    { key: "email", label: "이메일", value: `${deal.contact.toLowerCase()}@company.com`, editable: true },
-    { key: "service", label: "희망서비스", value: deal.service, editable: true },
-    { key: "quantity", label: "총수량", value: `${deal.quantity}`, editable: true },
-    { key: "amount", label: "견적금액", value: deal.amount, editable: true },
-    { key: "manager", label: "고객책임자", value: deal.manager, editable: true },
-    { key: "stage", label: "진행상태", value: deal.stage, editable: true },
-    { key: "status", label: "성공여부", value: deal.status, editable: false },
-    { key: "date", label: "등록일", value: deal.date, editable: false },
-  ];
+  // Dynamic: driven by customFields (single source of truth for the workspace schema)
+  const basicFields = customFields
+    .filter((f) => f.visible)
+    .map((f) => {
+      const raw = (deal as Record<string, unknown>)[f.key];
+      const value = raw === undefined || raw === null ? "" : String(raw);
+      const editable = f.key !== "status" && f.key !== "date";
+      return { key: f.key, label: f.label, value, editable };
+    });
 
   const startEdit = (key: string, value: string) => {
     setEditingField(key);
@@ -2956,35 +2962,84 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: "memo", label: "비고", required: false, sort: false, defaultVisible: false },
 ];
 
-/* ─── ADD DEAL MODAL ─── */
-function AddDealModal({ onClose, onAdd, visibleColumns, stageNames }: { onClose: () => void; onAdd: (deal: Deal) => void; visibleColumns: Set<string>; stageNames: string[] }) {
-  const [form, setForm] = useState<Record<string, string>>({
-    company: "", stage: "신규", contact: "", position: "", service: "",
-    quantity: "", amount: "", manager: "", status: "진행중", date: new Date().toISOString().slice(0, 10),
-    phone: "", email: "", memo: "",
+/* ─── ADD DEAL MODAL (customField-driven) ─── */
+function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields }: { onClose: () => void; onAdd: (deal: Deal) => void; visibleColumns: Set<string>; stageNames: string[]; customFields: CustomField[] }) {
+  // Render fields driven by customFields (single source of truth). Show required + visible fields.
+  const fieldDefs = customFields.filter((f) => f.required || f.visible || visibleColumns.has(f.key));
+
+  const [form, setForm] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    for (const f of fieldDefs) {
+      if (f.key === "stage") init[f.key] = stageNames[0] || "신규";
+      else if (f.key === "status") init[f.key] = "진행중";
+      else if (f.key === "date" || f.type === "date") init[f.key] = new Date().toISOString().slice(0, 10);
+      else init[f.key] = "";
+    }
+    return init;
   });
 
   const set = (key: string, val: string) => setForm((p) => ({ ...p, [key]: val }));
 
   const handleSubmit = () => {
-    if (!form.company.trim()) return;
-    onAdd({
+    if (!form.company?.trim()) return;
+    const deal: Deal = {
       id: Date.now(),
       company: form.company,
-      stage: form.stage || "신규",
-      contact: form.contact,
-      position: form.position,
-      service: form.service,
+      stage: form.stage || stageNames[0] || "신규",
+      contact: form.contact || "",
+      position: form.position || "",
+      service: form.service || "",
       quantity: parseInt(form.quantity) || 0,
       amount: form.amount || "₩0",
-      manager: form.manager,
+      manager: form.manager || "",
       status: form.status || "진행중",
-      date: form.date,
-    });
+      date: form.date || new Date().toISOString().slice(0, 10),
+    };
+    // Merge any custom-field values that aren't built-in
+    const builtInKeys = new Set(["id","company","stage","contact","position","service","quantity","amount","manager","status","date"]);
+    for (const f of fieldDefs) {
+      if (builtInKeys.has(f.key)) continue;
+      const v = form[f.key];
+      if (v !== undefined && v !== "") (deal as Record<string, unknown>)[f.key] = f.type === "number" ? (parseFloat(v) || 0) : v;
+    }
+    onAdd(deal);
     onClose();
   };
 
-  const fieldDefs = ALL_COLUMNS.filter((c) => visibleColumns.has(c.key) || c.required);
+  const renderField = (f: CustomField) => {
+    const val = form[f.key] || "";
+    const common = "w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#1A472A]";
+    if (f.key === "stage") {
+      return (
+        <select className={`${common} bg-white`} style={{ borderColor: T.border }} value={val || stageNames[0] || ""} onChange={(e) => set(f.key, e.target.value)}>
+          {stageNames.map((s) => <option key={s}>{s}</option>)}
+        </select>
+      );
+    }
+    if (f.type === "select" && f.options && f.options.length > 0) {
+      return (
+        <select className={`${common} bg-white`} style={{ borderColor: T.border }} value={val || f.options[0]} onChange={(e) => set(f.key, e.target.value)}>
+          {f.options.map((o) => <option key={o}>{o}</option>)}
+        </select>
+      );
+    }
+    if (f.type === "date") {
+      return <input type="date" className={common} style={{ borderColor: T.border }} value={val} onChange={(e) => set(f.key, e.target.value)} />;
+    }
+    if (f.type === "number") {
+      return <input type="number" inputMode="decimal" className={common} style={{ borderColor: T.border }} value={val} onChange={(e) => set(f.key, e.target.value)} placeholder={`${f.label}을(를) 입력하세요`} />;
+    }
+    if (f.type === "email") {
+      return <input type="email" className={common} style={{ borderColor: T.border }} value={val} onChange={(e) => set(f.key, e.target.value)} placeholder="name@example.com" />;
+    }
+    if (f.type === "phone") {
+      return <input type="tel" className={common} style={{ borderColor: T.border }} value={val} onChange={(e) => set(f.key, e.target.value)} placeholder="010-0000-0000" />;
+    }
+    if (f.key === "memo") {
+      return <textarea className={`${common} resize-none h-[64px]`} style={{ borderColor: T.border }} value={val} onChange={(e) => set(f.key, e.target.value)} placeholder={`${f.label}을(를) 입력하세요`} />;
+    }
+    return <input className={common} style={{ borderColor: T.border }} value={val} onChange={(e) => set(f.key, e.target.value)} placeholder={`${f.label}을(를) 입력하세요`} />;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
@@ -2994,33 +3049,19 @@ function AddDealModal({ onClose, onAdd, visibleColumns, stageNames }: { onClose:
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F7F8FA]"><X size={14} color="#999" /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-7 py-5 space-y-4">
-          {fieldDefs.map((col) => (
-            <div key={col.key}>
+          {fieldDefs.map((f) => (
+            <div key={f.key}>
               <label className="text-[0.75rem] text-[#666] mb-1.5 block">
-                {col.label}
-                {col.required && <span className="text-red-500 ml-0.5">*</span>}
+                {f.label}
+                {f.required && <span className="text-red-500 ml-0.5">*</span>}
               </label>
-              {col.key === "stage" ? (
-                <select className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] bg-white focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.stage} onChange={(e) => set("stage", e.target.value)}>
-                  {stageNames.map((s) => <option key={s}>{s}</option>)}
-                </select>
-              ) : col.key === "status" ? (
-                <select className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] bg-white focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.status} onChange={(e) => set("status", e.target.value)}>
-                  <option>진행중</option><option>성공</option><option>실패</option>
-                </select>
-              ) : col.key === "date" ? (
-                <input type="date" className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form.date} onChange={(e) => set("date", e.target.value)} />
-              ) : col.key === "memo" ? (
-                <textarea className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] focus:outline-none focus:border-[#1A472A] resize-none h-[64px]" style={{ borderColor: T.border }} value={form[col.key] || ""} onChange={(e) => set(col.key, e.target.value)} placeholder={`${col.label}을 입력하세요`} />
-              ) : (
-                <input className="w-full px-4 py-2.5 rounded-lg border text-[0.8rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#1A472A]" style={{ borderColor: T.border }} value={form[col.key] || ""} onChange={(e) => set(col.key, e.target.value)} placeholder={`${col.label}을 입력하세요`} />
-              )}
+              {renderField(f)}
             </div>
           ))}
         </div>
         <div className="flex items-center justify-end gap-3 px-7 py-4 border-t" style={{ borderColor: T.border }}>
           <button onClick={onClose} className="px-5 py-2.5 rounded-lg text-[0.75rem] text-[#666] border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>취소</button>
-          <button onClick={handleSubmit} className="px-6 py-2.5 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: form.company.trim() ? T.primary : "#CCC", cursor: form.company.trim() ? "pointer" : "not-allowed" }}>추가</button>
+          <button onClick={handleSubmit} className="px-6 py-2.5 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: form.company?.trim() ? T.primary : "#CCC", cursor: form.company?.trim() ? "pointer" : "not-allowed" }}>추가</button>
         </div>
       </div>
     </div>
@@ -3796,23 +3837,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const navigate = useNavigate();
   const { pageId } = useParams<{ pageId: string }>();
 
-  /* ── CSV Export ── */
-  const exportDealsCsv = useCallback((list: Deal[]) => {
-    const headers = ["기업명", "진행상태", "담당자", "희망서비스", "견적금액", "총수량", "고객책임자", "성공여부", "등록일", "전화번호", "이메일"];
-    const rows = list.map((d) => [d.company, d.stage, d.contact, d.service, d.amount, d.quantity, d.manager, d.status, d.date, String(d.phone ?? ""), String(d.email ?? "")]);
-    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const csv = "\uFEFF" + [headers, ...rows].map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dangol_deals_${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, []);
-
   /* ── Modal Toggles ── */
   const [showAddView, setShowAddView] = useState(false);
 
@@ -3893,6 +3917,24 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       return changed ? next : prev;
     });
   }, [customFields]);
+
+  /* ── CSV Export (dynamic: built-ins + custom fields) ── */
+  const exportDealsCsv = useCallback((list: Deal[]) => {
+    const headers = mergedColumns.map((c) => c.label);
+    const keys = mergedColumns.map((c) => c.key);
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const rows = list.map((d) => keys.map((k) => (d as Record<string, unknown>)[k]));
+    const csv = "\uFEFF" + [headers, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dangol_deals_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [mergedColumns]);
 
   const toggleColumn = (key: string) => {
     const col = mergedColumns.find((c) => c.key === key);
@@ -5051,7 +5093,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           {selectedDeal && (() => {
             const liveDeal = customerDeals.find((d) => d.id === selectedDeal.id);
             if (!liveDeal) return null;
-            return <DetailDrawer deal={liveDeal} onClose={() => setSelectedDeal(null)} stageColorMap={stageColors} stageNames={pipelineStages.map((s) => s.name)} onChangeStage={moveDealStage} onChangeStatus={updateDealStatus} />;
+            return <DetailDrawer deal={liveDeal} onClose={() => setSelectedDeal(null)} stageColorMap={stageColors} stageNames={pipelineStages.map((s) => s.name)} onChangeStage={moveDealStage} onChangeStatus={updateDealStatus} customFields={customFields} />;
           })()}
         </div>
       </div>
@@ -5124,6 +5166,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           onAdd={addDeal}
           visibleColumns={visibleColumns}
           stageNames={pipelineStages.map((s) => s.name)}
+          customFields={customFields}
         />
       )}
 

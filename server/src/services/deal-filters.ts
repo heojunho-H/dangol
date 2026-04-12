@@ -27,13 +27,36 @@ export function buildDealWhere(
     else where.managerId = query.managerId;
   }
 
-  // Search (company, contact, service)
+  // Search (company, contact, service, + customFieldValues JSON)
   if (query.search) {
     where.OR = [
       { company: { contains: query.search } },
       { contact: { contains: query.search } },
       { service: { contains: query.search } },
+      { customFieldValues: { contains: query.search } },
     ];
+  }
+
+  // Custom field filters: query params prefixed `cf_` match against the JSON
+  // blob stored in `customFieldValues`. Supports comma-separated values (in).
+  // Each `cf_<key>=v1,v2` adds an AND clause requiring the JSON to contain
+  // at least one of `"key":"v_i"` (string) or `"key":v_i` (number/bool).
+  const cfAnd: Record<string, unknown>[] = [];
+  for (const [qk, qv] of Object.entries(query)) {
+    if (!qk.startsWith("cf_") || !qv) continue;
+    const key = qk.slice(3);
+    if (!key) continue;
+    const values = qv.split(",").map((s) => s.trim()).filter(Boolean);
+    if (values.length === 0) continue;
+    const escape = (s: string) => s.replace(/"/g, '\\"');
+    const or = values.flatMap((v) => [
+      { customFieldValues: { contains: `"${escape(key)}":"${escape(v)}"` } },
+      { customFieldValues: { contains: `"${escape(key)}":${v}` } },
+    ]);
+    cfAnd.push({ OR: or });
+  }
+  if (cfAnd.length > 0) {
+    where.AND = [...(Array.isArray(where.AND) ? where.AND : []), ...cfAnd];
   }
 
   // Date range
