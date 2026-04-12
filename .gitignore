@@ -15,6 +15,10 @@ dist-ssr
 # Figma Make source (reference only)
 dangolui/
 
+# Environment
+.env
+.env.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

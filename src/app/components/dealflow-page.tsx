@@ -71,6 +71,7 @@ import {
   EyeOff,
   Globe,
   Code2,
+  RefreshCw,
 } from "lucide-react";
 
 /* ─── DESIGN TOKENS ─── */
@@ -485,6 +486,120 @@ function fmtAmt(manWon: number): string {
 
 const DEFAULT_ACTIVE_WIDGETS = ["kpi-deals", "kpi-winrate", "kpi-amount", "kpi-winrate-amount", "funnel", "donut"];
 
+/* ─── SMART DASHBOARD RECOMMENDATION (Dashboard AI) ─── */
+
+interface DealAnalysis {
+  totalDeals: number;
+  uniqueStages: number;
+  uniqueManagers: number;
+  totalAmount: number;
+  winRate: number;
+  dateRange: { earliest: string; latest: string; spanDays: number };
+  serviceCount: number;
+  hasAmountData: boolean;
+  hasManagerData: boolean;
+}
+
+function analyzeDealData(deals: Deal[]): DealAnalysis {
+  const stages = new Set(deals.map(d => d.stage));
+  const managers = new Set(deals.map(d => d.manager).filter(Boolean));
+  const services = new Set(deals.map(d => d.service).filter(Boolean));
+  const amounts = deals.map(d => parseAmt(d.amount));
+  const totalAmount = amounts.reduce((s, a) => s + a, 0);
+  const hasAmountData = amounts.some(a => a > 0);
+  const wonDeals = deals.filter(d => d.status === "성공" || d.stage === "수주확정");
+  const winRate = deals.length > 0 ? wonDeals.length / deals.length : 0;
+  const dates = deals.map(d => d.date).filter(Boolean).sort();
+  const earliest = dates[0] || "";
+  const latest = dates[dates.length - 1] || "";
+  const spanDays = earliest && latest
+    ? Math.max(1, Math.round((new Date(latest).getTime() - new Date(earliest).getTime()) / 86400000))
+    : 0;
+
+  return {
+    totalDeals: deals.length,
+    uniqueStages: stages.size,
+    uniqueManagers: managers.size,
+    totalAmount,
+    winRate,
+    dateRange: { earliest, latest, spanDays },
+    serviceCount: services.size,
+    hasAmountData,
+    hasManagerData: managers.size > 0,
+  };
+}
+
+type ScenarioType = "소규모 팀" | "중규모 팀" | "단순 고객 목록";
+
+function detectScenario(a: DealAnalysis): { scenario: ScenarioType; reason: string } {
+  if (!a.hasAmountData)
+    return { scenario: "단순 고객 목록", reason: "금액 데이터가 없어 기본 고객 관리 중심으로 구성합니다" };
+  if (a.uniqueManagers > 5 || a.totalDeals > 20)
+    return { scenario: "중규모 팀", reason: `담당자 ${a.uniqueManagers}명, 딜 ${a.totalDeals}건 — 팀 성과 비교가 중요합니다` };
+  return { scenario: "소규모 팀", reason: `담당자 ${a.uniqueManagers}명, 딜 ${a.totalDeals}건 — 개별 딜 추적이 중요합니다` };
+}
+
+interface WidgetRecommendation {
+  widgetId: string;
+  reason: string;
+  priority: number;
+}
+
+function recommendWidgets(a: DealAnalysis, scenario: ScenarioType): WidgetRecommendation[] {
+  const recs: WidgetRecommendation[] = [];
+  const add = (id: string, reason: string, priority: number) => recs.push({ widgetId: id, reason, priority });
+
+  // Always recommend
+  add("kpi-deals", "전체 딜 현황을 한눈에 파악", 100);
+
+  if (a.hasAmountData) {
+    add("kpi-amount", "총 견적 금액으로 파이프라인 가치 확인", 95);
+    add("kpi-winrate-amount", "금액 기준 수주율로 매출 효율 측정", 85);
+    add("stage-bar", `${a.uniqueStages}개 스테이지별 금액 분포 시각화`, 70);
+  }
+
+  if (a.uniqueStages >= 3) {
+    add("funnel", `${a.uniqueStages}개 스테이지 퍼널로 병목 구간 발견`, 90);
+  }
+
+  if (a.winRate > 0) {
+    add("kpi-winrate", `현재 수주율 ${Math.round(a.winRate * 100)}% 추적`, 88);
+    add("donut", "성공/실패/진행중 비율을 직관적으로 파악", 75);
+  }
+
+  if (a.hasManagerData && a.uniqueManagers >= 2) {
+    add("performance", `${a.uniqueManagers}명 담당자별 성과 비교`, 80);
+  }
+
+  if (a.dateRange.spanDays > 60) {
+    add("trend", `${a.dateRange.spanDays}일간 추이로 성장세 확인`, 72);
+  }
+
+  // Scenario-specific
+  if (scenario === "소규모 팀") {
+    add("recent-deals", "최근 딜 목록으로 빠른 현황 파악", 82);
+    add("shortcuts", "자주 쓰는 기능에 빠르게 접근", 60);
+  } else if (scenario === "중규모 팀") {
+    add("kpi-active", "현재 진행중인 활성 딜 수 모니터링", 78);
+    add("kpi-at-risk", "지연된 위험 딜 조기 발견", 76);
+  } else {
+    // 단순 고객 목록
+    add("recent-deals", "최근 등록된 고객 목록 확인", 85);
+    add("donut", "고객 상태 분포 파악", 70);
+  }
+
+  // Sort by priority, return top 8
+  recs.sort((a, b) => b.priority - a.priority);
+  // Deduplicate
+  const seen = new Set<string>();
+  const unique = recs.filter(r => {
+    if (seen.has(r.widgetId)) return false;
+    seen.add(r.widgetId);
+    return true;
+  });
+  return unique.slice(0, 8);
+}
+
 /* ─── CUSTOM KPI / GOAL TYPES ─── */
 interface CustomKpiDef {
   id: string;
@@ -532,8 +647,134 @@ function computeCustomKpi(kpi: CustomKpiDef, vars: Record<string, number>): numb
   }
 }
 
+/* ─── SMART COLUMN MAPPING (Import AI) ─── */
+
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  );
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+  return dp[m][n];
+}
+
+const SYNONYM_MAP: Record<string, string[]> = {
+  "회사명": ["기업명", "업체명", "회사", "고객사"],
+  "연락처": ["전화번호", "휴대폰", "핸드폰", "phone", "tel"],
+  "email": ["이메일", "메일", "e-mail"],
+  "금액": ["견적금액", "가격", "비용", "단가", "매출액"],
+  "영업담당": ["담당자", "매니저", "고객책임자", "영업사원"],
+  "상태": ["진행상태", "단계", "스테이지", "stage"],
+  "등록일자": ["문의 등록일", "날짜", "date", "등록일", "생성일"],
+  "서비스": ["희망서비스", "제품", "상품", "품목"],
+  "수량": ["총수량", "개수", "qty", "건수"],
+  "담당자": ["담당자명", "이름", "성명", "컨택"],
+  "직책": ["직위", "포지션", "position", "역할"],
+};
+
+function computeNameSimilarity(excelName: string, fieldLabel: string): number {
+  const a = excelName.toLowerCase().trim();
+  const b = fieldLabel.toLowerCase().trim();
+  if (a === b) return 1.0;
+  // Check synonym map in both directions
+  for (const [key, synonyms] of Object.entries(SYNONYM_MAP)) {
+    const group = [key.toLowerCase(), ...synonyms.map(s => s.toLowerCase())];
+    if (group.includes(a) && group.includes(b)) return 1.0;
+  }
+  // Substring match
+  if (a.includes(b) || b.includes(a)) return 0.8;
+  // Levenshtein fallback
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1.0;
+  return Math.max(0, 1 - levenshteinDistance(a, b) / maxLen);
+}
+
+type DataPattern = "phone" | "email" | "currency" | "date" | "number" | "text";
+
+function analyzeDataPattern(preview: string): DataPattern {
+  const v = preview.trim();
+  if (/^0\d{1,2}-\d{3,4}-\d{4}$/.test(v) || /^0\d{9,11}$/.test(v)) return "phone";
+  if (/@/.test(v) && /\.\w{2,}$/.test(v)) return "email";
+  if (/[₩$]|만|억|원/.test(v) || /^\d{6,}$/.test(v)) return "currency";
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(v)) return "date";
+  if (/^\d+$/.test(v)) return "number";
+  return "text";
+}
+
+const FIELD_PATTERN_MAP: Record<string, DataPattern> = {
+  "전화번호": "phone",
+  "이메일": "email",
+  "견적금액": "currency",
+  "문의 등록일": "date",
+  "총수량": "number",
+};
+
+function computePatternScore(detected: DataPattern, fieldName: string): number {
+  const expected = FIELD_PATTERN_MAP[fieldName];
+  if (!expected) return 0.3; // no pattern expectation → neutral
+  return detected === expected ? 1.0 : 0.0;
+}
+
+interface MappingResult {
+  excelColumn: string;
+  dealflowField: string;
+  confidence: number;
+  nameScore: number;
+  patternScore: number;
+  reason: string;
+}
+
+function computeSmartMappings(
+  excelCols: { name: string; preview: string }[],
+  dfFields: { name: string; required: boolean }[]
+): MappingResult[] {
+  // Score all pairs
+  const pairs: { excel: string; field: string; nameScore: number; patternScore: number; confidence: number }[] = [];
+  for (const col of excelCols) {
+    const detectedPattern = analyzeDataPattern(col.preview);
+    for (const field of dfFields) {
+      const nameScore = computeNameSimilarity(col.name, field.name);
+      const patternScore = computePatternScore(detectedPattern, field.name);
+      const confidence = 0.6 * nameScore + 0.4 * patternScore;
+      pairs.push({ excel: col.name, field: field.name, nameScore, patternScore, confidence });
+    }
+  }
+  // Greedy assignment: best confidence first, no duplicates
+  pairs.sort((a, b) => b.confidence - a.confidence);
+  const usedExcel = new Set<string>();
+  const usedField = new Set<string>();
+  const results: MappingResult[] = [];
+  for (const p of pairs) {
+    if (usedExcel.has(p.excel) || usedField.has(p.field)) continue;
+    if (p.confidence < 0.2) continue; // skip very poor matches
+    usedExcel.add(p.excel);
+    usedField.add(p.field);
+    const reason =
+      p.nameScore >= 0.8
+        ? `컬럼명 유사도: ${p.excel} ↔ ${p.field}`
+        : p.patternScore >= 0.8
+        ? `데이터 패턴 일치: ${analyzeDataPattern(excelCols.find(c => c.name === p.excel)?.preview || "")} 형식`
+        : p.confidence >= 0.4
+        ? `복합 분석: 이름(${Math.round(p.nameScore * 100)}%) + 패턴(${Math.round(p.patternScore * 100)}%)`
+        : "낮은 신뢰도 — 수동 확인 필요";
+    results.push({
+      excelColumn: p.excel,
+      dealflowField: p.field,
+      confidence: p.confidence,
+      nameScore: p.nameScore,
+      patternScore: p.patternScore,
+      reason,
+    });
+  }
+  return results;
+}
+
 /* ─── ONBOARDING FLOW ─── */
-function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void }) {
+function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommendedWidgets?: string[]) => void }) {
   const [step, setStep] = useState(1);
   const [fileSelected, setFileSelected] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -566,34 +807,106 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void })
     { name: "문의 등록일", required: false },
   ];
 
-  const [mappings, setMappings] = useState<Record<string, string>>({
-    기업명: "회사명",
-    담당자명: "담당자",
-    직책: "직책",
-    전화번호: "연락처",
-    이메일: "email",
-    희망서비스: "서비스",
-    총수량: "수량",
-    견적금액: "금액",
-    담당자: "영업담당",
-    진행상태: "상태",
-    "문의 등록일": "등록일자",
-  });
+  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<MappingResult[] | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
 
-  const autoMap = () => {
-    setMappings({
-      기업명: "회사명",
-      담당자명: "담당자",
-      직책: "직책",
-      전화번호: "연락처",
-      이메일: "email",
-      희망서비스: "서비스",
-      총수량: "수량",
-      견적금액: "금액",
-      담당자: "영업담당",
-      진행상태: "상태",
-      "문의 등록일": "등록일자",
-    });
+  // Dashboard AI state
+  const [isAnalyzingDashboard, setIsAnalyzingDashboard] = useState(false);
+  const [dashboardProgress, setDashboardProgress] = useState(0);
+  const [dealAnalysis, setDealAnalysis] = useState<DealAnalysis | null>(null);
+  const [scenario, setScenario] = useState<{ scenario: ScenarioType; reason: string } | null>(null);
+  const [recommendations, setRecommendations] = useState<WidgetRecommendation[]>([]);
+  const [selectedWidgets, setSelectedWidgets] = useState<Set<string>>(new Set());
+  const [showOtherWidgets, setShowOtherWidgets] = useState(false);
+
+  // Trigger dashboard analysis when entering step 3
+  const goToStep3 = async () => {
+    setStep(3);
+    setIsAnalyzingDashboard(true);
+    setDashboardProgress(0);
+
+    setTimeout(() => setDashboardProgress(1), 350);
+    setTimeout(() => setDashboardProgress(2), 750);
+
+    try {
+      const response = await fetch("/api/ai/dashboard-recommendation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deals: SAMPLE_DEALS,
+          availableWidgets: allWidgets.map(w => ({ id: w.id, name: w.name, category: w.category })),
+        }),
+      });
+
+      if (!response.ok) throw new Error("API 요청 실패");
+
+      const data = await response.json();
+      setDashboardProgress(3);
+      setDealAnalysis(data.analysis);
+      setScenario(data.scenario);
+      setRecommendations(data.recommendations);
+      setSelectedWidgets(new Set(data.recommendations.map((r: WidgetRecommendation) => r.widgetId)));
+    } catch {
+      // Fallback: 로컬 규칙 기반 추천
+      console.warn("AI 대시보드 추천 실패, 로컬 폴백 사용");
+      const analysis = analyzeDealData(SAMPLE_DEALS);
+      const detected = detectScenario(analysis);
+      const recs = recommendWidgets(analysis, detected.scenario);
+      setDashboardProgress(3);
+      setDealAnalysis(analysis);
+      setScenario(detected);
+      setRecommendations(recs);
+      setSelectedWidgets(new Set(recs.map(r => r.widgetId)));
+    } finally {
+      setIsAnalyzingDashboard(false);
+    }
+  };
+
+  const autoMap = async () => {
+    setIsAnalyzing(true);
+    setAnalysisProgress(0);
+    setAnalysisResults(null);
+
+    // Progress animation
+    setTimeout(() => setAnalysisProgress(1), 400);
+    setTimeout(() => setAnalysisProgress(2), 900);
+
+    try {
+      const response = await fetch("/api/ai/column-mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ excelColumns, dealflowFields }),
+      });
+
+      if (!response.ok) throw new Error("API 요청 실패");
+
+      const data = await response.json();
+      setAnalysisProgress(3);
+      setAnalysisResults(data.mappings);
+
+      const newMappings: Record<string, string> = {};
+      for (const r of data.mappings) {
+        if (r.confidence >= 0.4) {
+          newMappings[r.dealflowField] = r.excelColumn;
+        }
+      }
+      setMappings(newMappings);
+    } catch {
+      // Fallback: 로컬 규칙 기반 매핑
+      console.warn("AI 매핑 실패, 로컬 폴백 사용");
+      const results = computeSmartMappings(excelColumns, dealflowFields);
+      setAnalysisProgress(3);
+      setAnalysisResults(results);
+      const newMappings: Record<string, string> = {};
+      for (const r of results) {
+        if (r.confidence >= 0.4) newMappings[r.dealflowField] = r.excelColumn;
+      }
+      setMappings(newMappings);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
@@ -615,7 +928,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void })
               className="text-[0.8rem]"
               style={{ color: step >= s ? T.textPrimary : "#999" }}
             >
-              {s === 1 ? "파일 업로드" : s === 2 ? "컬럼 매핑" : "완료"}
+              {s === 1 ? "파일 업로드" : s === 2 ? "AI 컬럼 매핑" : "AI 대시보드"}
             </span>
             {s < 3 && <div className="w-12 h-px" style={{ background: step > s ? T.primary : "#E0E3E8" }} />}
           </div>
@@ -673,87 +986,348 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void })
       )}
 
       {step === 2 && (
-        <div className="bg-white rounded-2xl p-8 w-full max-w-[720px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-[1.2rem] text-[#1A1A1A]">컬럼 매핑</h2>
-            <button
-              onClick={autoMap}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-[0.8rem] transition-colors"
-              style={{ background: "#F0F4FF", color: T.primary }}
-            >
-              <Sparkles size={13} /> AI 자동 매핑
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">Excel 컬럼</p>
-              <div className="space-y-2">
-                {excelColumns.map((col) => (
-                  <div key={col.name} className="flex items-center justify-between px-4 py-2.5 rounded-lg" style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }}>
-                    <span className="text-[0.8rem] text-[#1A1A1A]">{col.name}</span>
-                    <span className="text-[0.7rem] text-[#BBB]">{col.preview}</span>
-                  </div>
-                ))}
+        <div className="bg-white rounded-2xl p-8 w-full max-w-[800px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+          {isAnalyzing ? (
+            /* ── AI 분석 중 로딩 ── */
+            <div className="flex flex-col items-center py-12">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6" style={{ background: "#F0F4FF" }}>
+                <Sparkles size={24} color={T.primary} className="animate-pulse" />
               </div>
-            </div>
-            <div>
-              <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">DealFlow 필드</p>
-              <div className="space-y-2">
-                {dealflowFields.map((field) => (
-                  <div key={field.name} className="flex items-center gap-2 px-4 py-2.5 rounded-lg" style={{ background: "#F8F9FA", border: `1px solid ${T.primary}` }}>
-                    <span className="text-[0.8rem] text-[#1A1A1A] flex-1">
-                      {field.name}
-                      {field.required && <span className="text-red-500 ml-0.5">*</span>}
-                    </span>
-                    <select
-                      className="text-[0.75rem] px-2 py-1 rounded border bg-white text-[#666]"
-                      style={{ borderColor: T.border }}
-                      value={mappings[field.name] || ""}
-                      onChange={(e) => setMappings((p) => ({ ...p, [field.name]: e.target.value }))}
+              <h2 className="text-[1.1rem] text-[#1A1A1A] mb-2">AI가 데이터를 분석하고 있습니다...</h2>
+              <p className="text-[0.8rem] text-[#999] mb-8">엑셀 컬럼과 DealFlow 필드를 매칭합니다</p>
+              <div className="w-full max-w-[360px] space-y-3">
+                {["컬럼명 분석", "데이터 패턴 감지", "최적 매핑 계산"].map((label, i) => (
+                  <div key={label} className="flex items-center gap-3">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[0.65rem]"
+                      style={{
+                        background: analysisProgress > i ? T.success : analysisProgress === i ? "#FEF3C7" : "#F3F4F6",
+                        color: analysisProgress > i ? "#fff" : analysisProgress === i ? "#D97706" : "#999",
+                        transition: "all 0.3s",
+                      }}
                     >
-                      <option value="">선택</option>
-                      {excelColumns.map((c) => (
-                        <option key={c.name} value={c.name}>{c.name}</option>
-                      ))}
-                    </select>
+                      {analysisProgress > i ? "✓" : i + 1}
+                    </div>
+                    <span className="text-[0.8rem]" style={{ color: analysisProgress >= i ? T.textPrimary : "#999" }}>{label}</span>
+                    {analysisProgress === i && (
+                      <div className="ml-auto w-16 h-1.5 bg-[#E5E7EB] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full animate-pulse" style={{ background: T.primary, width: "60%" }} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-          <div className="flex justify-end mt-6">
-            <button
-              onClick={() => setStep(3)}
-              className="px-6 py-2.5 rounded-lg text-[0.8rem] text-white transition-colors"
-              style={{ background: T.primary }}
-            >
-              데이터 가져오기 ({SAMPLE_DEALS.length}건)
-            </button>
-          </div>
+          ) : !analysisResults ? (
+            /* ── 분석 전 초기 상태 ── */
+            <div className="flex flex-col items-center py-12">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: "#F0F4FF" }}>
+                <Sparkles size={22} color={T.primary} />
+              </div>
+              <h2 className="text-[1.1rem] text-[#1A1A1A] mb-2">AI 컬럼 매핑</h2>
+              <p className="text-[0.8rem] text-[#999] mb-6">AI가 엑셀 컬럼을 자동으로 분석하여 최적의 매핑을 제안합니다</p>
+              <button
+                onClick={autoMap}
+                className="flex items-center gap-2 px-6 py-3 rounded-lg text-[0.85rem] text-white transition-colors"
+                style={{ background: T.primary }}
+              >
+                <Sparkles size={14} /> AI 자동 매핑 시작
+              </button>
+            </div>
+          ) : (
+            /* ── 매핑 결과 ── */
+            <>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-[1.1rem] text-[#1A1A1A]">AI 매핑 결과</h2>
+                <div className="flex items-center gap-4 text-[0.75rem]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: T.success }} /> 자동 매핑 {analysisResults.filter(r => r.confidence >= 0.8).length}개
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#F59E0B" }} /> 확인 필요 {analysisResults.filter(r => r.confidence >= 0.4 && r.confidence < 0.8).length}개
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#D1D5DB" }} /> 미매핑 {dealflowFields.length - analysisResults.filter(r => r.confidence >= 0.4).length}개
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-6">
+                {dealflowFields.map((field) => {
+                  const result = analysisResults.find(r => r.dealflowField === field.name);
+                  const confidence = result?.confidence ?? 0;
+                  const bgColor = confidence >= 0.8 ? "#F0FFF4" : confidence >= 0.4 ? "#FFFBEB" : "#F9FAFB";
+                  const borderColor = confidence >= 0.8 ? "#86EFAC" : confidence >= 0.4 ? "#FDE68A" : "#E5E7EB";
+                  const dotColor = confidence >= 0.8 ? T.success : confidence >= 0.4 ? "#F59E0B" : "#D1D5DB";
+
+                  return (
+                    <div
+                      key={field.name}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
+                      style={{ background: bgColor, border: `1px solid ${borderColor}` }}
+                    >
+                      {/* Confidence dot */}
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: dotColor }} />
+
+                      {/* DealFlow field */}
+                      <div className="w-[120px] shrink-0">
+                        <span className="text-[0.8rem] text-[#1A1A1A]">
+                          {field.name}
+                          {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                        </span>
+                      </div>
+
+                      {/* Arrow */}
+                      <ArrowRight size={12} className="text-[#BBB] shrink-0" />
+
+                      {/* Excel column selector */}
+                      <select
+                        className="flex-1 text-[0.8rem] px-3 py-1.5 rounded-md border bg-white text-[#1A1A1A]"
+                        style={{ borderColor: T.border }}
+                        value={mappings[field.name] || ""}
+                        onChange={(e) => setMappings((p) => ({ ...p, [field.name]: e.target.value }))}
+                      >
+                        <option value="">선택해주세요</option>
+                        {excelColumns.map((c) => (
+                          <option key={c.name} value={c.name}>{c.name} — {c.preview}</option>
+                        ))}
+                      </select>
+
+                      {/* Preview */}
+                      {mappings[field.name] && (
+                        <span className="text-[0.7rem] text-[#999] w-[100px] truncate shrink-0">
+                          {excelColumns.find(c => c.name === mappings[field.name])?.preview}
+                        </span>
+                      )}
+
+                      {/* Confidence badge */}
+                      {confidence >= 0.4 && confidence < 0.8 && (
+                        <span className="text-[0.65rem] px-2 py-0.5 rounded-full shrink-0" style={{ background: "#FEF3C7", color: "#D97706" }}>
+                          확인 필요
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Reason summary */}
+              {analysisResults.some(r => r.confidence >= 0.4) && (
+                <div className="px-4 py-3 rounded-lg mb-6" style={{ background: "#F8FAFC", border: `1px solid ${T.border}` }}>
+                  <p className="text-[0.7rem] text-[#999] mb-2">AI 분석 근거</p>
+                  <div className="space-y-1">
+                    {analysisResults.filter(r => r.confidence >= 0.4).map(r => (
+                      <p key={r.dealflowField} className="text-[0.7rem] text-[#666]">
+                        <span style={{ color: T.primary }}>{r.dealflowField}</span> ← {r.excelColumn}: {r.reason} ({Math.round(r.confidence * 100)}%)
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={autoMap}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-[0.8rem] transition-colors"
+                  style={{ background: "#F0F4FF", color: T.primary }}
+                >
+                  <RefreshCw size={12} /> 다시 분석
+                </button>
+                <button
+                  onClick={goToStep3}
+                  className="px-6 py-2.5 rounded-lg text-[0.8rem] text-white transition-colors"
+                  style={{ background: T.primary }}
+                >
+                  데이터 가져오기 ({SAMPLE_DEALS.length}건)
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {step === 3 && (
-        <div className="bg-white rounded-2xl p-10 w-full max-w-[416px] text-center" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: "#ECFDF5" }}>
-            <CheckCircle2 size={26} color={T.success} />
-          </div>
-          <h2 className="text-[22px] text-[#1A1A1A] mb-2">데이터 가져오기 완료!</h2>
-          <p className="text-[0.9rem] text-[#666] mb-6">{SAMPLE_DEALS.length}건의 딜이 성공적으로 추가되었습니다</p>
-          <div className="flex items-center justify-center gap-4 mb-8 flex-wrap">
-            {[`기업 ${new Set(SAMPLE_DEALS.map((d) => d.company)).size}개`, `담당자 ${new Set(SAMPLE_DEALS.map((d) => d.manager)).size}명`, `총 견적 ${(SAMPLE_DEALS.reduce((s, d) => s + parseInt(d.amount.replace(/[₩,만억\s]/g, "") || "0"), 0) / 10000).toFixed(1)}억`].map((s) => (
-              <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.75rem]" style={{ background: "#ECFDF5", color: "#059669" }}>
-                ✓ {s}
-              </span>
-            ))}
-          </div>
-          <button
-            onClick={() => onComplete(SAMPLE_DEALS)}
-            className="px-8 py-3 rounded-lg text-[0.85rem] text-white transition-colors"
-            style={{ background: T.primary }}
-          >
-            대시보드로 이동하기
-          </button>
+        <div className="bg-white rounded-2xl p-8 w-full max-w-[960px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+          {isAnalyzingDashboard ? (
+            /* ── 대시보드 AI 분석 중 ── */
+            <div className="flex flex-col items-center py-12">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-6" style={{ background: "#F0F4FF" }}>
+                <LayoutGrid size={24} color={T.primary} className="animate-pulse" />
+              </div>
+              <h2 className="text-[1.1rem] text-[#1A1A1A] mb-2">AI가 대시보드를 구성하고 있습니다...</h2>
+              <p className="text-[0.8rem] text-[#999] mb-8">{SAMPLE_DEALS.length}건의 데이터를 분석하여 최적의 대시보드를 추천합니다</p>
+              <div className="w-full max-w-[360px] space-y-3">
+                {["데이터 분석", "시나리오 감지", "위젯 추천"].map((label, i) => (
+                  <div key={label} className="flex items-center gap-3">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[0.65rem]"
+                      style={{
+                        background: dashboardProgress > i ? T.success : dashboardProgress === i ? "#FEF3C7" : "#F3F4F6",
+                        color: dashboardProgress > i ? "#fff" : dashboardProgress === i ? "#D97706" : "#999",
+                        transition: "all 0.3s",
+                      }}
+                    >
+                      {dashboardProgress > i ? "✓" : i + 1}
+                    </div>
+                    <span className="text-[0.8rem]" style={{ color: dashboardProgress >= i ? T.textPrimary : "#999" }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : dealAnalysis && scenario ? (
+            /* ── 대시보드 추천 결과 ── */
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-[1.1rem] text-[#1A1A1A] mb-1">AI 대시보드 추천</h2>
+                  <p className="text-[0.8rem] text-[#999]">{SAMPLE_DEALS.length}건의 딜 데이터를 분석했습니다</p>
+                </div>
+                <span className="px-3 py-1.5 rounded-full text-[0.75rem]" style={{ background: "#F0F4FF", color: T.primary }}>
+                  {scenario.scenario}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-[1fr_1.2fr] gap-6">
+                {/* 왼쪽: 데이터 분석 요약 */}
+                <div>
+                  <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">데이터 분석 결과</p>
+                  <div className="p-3 rounded-lg mb-4 text-[0.8rem]" style={{ background: "#F8FAFC", border: `1px solid ${T.border}` }}>
+                    <p className="text-[#666]">{scenario.reason}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: "총 딜 수", value: `${dealAnalysis.totalDeals}건`, icon: BarChart3 },
+                      { label: "스테이지", value: `${dealAnalysis.uniqueStages}개`, icon: Filter },
+                      { label: "담당자", value: `${dealAnalysis.uniqueManagers}명`, icon: Users },
+                      { label: "총 금액", value: fmtAmt(dealAnalysis.totalAmount), icon: DollarSign },
+                      { label: "수주율", value: `${Math.round(dealAnalysis.winRate * 100)}%`, icon: Target },
+                      { label: "기간", value: dealAnalysis.dateRange.spanDays > 0 ? `${dealAnalysis.dateRange.spanDays}일` : "-", icon: Calendar },
+                    ].map((stat) => (
+                      <div key={stat.label} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg" style={{ background: "#F8F9FA", border: `1px solid ${T.border}` }}>
+                        <stat.icon size={14} color={T.primary} />
+                        <div>
+                          <p className="text-[0.65rem] text-[#999]">{stat.label}</p>
+                          <p className="text-[0.85rem] text-[#1A1A1A]">{stat.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 오른쪽: 추천 위젯 목록 */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[0.75rem] text-[#999] uppercase tracking-wider">추천 위젯</p>
+                    <span className="text-[0.7rem] px-2 py-0.5 rounded-full" style={{ background: "#ECFDF5", color: "#059669" }}>
+                      {selectedWidgets.size}개 선택됨
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {recommendations.map((rec) => {
+                      const widget = allWidgets.find(w => w.id === rec.widgetId);
+                      if (!widget) return null;
+                      const isSelected = selectedWidgets.has(rec.widgetId);
+                      return (
+                        <div
+                          key={rec.widgetId}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all"
+                          style={{
+                            background: isSelected ? "#F0FFF4" : "#F9FAFB",
+                            border: `1px solid ${isSelected ? "#86EFAC" : "#E5E7EB"}`,
+                          }}
+                          onClick={() => {
+                            setSelectedWidgets(prev => {
+                              const next = new Set(prev);
+                              if (next.has(rec.widgetId)) next.delete(rec.widgetId);
+                              else next.add(rec.widgetId);
+                              return next;
+                            });
+                          }}
+                        >
+                          <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#10B981] shrink-0" />
+                          <widget.icon size={14} color={isSelected ? T.primary : "#999"} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[0.8rem] text-[#1A1A1A]">{widget.name}</p>
+                            <p className="text-[0.68rem] text-[#999] truncate">{rec.reason}</p>
+                          </div>
+                          <span className="text-[0.6rem] px-1.5 py-0.5 rounded shrink-0" style={{ background: "#F3F4F6", color: "#666" }}>
+                            {widget.category === "kpi" ? "KPI" : widget.category === "chart" ? "차트" : widget.category === "table" ? "테이블" : "유틸"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* 기타 위젯 */}
+                  {(() => {
+                    const otherWidgets = allWidgets.filter(w => !recommendations.some(r => r.widgetId === w.id));
+                    if (otherWidgets.length === 0) return null;
+                    return (
+                      <div className="mt-3">
+                        <button
+                          onClick={() => setShowOtherWidgets(!showOtherWidgets)}
+                          className="flex items-center gap-1.5 text-[0.75rem] mb-2 transition-colors"
+                          style={{ color: T.primary }}
+                        >
+                          <ChevronDown size={12} className={`transition-transform ${showOtherWidgets ? "rotate-180" : ""}`} />
+                          기타 위젯 ({otherWidgets.length}개)
+                        </button>
+                        {showOtherWidgets && (
+                          <div className="space-y-1.5">
+                            {otherWidgets.map(widget => {
+                              const isSelected = selectedWidgets.has(widget.id);
+                              return (
+                                <div
+                                  key={widget.id}
+                                  className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all"
+                                  style={{
+                                    background: isSelected ? "#F0FFF4" : "#FAFAFA",
+                                    border: `1px solid ${isSelected ? "#86EFAC" : "#F3F4F6"}`,
+                                  }}
+                                  onClick={() => {
+                                    setSelectedWidgets(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(widget.id)) next.delete(widget.id);
+                                      else next.add(widget.id);
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  <input type="checkbox" checked={isSelected} readOnly className="w-3.5 h-3.5 accent-[#10B981] shrink-0" />
+                                  <widget.icon size={13} color="#999" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[0.78rem] text-[#666]">{widget.name}</p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              {/* 하단 버튼 */}
+              <div className="flex items-center justify-between mt-6 pt-5" style={{ borderTop: `1px solid ${T.border}` }}>
+                <button
+                  onClick={() => setStep(2)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-[0.8rem] transition-colors"
+                  style={{ border: `1px solid ${T.border}`, color: "#666" }}
+                >
+                  <ChevronLeft size={13} /> 이전
+                </button>
+                <button
+                  onClick={() => onComplete(SAMPLE_DEALS, Array.from(selectedWidgets))}
+                  className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-[0.85rem] text-white transition-colors"
+                  style={{ background: T.primary }}
+                >
+                  대시보드로 이동하기 <ArrowRight size={13} />
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       )}
     </div>
@@ -3008,12 +3582,15 @@ function DealflowPageInner() {
     setCustomerDeals((prev) => [deal, ...prev]);
   };
 
-  const handleOnboardingComplete = (importedDeals: Deal[]) => {
+  const handleOnboardingComplete = (importedDeals: Deal[], recommendedWidgets?: string[]) => {
     setCustomerDeals((prev) => {
       const existingIds = new Set(prev.map((d) => d.id));
       const newDeals = importedDeals.filter((d) => !existingIds.has(d.id));
       return [...newDeals, ...prev];
     });
+    if (recommendedWidgets?.length) {
+      setWidgetOrder(recommendedWidgets);
+    }
     setShowOnboarding(false);
   };
 
