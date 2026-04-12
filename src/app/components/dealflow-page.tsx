@@ -1069,113 +1069,188 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
               </button>
             </div>
           ) : (
-            /* ── 매핑 결과 ── */
-            <>
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-[1.1rem] text-[#1A1A1A]">AI 매핑 결과</h2>
-                <div className="flex items-center gap-4 text-[0.75rem]">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: T.success }} /> 자동 매핑 {analysisResults.filter(r => r.confidence >= 0.8).length}개
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#F59E0B" }} /> 확인 필요 {analysisResults.filter(r => r.confidence >= 0.4 && r.confidence < 0.8).length}개
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: "#D1D5DB" }} /> 미매핑 {dealflowFields.length - analysisResults.filter(r => r.confidence >= 0.4).length}개
-                  </span>
-                </div>
-              </div>
+            /* ── 매핑 결과 (그룹화 + 인라인 근거) ── */
+            (() => {
+              const getConfidence = (fieldName: string) =>
+                analysisResults.find(r => r.dealflowField === fieldName)?.confidence ?? 0;
 
-              <div className="space-y-2 mb-6">
-                {dealflowFields.map((field) => {
-                  const result = analysisResults.find(r => r.dealflowField === field.name);
-                  const confidence = result?.confidence ?? 0;
-                  const bgColor = confidence >= 0.8 ? "#F0FFF4" : confidence >= 0.4 ? "#FFFBEB" : "#F9FAFB";
-                  const borderColor = confidence >= 0.8 ? "#86EFAC" : confidence >= 0.4 ? "#FDE68A" : "#E5E7EB";
-                  const dotColor = confidence >= 0.8 ? T.success : confidence >= 0.4 ? "#F59E0B" : "#D1D5DB";
+              const autoMapped = dealflowFields.filter(f => getConfidence(f.name) >= 0.8);
+              const needsReview = dealflowFields.filter(f => {
+                const c = getConfidence(f.name);
+                return c >= 0.4 && c < 0.8;
+              });
+              const unmapped = dealflowFields.filter(f => getConfidence(f.name) < 0.4);
 
-                  return (
-                    <div
-                      key={field.name}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
-                      style={{ background: bgColor, border: `1px solid ${borderColor}` }}
-                    >
-                      {/* Confidence dot */}
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ background: dotColor }} />
+              const requiredUnmapped = unmapped.filter(f => f.required && !mappings[f.name]).length;
+              const canProceed = dealflowFields.filter(f => f.required).every(f => !!mappings[f.name]);
 
-                      {/* DealFlow field */}
-                      <div className="w-[120px] shrink-0">
-                        <span className="text-[0.8rem] text-[#1A1A1A]">
-                          {field.name}
-                          {field.required && <span className="text-red-500 ml-0.5">*</span>}
-                        </span>
+              const renderFieldRow = (field: { name: string; required: boolean }) => {
+                const result = analysisResults.find(r => r.dealflowField === field.name);
+                const confidence = result?.confidence ?? 0;
+                const currentMapping = mappings[field.name] || "";
+                const preview = currentMapping ? excelColumns.find(c => c.name === currentMapping)?.preview : null;
+                const tone = confidence >= 0.8 ? "success" : confidence >= 0.4 ? "warn" : "idle";
+                const borderCol = tone === "success" ? "#86EFAC" : tone === "warn" ? "#FDE68A" : T.border;
+
+                return (
+                  <div
+                    key={field.name}
+                    className="rounded-xl border transition-all"
+                    style={{ borderColor: borderCol, background: "#fff" }}
+                  >
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      {/* DealFlow field label */}
+                      <div className="w-[140px] shrink-0 flex items-center gap-1.5">
+                        <span className="text-[0.85rem] text-[#1A1A1A]">{field.name}</span>
+                        {field.required && (
+                          <span className="text-[0.6rem] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "#FEF2F2", color: "#DC2626" }}>필수</span>
+                        )}
                       </div>
 
-                      {/* Arrow */}
                       <ArrowRight size={12} className="text-[#BBB] shrink-0" />
 
                       {/* Excel column selector */}
                       <select
-                        className="flex-1 text-[0.8rem] px-3 py-1.5 rounded-md border bg-white text-[#1A1A1A]"
+                        className="flex-1 text-[0.85rem] px-3 py-2 rounded-lg border bg-white text-[#1A1A1A] focus:outline-none focus:border-[#1A472A] min-w-0"
                         style={{ borderColor: T.border }}
-                        value={mappings[field.name] || ""}
+                        value={currentMapping}
                         onChange={(e) => setMappings((p) => ({ ...p, [field.name]: e.target.value }))}
                       >
-                        <option value="">선택해주세요</option>
+                        <option value="">— 선택하지 않음 —</option>
                         {excelColumns.map((c) => (
-                          <option key={c.name} value={c.name}>{c.name} — {c.preview}</option>
+                          <option key={c.name} value={c.name}>{c.name}</option>
                         ))}
                       </select>
 
-                      {/* Preview */}
-                      {mappings[field.name] && (
-                        <span className="text-[0.7rem] text-[#999] w-[100px] truncate shrink-0">
-                          {excelColumns.find(c => c.name === mappings[field.name])?.preview}
-                        </span>
+                      {/* Preview sample data */}
+                      {preview && (
+                        <div className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-md" style={{ background: "#F8FAFC", border: `1px solid ${T.border}` }}>
+                          <span className="text-[0.65rem] text-[#BBB]">예시</span>
+                          <span className="text-[0.75rem] text-[#444] truncate max-w-[140px]">{preview}</span>
+                        </div>
                       )}
 
-                      {/* Confidence badge */}
-                      {confidence >= 0.4 && confidence < 0.8 && (
-                        <span className="text-[0.65rem] px-2 py-0.5 rounded-full shrink-0" style={{ background: "#FEF3C7", color: "#D97706" }}>
-                          확인 필요
+                      {/* Confidence % badge */}
+                      {confidence > 0 && (
+                        <span
+                          className="text-[0.7rem] font-medium px-2 py-1 rounded-full shrink-0 tabular-nums"
+                          style={{
+                            background: tone === "success" ? "#ECFDF5" : tone === "warn" ? "#FEF3C7" : "#F3F4F6",
+                            color: tone === "success" ? "#059669" : tone === "warn" ? "#D97706" : "#9CA3AF",
+                          }}
+                        >
+                          {Math.round(confidence * 100)}%
                         </span>
                       )}
                     </div>
-                  );
-                })}
-              </div>
 
-              {/* Reason summary */}
-              {analysisResults.some(r => r.confidence >= 0.4) && (
-                <div className="px-4 py-3 rounded-lg mb-6" style={{ background: "#F8FAFC", border: `1px solid ${T.border}` }}>
-                  <p className="text-[0.7rem] text-[#999] mb-2">AI 분석 근거</p>
-                  <div className="space-y-1">
-                    {analysisResults.filter(r => r.confidence >= 0.4).map(r => (
-                      <p key={r.dealflowField} className="text-[0.7rem] text-[#666]">
-                        <span style={{ color: T.primary }}>{r.dealflowField}</span> ← {r.excelColumn}: {r.reason} ({Math.round(r.confidence * 100)}%)
-                      </p>
-                    ))}
+                    {/* Inline AI reason */}
+                    {result && confidence > 0 && result.reason && (
+                      <div className="px-4 pb-3 pt-0 flex items-start gap-1.5">
+                        <Sparkles size={10} className="shrink-0 mt-0.5" color={tone === "success" ? "#059669" : tone === "warn" ? "#D97706" : "#9CA3AF"} />
+                        <p className="text-[0.7rem] text-[#666] leading-relaxed">{result.reason}</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              };
 
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={autoMap}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-[0.8rem] transition-colors"
-                  style={{ background: "#F0F4FF", color: T.primary }}
-                >
-                  <RefreshCw size={12} /> 다시 분석
-                </button>
-                <button
-                  onClick={goToStep3}
-                  className="px-6 py-2.5 rounded-lg text-[0.8rem] text-white transition-colors"
-                  style={{ background: T.primary }}
-                >
-                  데이터 가져오기 ({SAMPLE_DEALS.length}건)
-                </button>
-              </div>
-            </>
+              return (
+                <>
+                  {/* Header + summary */}
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h2 className="text-[1.1rem] text-[#1A1A1A] mb-1">AI 매핑 결과</h2>
+                      <p className="text-[0.75rem] text-[#999]">전체 {dealflowFields.length}개 필드 중 {autoMapped.length}개 자동 매핑 · {needsReview.length}개 확인 필요 · {unmapped.length}개 미매핑</p>
+                    </div>
+                    <button
+                      onClick={autoMap}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-[0.8rem] transition-colors"
+                      style={{ background: "#F0F4FF", color: T.primary }}
+                    >
+                      <RefreshCw size={12} /> 다시 분석
+                    </button>
+                  </div>
+
+                  {/* Required unmapped warning */}
+                  {requiredUnmapped > 0 && (
+                    <div className="flex items-start gap-2.5 px-4 py-3 rounded-lg mb-4" style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                      <AlertTriangle size={14} color="#DC2626" className="shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[0.8rem] text-[#991B1B] font-medium">필수 필드 {requiredUnmapped}개가 매핑되지 않았습니다</p>
+                        <p className="text-[0.7rem] text-[#B91C1C] mt-0.5">아래 "미매핑" 섹션에서 엑셀 컬럼을 선택해주세요.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: 확인 필요 (priority — shown first) */}
+                  {needsReview.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "#FEF3C7" }}>
+                          <AlertTriangle size={12} color="#D97706" />
+                        </div>
+                        <span className="text-[0.85rem] text-[#1A1A1A] font-medium">확인 필요</span>
+                        <span className="text-[0.7rem] text-[#999]">{needsReview.length}개 · AI 확신도 중간, 매핑을 검토하세요</span>
+                      </div>
+                      <div className="space-y-2">
+                        {needsReview.map(renderFieldRow)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: 미매핑 */}
+                  {unmapped.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "#F3F4F6" }}>
+                          <X size={12} color="#9CA3AF" />
+                        </div>
+                        <span className="text-[0.85rem] text-[#1A1A1A] font-medium">미매핑</span>
+                        <span className="text-[0.7rem] text-[#999]">{unmapped.length}개 · 필요한 필드를 직접 선택하세요</span>
+                      </div>
+                      <div className="space-y-2">
+                        {unmapped.map(renderFieldRow)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: 자동 매핑됨 */}
+                  {autoMapped.length > 0 && (
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "#ECFDF5" }}>
+                          <CheckCircle2 size={12} color="#059669" />
+                        </div>
+                        <span className="text-[0.85rem] text-[#1A1A1A] font-medium">자동 매핑됨</span>
+                        <span className="text-[0.7rem] text-[#999]">{autoMapped.length}개 · AI 확신도 높음</span>
+                      </div>
+                      <div className="space-y-2">
+                        {autoMapped.map(renderFieldRow)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer action */}
+                  <div className="flex items-center justify-between pt-4 border-t" style={{ borderColor: T.border }}>
+                    <button
+                      onClick={() => setStep(1)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.8rem] text-[#666] hover:bg-[#F7F8FA] transition-colors"
+                    >
+                      <ChevronLeft size={13} /> 이전
+                    </button>
+                    <button
+                      onClick={goToStep3}
+                      disabled={!canProceed}
+                      className="px-6 py-2.5 rounded-lg text-[0.8rem] text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ background: T.primary }}
+                    >
+                      데이터 가져오기 ({SAMPLE_DEALS.length}건) <ArrowRight size={12} className="inline ml-1" />
+                    </button>
+                  </div>
+                </>
+              );
+            })()
           )}
         </div>
       )}
