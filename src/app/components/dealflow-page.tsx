@@ -69,6 +69,8 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Globe,
+  Code2,
 } from "lucide-react";
 
 /* ─── DESIGN TOKENS ─── */
@@ -747,6 +749,277 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[]) => void })
           </div>
           <button
             onClick={() => onComplete(SAMPLE_DEALS)}
+            className="px-8 py-3 rounded-lg text-[0.85rem] text-white transition-colors"
+            style={{ background: T.primary }}
+          >
+            대시보드로 이동하기
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── WEB FORM SAMPLE DEALS ─── */
+const WEB_FORM_SAMPLE_DEALS: Deal[] = [
+  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", service: "CRM 솔루션 도입 문의", quantity: 1, amount: "₩0", manager: "박지은", status: "진행중", date: "2026-04-12" },
+  { id: 102, company: "스마트로직(주)", stage: "신규", contact: "이동훈", position: "대표이사", service: "ERP 연동 문의", quantity: 1, amount: "₩0", manager: "김태현", status: "진행중", date: "2026-04-12" },
+  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀", service: "데이터 분석 플랫폼 문의", quantity: 1, amount: "₩0", manager: "이서연", status: "진행중", date: "2026-04-11" },
+];
+
+/* ─── WEB FORM ONBOARDING FLOW ─── */
+interface WebFormField { key: string; label: string; required: boolean; locked: boolean; }
+
+const DEFAULT_WEB_FORM_FIELDS: WebFormField[] = [
+  { key: "company", label: "기업명", required: true, locked: true },
+  { key: "contact", label: "담당자명", required: false, locked: false },
+  { key: "phone", label: "전화번호", required: false, locked: false },
+  { key: "email", label: "이메일", required: false, locked: false },
+  { key: "service", label: "희망서비스", required: false, locked: false },
+  { key: "message", label: "문의내용", required: false, locked: false },
+];
+
+function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void }) {
+  const [step, setStep] = useState(1);
+  const [formName, setFormName] = useState("홈페이지 문의하기");
+  const [fields, setFields] = useState<WebFormField[]>(DEFAULT_WEB_FORM_FIELDS);
+  const [copied, setCopied] = useState(false);
+  const [testSubmitted, setTestSubmitted] = useState(false);
+
+  const activeFields = fields.filter((f) => f.required || f.locked);
+  const toggleField = (key: string) => {
+    setFields((prev) =>
+      prev.map((f) =>
+        f.key === key && !f.locked ? { ...f, required: !f.required } : f
+      )
+    );
+  };
+
+  const embedCode = `<!-- dangol CRM 웹 폼 -->
+<script src="https://cdn.dangol.io/form.js"></script>
+<div id="dangol-form"
+  data-form-id="f-${Date.now().toString(36)}"
+  data-fields="${fields.filter((f) => f.required || f.locked).map((f) => f.key).join(",")}"
+></div>`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(embedCode).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleTestSubmit = () => {
+    setTestSubmitted(true);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8" style={{ background: T.bg }}>
+      {/* Step indicator */}
+      <div className="flex items-center gap-3 mb-10">
+        {[1, 2, 3].map((s) => (
+          <div key={s} className="flex items-center gap-3">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-[0.8rem]"
+              style={{ background: step >= s ? T.primary : "#E0E3E8", color: step >= s ? "#fff" : "#999" }}
+            >
+              {step > s ? "✓" : s}
+            </div>
+            <span className="text-[0.8rem]" style={{ color: step >= s ? T.textPrimary : "#999" }}>
+              {s === 1 ? "폼 설정" : s === 2 ? "미리보기 & 코드" : "완료"}
+            </span>
+            {s < 3 && <div className="w-12 h-px" style={{ background: step > s ? T.primary : "#E0E3E8" }} />}
+          </div>
+        ))}
+      </div>
+
+      {/* Step 1: 폼 설정 */}
+      {step === 1 && (
+        <div className="bg-white rounded-2xl p-10 w-full max-w-[480px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: "#EBF5FF" }}>
+              <Globe size={22} color={T.primary} />
+            </div>
+            <h2 className="text-[22px] text-[#1A1A1A] mb-2">웹 폼 연동 설정</h2>
+            <p className="text-[0.85rem] text-[#999]">홈페이지 문의 폼을 통해 리드를 자동으로 수집합니다.</p>
+          </div>
+
+          <div className="mb-6">
+            <label className="text-[0.75rem] text-[#666] mb-1.5 block">폼 이름</label>
+            <input
+              className="w-full px-4 py-2.5 rounded-lg border text-[0.85rem] text-[#1A1A1A] placeholder-[#CCC] focus:outline-none focus:border-[#1A472A]"
+              style={{ borderColor: T.border }}
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="예: 홈페이지 문의하기"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="text-[0.75rem] text-[#666] mb-2 block">수집할 필드</label>
+            <div className="space-y-1.5">
+              {fields.map((field) => (
+                <label
+                  key={field.key}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-lg border cursor-pointer transition-colors hover:bg-[#FAFBFC]"
+                  style={{ borderColor: field.required || field.locked ? T.primary : T.border, background: field.required || field.locked ? "#F0F7F2" : "#fff" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={field.required || field.locked}
+                    disabled={field.locked}
+                    onChange={() => toggleField(field.key)}
+                    className="w-4 h-4 rounded accent-[#1A472A]"
+                  />
+                  <span className="text-[0.8rem] text-[#1A1A1A] flex-1">{field.label}</span>
+                  {field.locked && <span className="text-[0.6rem] text-[#BBB]">필수</span>}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => setStep(2)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[0.85rem] text-white transition-colors"
+            style={{ background: formName.trim() ? T.primary : "#CCC", cursor: formName.trim() ? "pointer" : "not-allowed" }}
+            disabled={!formName.trim()}
+          >
+            다음 <ArrowRight size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* Step 2: 미리보기 & 임베드 코드 */}
+      {step === 2 && (
+        <div className="bg-white rounded-2xl p-8 w-full max-w-[780px]" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-[1.2rem] text-[#1A1A1A]">미리보기 & 임베드 코드</h2>
+            <button
+              onClick={() => setStep(1)}
+              className="text-[0.8rem] text-[#999] hover:text-[#666] transition-colors"
+            >
+              ← 이전
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-6">
+            {/* 폼 미리보기 */}
+            <div>
+              <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">폼 미리보기</p>
+              <div className="rounded-xl p-6 border" style={{ borderColor: T.border, background: "#FAFBFC" }}>
+                <p className="text-[1rem] text-[#1A1A1A] mb-4">{formName}</p>
+                <div className="space-y-3">
+                  {fields.filter((f) => f.required || f.locked).map((field) => (
+                    <div key={field.key}>
+                      <label className="text-[0.7rem] text-[#666] mb-1 block">
+                        {field.label}
+                        {field.locked && <span className="text-red-500 ml-0.5">*</span>}
+                      </label>
+                      {field.key === "message" ? (
+                        <textarea
+                          className="w-full px-3 py-2 rounded-lg border text-[0.8rem] bg-white text-[#CCC] resize-none h-[64px]"
+                          style={{ borderColor: T.border }}
+                          placeholder={`${field.label}을 입력하세요`}
+                          readOnly
+                        />
+                      ) : (
+                        <input
+                          className="w-full px-3 py-2 rounded-lg border text-[0.8rem] bg-white text-[#CCC]"
+                          style={{ borderColor: T.border }}
+                          placeholder={`${field.label}을 입력하세요`}
+                          readOnly
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  className="w-full mt-4 py-2.5 rounded-lg text-[0.8rem] text-white"
+                  style={{ background: T.primary }}
+                >
+                  문의하기
+                </button>
+              </div>
+              {/* 테스트 제출 */}
+              <button
+                onClick={handleTestSubmit}
+                disabled={testSubmitted}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border text-[0.8rem] transition-colors"
+                style={{
+                  borderColor: testSubmitted ? T.success : T.border,
+                  color: testSubmitted ? T.success : "#666",
+                  background: testSubmitted ? "#ECFDF5" : "#fff",
+                }}
+              >
+                {testSubmitted ? (
+                  <><CheckCircle2 size={13} /> 테스트 문의 수신 완료</>
+                ) : (
+                  <><Sparkles size={13} /> 테스트 제출 시뮬레이션</>
+                )}
+              </button>
+            </div>
+
+            {/* 임베드 코드 */}
+            <div>
+              <p className="text-[0.75rem] text-[#999] mb-3 uppercase tracking-wider">임베드 코드</p>
+              <div className="rounded-xl border overflow-hidden" style={{ borderColor: T.border }}>
+                <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: T.border, background: "#1E293B" }}>
+                  <div className="flex items-center gap-2">
+                    <Code2 size={12} color="#94A3B8" />
+                    <span className="text-[0.7rem] text-[#94A3B8]">HTML</span>
+                  </div>
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[0.65rem] transition-colors"
+                    style={{ color: copied ? T.success : "#94A3B8", background: copied ? "#0F291A" : "transparent" }}
+                  >
+                    {copied ? <><CheckCircle2 size={10} /> 복사됨</> : <><Copy size={10} /> 복사</>}
+                  </button>
+                </div>
+                <pre className="p-4 text-[0.7rem] text-[#E2E8F0] leading-relaxed overflow-x-auto" style={{ background: "#0F172A" }}>
+                  {embedCode}
+                </pre>
+              </div>
+
+              <div className="mt-4 p-4 rounded-xl" style={{ background: "#FFFBEB", border: "1px solid #FEF3C7" }}>
+                <p className="text-[0.75rem] text-[#92400E] leading-relaxed">
+                  위 코드를 홈페이지의 문의하기 페이지에 붙여넣으세요.
+                  폼을 통해 접수된 문의는 자동으로 <strong>"신규"</strong> 스테이지의 딜로 생성됩니다.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={() => setStep(3)}
+              className="px-6 py-2.5 rounded-lg text-[0.85rem] text-white transition-colors"
+              style={{ background: T.primary }}
+            >
+              연동 완료
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: 완료 */}
+      {step === 3 && (
+        <div className="bg-white rounded-2xl p-10 w-full max-w-[416px] text-center" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: "#ECFDF5" }}>
+            <CheckCircle2 size={26} color={T.success} />
+          </div>
+          <h2 className="text-[22px] text-[#1A1A1A] mb-2">웹 폼 연동 완료!</h2>
+          <p className="text-[0.9rem] text-[#666] mb-6">
+            홈페이지 문의 폼이 연동되었습니다.<br />
+            접수된 문의는 자동으로 딜로 생성됩니다.
+          </p>
+          <div className="flex items-center justify-center gap-3 mb-8 flex-wrap">
+            {[`리드 ${WEB_FORM_SAMPLE_DEALS.length}건 수신`, `스테이지: 신규`, `자동 배정 활성`].map((s) => (
+              <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.75rem]" style={{ background: "#ECFDF5", color: "#059669" }}>
+                ✓ {s}
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={() => onComplete(WEB_FORM_SAMPLE_DEALS)}
             className="px-8 py-3 rounded-lg text-[0.85rem] text-white transition-colors"
             style={{ background: T.primary }}
           >
@@ -2690,6 +2963,7 @@ function DealflowPageInner() {
 
   /* ── Original State ── */
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showWebFormOnboarding, setShowWebFormOnboarding] = useState(false);
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
   const [customizeMode, setCustomizeMode] = useState(false);
@@ -2893,6 +3167,9 @@ function DealflowPageInner() {
   if (showOnboarding) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
+  if (showWebFormOnboarding) {
+    return <WebFormOnboarding onComplete={(deals) => { handleOnboardingComplete(deals); setShowWebFormOnboarding(false); }} />;
+  }
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden" style={{ background: T.bg }}>
@@ -2952,6 +3229,9 @@ function DealflowPageInner() {
           </div>
           <button onClick={() => setShowOnboarding(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] transition-colors hover:bg-[#F7F8FA]" style={{ borderColor: T.border, color: "#666" }}>
             <Upload size={12} /> Excel 가져오기
+          </button>
+          <button onClick={() => setShowWebFormOnboarding(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] transition-colors hover:bg-[#F7F8FA]" style={{ borderColor: T.border, color: "#666" }}>
+            <Globe size={12} /> 웹 폼 연동
           </button>
           <button onClick={() => setShowAddDeal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: T.primary }}>
             <Plus size={12} /> 딜 추가
@@ -3406,6 +3686,19 @@ function DealflowPageInner() {
                         <div>
                           <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">Excel 가져오기</p>
                           <p className="text-[0.65rem] text-[#999]">파일에서 일괄 업로드</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setShowWebFormOnboarding(true)}
+                        className="flex-1 flex flex-col items-center gap-3 p-6 rounded-xl border transition-all hover:border-[#1A472A] hover:bg-[#FAFBFC]"
+                        style={{ borderColor: T.border }}
+                      >
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: "#F3F4F6" }}>
+                          <Globe size={16} color="#666" />
+                        </div>
+                        <div>
+                          <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">웹 폼 연동</p>
+                          <p className="text-[0.65rem] text-[#999]">홈페이지 문의폼과 연결</p>
                         </div>
                       </button>
                       <button
