@@ -811,10 +811,12 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<MappingResult[] | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const mappingAbortRef = React.useRef<AbortController | null>(null);
 
   // Dashboard AI state
   const [isAnalyzingDashboard, setIsAnalyzingDashboard] = useState(false);
   const [dashboardProgress, setDashboardProgress] = useState(0);
+  const dashboardAbortRef = React.useRef<AbortController | null>(null);
   const [dealAnalysis, setDealAnalysis] = useState<DealAnalysis | null>(null);
   const [scenario, setScenario] = useState<{ scenario: ScenarioType; reason: string } | null>(null);
   const [recommendations, setRecommendations] = useState<WidgetRecommendation[]>([]);
@@ -823,12 +825,16 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
 
   // Trigger dashboard analysis when entering step 3
   const goToStep3 = async () => {
+    dashboardAbortRef.current?.abort();
+    const controller = new AbortController();
+    dashboardAbortRef.current = controller;
+
     setStep(3);
     setIsAnalyzingDashboard(true);
     setDashboardProgress(0);
 
-    setTimeout(() => setDashboardProgress(1), 350);
-    setTimeout(() => setDashboardProgress(2), 750);
+    setTimeout(() => { if (!controller.signal.aborted) setDashboardProgress(1); }, 350);
+    setTimeout(() => { if (!controller.signal.aborted) setDashboardProgress(2); }, 750);
 
     try {
       const response = await fetch("/api/ai/dashboard-recommendation", {
@@ -838,6 +844,7 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
           deals: SAMPLE_DEALS,
           availableWidgets: allWidgets.map(w => ({ id: w.id, name: w.name, category: w.category })),
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) throw new Error("API 요청 실패");
@@ -848,7 +855,8 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
       setScenario(data.scenario);
       setRecommendations(data.recommendations);
       setSelectedWidgets(new Set(data.recommendations.map((r: WidgetRecommendation) => r.widgetId)));
-    } catch {
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
       // Fallback: 로컬 규칙 기반 추천
       console.warn("AI 대시보드 추천 실패, 로컬 폴백 사용");
       const analysis = analyzeDealData(SAMPLE_DEALS);
@@ -860,24 +868,36 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
       setRecommendations(recs);
       setSelectedWidgets(new Set(recs.map(r => r.widgetId)));
     } finally {
-      setIsAnalyzingDashboard(false);
+      if (!controller.signal.aborted) setIsAnalyzingDashboard(false);
     }
   };
 
+  const cancelDashboardAnalysis = () => {
+    dashboardAbortRef.current?.abort();
+    setIsAnalyzingDashboard(false);
+    setDashboardProgress(0);
+    setStep(2);
+  };
+
   const autoMap = async () => {
+    mappingAbortRef.current?.abort();
+    const controller = new AbortController();
+    mappingAbortRef.current = controller;
+
     setIsAnalyzing(true);
     setAnalysisProgress(0);
     setAnalysisResults(null);
 
     // Progress animation
-    setTimeout(() => setAnalysisProgress(1), 400);
-    setTimeout(() => setAnalysisProgress(2), 900);
+    setTimeout(() => { if (!controller.signal.aborted) setAnalysisProgress(1); }, 400);
+    setTimeout(() => { if (!controller.signal.aborted) setAnalysisProgress(2); }, 900);
 
     try {
       const response = await fetch("/api/ai/column-mapping", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ excelColumns, dealflowFields }),
+        signal: controller.signal,
       });
 
       if (!response.ok) throw new Error("API 요청 실패");
@@ -893,7 +913,8 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
         }
       }
       setMappings(newMappings);
-    } catch {
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return;
       // Fallback: 로컬 규칙 기반 매핑
       console.warn("AI 매핑 실패, 로컬 폴백 사용");
       const results = computeSmartMappings(excelColumns, dealflowFields);
@@ -905,8 +926,14 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
       }
       setMappings(newMappings);
     } finally {
-      setIsAnalyzing(false);
+      if (!controller.signal.aborted) setIsAnalyzing(false);
     }
+  };
+
+  const cancelMapping = () => {
+    mappingAbortRef.current?.abort();
+    setIsAnalyzing(false);
+    setAnalysisProgress(0);
   };
 
   return (
@@ -1017,6 +1044,13 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                   </div>
                 ))}
               </div>
+              <button
+                onClick={cancelMapping}
+                className="mt-8 px-5 py-2 rounded-lg text-[0.8rem] text-[#666] border hover:bg-[#FEF2F2] hover:text-[#E8453A] hover:border-[#FECACA] transition-colors"
+                style={{ borderColor: T.border }}
+              >
+                <X size={12} className="inline mr-1.5" />분석 취소
+              </button>
             </div>
           ) : !analysisResults ? (
             /* ── 분석 전 초기 상태 ── */
@@ -1173,6 +1207,13 @@ function OnboardingFlow({ onComplete }: { onComplete: (deals: Deal[], recommende
                   </div>
                 ))}
               </div>
+              <button
+                onClick={cancelDashboardAnalysis}
+                className="mt-8 px-5 py-2 rounded-lg text-[0.8rem] text-[#666] border hover:bg-[#FEF2F2] hover:text-[#E8453A] hover:border-[#FECACA] transition-colors"
+                style={{ borderColor: T.border }}
+              >
+                <X size={12} className="inline mr-1.5" />분석 취소
+              </button>
             </div>
           ) : dealAnalysis && scenario ? (
             /* ── 대시보드 추천 결과 ── */
