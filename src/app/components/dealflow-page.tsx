@@ -454,7 +454,7 @@ const allWidgets: WidgetDef[] = [
   { id: "kpi-avg-cycle", name: "평균 영업 주기", description: "딜 생성부터 종료까지 평균 일수입니다", category: "kpi", icon: Clock, colSpan: 1 },
   { id: "kpi-at-risk", name: "위험 딜", description: "장기 미진행 또는 지연된 딜 수입니다", category: "kpi", icon: AlertTriangle, colSpan: 1 },
   { id: "kpi-new-month", name: "이달 신규", description: "이번 달 새로 생성된 딜 건수입니다", category: "kpi", icon: Plus, colSpan: 1 },
-  { id: "funnel", name: "파이프라인 퍼널", description: "각 스테이지별 딜 분포를 막대 차트로 표시합니다", category: "chart", icon: Filter, colSpan: 3 },
+  { id: "funnel", name: "파이프라인 퍼널", description: "각 스테이지별 딜 분포를 막대 차트로 표시합니다", category: "chart", icon: Filter, colSpan: 4 },
   { id: "donut", name: "성공여부 분포", description: "딜의 성공/실패/진행중 비율을 도넛 차트로 표시합니다", category: "chart", icon: PieIcon, colSpan: 1 },
   { id: "trend", name: "월별 추이", description: "최근 6개월간 딜 수와 금액 추이를 꺾은선 그래프로 표시합니다", category: "chart", icon: TrendingUp, colSpan: 2 },
   { id: "stage-bar", name: "스테이지별 금액", description: "각 스테이지별 누적 금액을 가로 막대로 표시합니다", category: "chart", icon: BarChart3, colSpan: 2 },
@@ -2715,10 +2715,16 @@ function DealflowPageInner() {
     setActiveViewId(view.id);
   };
 
+  const [confirmDeleteViewId, setConfirmDeleteViewId] = useState<string | null>(null);
   const removeView = (id: string) => {
     if (savedViews.length <= 1) return;
-    setSavedViews((prev) => prev.filter((v) => v.id !== id));
-    if (activeViewId === id) setActiveViewId(savedViews[0].id);
+    setConfirmDeleteViewId(id);
+  };
+  const confirmRemoveView = () => {
+    if (!confirmDeleteViewId) return;
+    setSavedViews((prev) => prev.filter((v) => v.id !== confirmDeleteViewId));
+    if (activeViewId === confirmDeleteViewId) setActiveViewId(savedViews[0].id);
+    setConfirmDeleteViewId(null);
   };
 
   const activeWidgets = useMemo(() => new Set(widgetOrder), [widgetOrder]);
@@ -2734,7 +2740,7 @@ function DealflowPageInner() {
   };
 
   const resizeWidget = (id: string, newSpan: number) => {
-    setWidgetSizes((prev) => ({ ...prev, [id]: newSpan }));
+    setWidgetSizes((prev) => ({ ...prev, [id]: Math.min(newSpan, 4) }));
   };
 
   const handleWidgetDragStart = (idx: number) => setWidgetDragIdx(idx);
@@ -2751,7 +2757,10 @@ function DealflowPageInner() {
   };
   const handleWidgetDragEnd = () => setWidgetDragIdx(null);
 
-  const getWidgetSpan = (w: WidgetDef) => widgetSizes[w.id] ?? w.colSpan;
+  const getWidgetSpan = (w: WidgetDef) => {
+    const raw = widgetSizes[w.id] ?? w.colSpan;
+    return raw === 3 ? 2 : raw; // normalize: 3 is invalid in 4-col grid
+  };
 
   const dateFilteredDeals = useMemo(() => filterByDateRange(customerDeals, dateRange), [customerDeals, dateRange]);
 
@@ -3064,7 +3073,7 @@ function DealflowPageInner() {
                                 {/* Controls */}
                                 <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                   {/* Resize buttons */}
-                                  {[1, 2, 3].map((s) => (
+                                  {[1, 2, 4].map((s) => (
                                     <button
                                       key={s}
                                       onClick={(e) => { e.stopPropagation(); resizeWidget(w.id, s); }}
@@ -3073,9 +3082,9 @@ function DealflowPageInner() {
                                         background: span === s ? T.primary : "#F3F4F6",
                                         color: span === s ? "#fff" : "#999",
                                       }}
-                                      title={`${s}칸`}
+                                      title={s === 4 ? "전체" : `${s}칸`}
                                     >
-                                      {s}
+                                      {s === 4 ? "F" : s}
                                     </button>
                                   ))}
                                   <div className="w-px h-4 mx-0.5" style={{ background: T.border }} />
@@ -3547,11 +3556,11 @@ function DealflowPageInner() {
                                   const isSelected = selectedIds.has(deal.id);
                                   const cellMap: Record<string, React.ReactNode> = {
                                     company: (
-                                      <div className="flex items-center gap-2.5">
+                                      <div className="flex items-center gap-2.5 cursor-pointer group/company" onClick={() => setSelectedDeal(deal)}>
                                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[0.65rem] text-white shrink-0" style={{ background: stageColors[deal.stage] || T.primary }}>
                                           {deal.company.replace(/[\(\)주]/g, "").charAt(0)}
                                         </div>
-                                        <span className="text-[0.75rem] text-[#1A1A1A]">{deal.company}</span>
+                                        <span className="text-[0.75rem] text-[#1A1A1A] group-hover/company:text-[#1A472A] group-hover/company:underline transition-colors">{deal.company}</span>
                                       </div>
                                     ),
                                     stage: (
@@ -3591,11 +3600,10 @@ function DealflowPageInner() {
                                   return (
                                     <tr
                                       key={deal.id}
-                                      className="border-b cursor-pointer transition-colors"
+                                      className="border-b transition-colors"
                                       style={{ borderColor: T.border, background: isSelected ? "#F0F7F2" : "#fff" }}
                                       onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#FAFBFC"; }}
                                       onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "#fff"; }}
-                                      onClick={() => setSelectedDeal(deal)}
                                     >
                                       <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
                                         <input type="checkbox" checked={isSelected} onChange={() => toggleOne(deal.id)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
@@ -3778,6 +3786,23 @@ function DealflowPageInner() {
           onClose={() => setShowGoalModal(false)}
         />
       )}
+
+      {/* View Delete Confirmation */}
+      {confirmDeleteViewId && (() => {
+        const viewToDelete = savedViews.find((v) => v.id === confirmDeleteViewId);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.2)" }} onClick={() => setConfirmDeleteViewId(null)}>
+            <div className="bg-white rounded-xl border p-6 w-[300px]" style={{ borderColor: T.border, boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }} onClick={(e) => e.stopPropagation()}>
+              <p className="text-[0.95rem] text-[#1A1A1A] mb-1">뷰 삭제</p>
+              <p className="text-[0.8rem] text-[#999] mb-5">"{viewToDelete?.name}" 뷰를 삭제할까요?</p>
+              <div className="flex items-center gap-2 justify-end">
+                <button onClick={() => setConfirmDeleteViewId(null)} className="px-4 py-2 rounded-lg text-[0.75rem] text-[#666] border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>취소</button>
+                <button onClick={confirmRemoveView} className="px-4 py-2 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: T.danger }}>삭제</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
