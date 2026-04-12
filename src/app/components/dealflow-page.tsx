@@ -1763,6 +1763,49 @@ function StageDropdown({ currentStage, stageNames, stageColorMap, onChange, comp
   );
 }
 
+const STATUS_OPTIONS = ["진행중", "성공", "실패"];
+
+function StatusDropdown({ currentStatus, onChange, compact }: { currentStatus: string; onChange: (status: string) => void; compact?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const palette = statusColors[currentStatus] || { bg: "#F1F5F9", text: "#64748B" };
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <button
+        onClick={() => setOpen((p) => !p)}
+        className="inline-flex items-center gap-1.5 text-[0.65rem] px-2.5 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
+        style={{ background: palette.bg, color: palette.text }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: palette.text }} />
+        {currentStatus}
+        {(!compact || hovered || open) && <ChevronDown size={9} />}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-50 py-1 w-[140px]" style={{ borderColor: T.border }}>
+            {STATUS_OPTIONS.map((s) => {
+              const p = statusColors[s] || { bg: "#F1F5F9", text: "#64748B" };
+              return (
+                <button
+                  key={s}
+                  onClick={() => { onChange(s); setOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-[0.75rem] flex items-center gap-2 transition-colors hover:bg-[#F7F8FA] ${s === currentStatus ? "font-medium" : ""}`}
+                  style={{ color: s === currentStatus ? p.text : "#444" }}
+                >
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.text }} />
+                  {s}
+                  {s === currentStatus && <CheckCircle2 size={11} className="ml-auto text-[#2CBF60]" />}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ─── DETAIL DRAWER ─── */
 type DrawerTab = "basic" | "activity" | "files";
 
@@ -2058,16 +2101,10 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
                     onChange={(s) => onChangeStage(deal.id, s)}
                   />
                 ) : field.key === "status" ? (
-                  <select
-                    value={deal.status}
-                    onChange={(e) => onChangeStatus(deal.id, e.target.value)}
-                    className="text-[0.7rem] px-2 py-0.5 rounded-md border-0 focus:outline-none cursor-pointer w-fit"
-                    style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}
-                  >
-                    <option value="진행중">진행중</option>
-                    <option value="성공">성공</option>
-                    <option value="실패">실패</option>
-                  </select>
+                  <StatusDropdown
+                    currentStatus={deal.status}
+                    onChange={(s) => onChangeStatus(deal.id, s)}
+                  />
                 ) : editingField === field.key ? (
                   <input
                     autoFocus
@@ -4316,17 +4353,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                       </div>
                                     ),
                                     status: (
-                                      <select
-                                        value={deal.status}
-                                        onClick={(e) => e.stopPropagation()}
-                                        onChange={(e) => { e.stopPropagation(); updateDealStatus(deal.id, e.target.value); }}
-                                        className="text-[0.65rem] px-2.5 py-1 rounded-full border-0 focus:outline-none cursor-pointer"
-                                        style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}
-                                      >
-                                        <option value="진행중">진행중</option>
-                                        <option value="성공">성공</option>
-                                        <option value="실패">실패</option>
-                                      </select>
+                                      <StatusDropdown
+                                        currentStatus={deal.status}
+                                        onChange={(s) => updateDealStatus(deal.id, s)}
+                                        compact
+                                      />
                                     ),
                                     date: <span className="text-[0.7rem] text-[#999] whitespace-nowrap tabular-nums">{deal.date}</span>,
                                     phone: <span className="text-[0.7rem] text-[#555]">—</span>,
