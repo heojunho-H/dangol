@@ -3,7 +3,8 @@ import * as XLSX from "xlsx";
 /* ─── Parsed structure ─── */
 export interface ParsedColumn {
   name: string;              // header
-  preview: string;           // first non-empty cell as string
+  preview: string;           // first non-empty cell as string (kept for backward compat)
+  samples: string[];         // up to 5 distinct non-empty samples for AI pattern detection
   values: unknown[];         // all values in order
 }
 
@@ -38,12 +39,21 @@ export async function parseFile(file: File): Promise<ParsedSheet> {
 
   const columns: ParsedColumn[] = headers.map((h) => {
     const values = raw.map((r) => r[h]);
-    const firstNonEmpty = values.find(
-      (v) => v !== "" && v !== null && v !== undefined
-    );
+    // Collect up to 5 distinct non-empty samples for AI pattern detection
+    const samples: string[] = [];
+    const seen = new Set<string>();
+    for (const v of values) {
+      if (v === "" || v === null || v === undefined) continue;
+      const s = stringifyCell(v);
+      if (seen.has(s)) continue;
+      seen.add(s);
+      samples.push(s);
+      if (samples.length >= 5) break;
+    }
     return {
       name: h,
-      preview: firstNonEmpty !== undefined ? stringifyCell(firstNonEmpty) : "",
+      preview: samples[0] ?? "",
+      samples,
       values,
     };
   });

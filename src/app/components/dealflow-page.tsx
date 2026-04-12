@@ -825,7 +825,7 @@ function OnboardingFlow({ onComplete, customFields, pipelineStages }: { onComple
   /* ── excelColumns = parsed headers (dynamic) OR fallback (sample demo) ── */
   const excelColumns = useMemo(() =>
     parsedSheet
-      ? parsedSheet.columns.map((c) => ({ name: c.name, preview: c.preview }))
+      ? parsedSheet.columns.map((c) => ({ name: c.name, preview: c.preview, samples: c.samples }))
       : FALLBACK_EXCEL_COLUMNS,
     [parsedSheet, FALLBACK_EXCEL_COLUMNS]
   );
