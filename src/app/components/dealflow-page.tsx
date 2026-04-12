@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useParams } from "react-router";
+import { useDrag, useDrop, DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import {
   BarChart,
   Bar,
@@ -23,6 +25,8 @@ import {
   Plus,
   Download,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
   X,
   MoreHorizontal,
   Pencil,
@@ -54,6 +58,9 @@ import {
   Zap,
   LayoutGrid,
   ChevronUp,
+  Columns3,
+  CalendarRange,
+  User,
 } from "lucide-react";
 
 /* ─── DESIGN TOKENS ─── */
@@ -850,8 +857,301 @@ function AddDealModal({ onClose, onAdd, visibleColumns }: { onClose: () => void;
   );
 }
 
+/* ─── VIEW TYPE ─── */
+type ViewType = "table" | "kanban" | "timeline";
+
+/* ─── KANBAN: DRAG ITEM TYPE ─── */
+const DEAL_DRAG_TYPE = "DEAL_CARD";
+
+interface DealDragItem {
+  id: number;
+  stage: string;
+}
+
+/* ─── KANBAN: DEAL CARD ─── */
+function KanbanCard({ deal, onClick }: { deal: Deal; onClick: (deal: Deal) => void }) {
+  const [{ isDragging }, dragRef] = useDrag({
+    type: DEAL_DRAG_TYPE,
+    item: { id: deal.id, stage: deal.stage } as DealDragItem,
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+  });
+
+  return (
+    <div
+      ref={dragRef as unknown as React.Ref<HTMLDivElement>}
+      onClick={() => onClick(deal)}
+      className="bg-white rounded-lg border p-3.5 cursor-grab active:cursor-grabbing transition-all hover:shadow-md group/card"
+      style={{
+        borderColor: T.border,
+        opacity: isDragging ? 0.4 : 1,
+        boxShadow: isDragging ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
+      }}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <span className="text-[0.8rem] text-[#1A1A1A] leading-snug">{deal.company}</span>
+        <button className="p-0.5 rounded opacity-0 group-hover/card:opacity-100 hover:bg-[#F7F8FA] transition-all shrink-0 ml-2">
+          <MoreHorizontal size={12} className="text-[#BBB]" />
+        </button>
+      </div>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-2.5 tabular-nums">{deal.amount}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[0.5rem] text-white" style={{ background: "#94A3B8" }}>
+            {deal.manager.charAt(0)}
+          </div>
+          <span className="text-[0.65rem] text-[#999]">{deal.manager}</span>
+        </div>
+        <span className="text-[0.6rem] text-[#BBB] tabular-nums">{deal.date.slice(5)}</span>
+      </div>
+      {deal.service && (
+        <div className="mt-2 pt-2 border-t" style={{ borderColor: "#F0F1F3" }}>
+          <span className="text-[0.6rem] text-[#999]">{deal.service}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── KANBAN: STAGE COLUMN ─── */
+function KanbanColumn({
+  stage,
+  deals,
+  color,
+  onDropDeal,
+  onClickDeal,
+  onAddDeal,
+}: {
+  stage: string;
+  deals: Deal[];
+  color: string;
+  onDropDeal: (dealId: number, toStage: string) => void;
+  onClickDeal: (deal: Deal) => void;
+  onAddDeal: () => void;
+}) {
+  const [{ isOver }, dropRef] = useDrop({
+    accept: DEAL_DRAG_TYPE,
+    drop: (item: DealDragItem) => {
+      if (item.stage !== stage) {
+        onDropDeal(item.id, stage);
+      }
+    },
+    collect: (monitor) => ({ isOver: monitor.isOver() }),
+  });
+
+  const totalAmount = deals.reduce((s, d) => s + parseAmt(d.amount), 0);
+
+  return (
+    <div
+      ref={dropRef as unknown as React.Ref<HTMLDivElement>}
+      className="flex flex-col min-w-[232px] max-w-[280px] flex-1 rounded-xl transition-colors"
+      style={{
+        background: isOver ? color + "08" : "#F8F9FB",
+        border: isOver ? `2px dashed ${color}40` : "2px solid transparent",
+      }}
+    >
+      {/* Column Header */}
+      <div className="px-3.5 pt-3.5 pb-2">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
+          <span className="text-[0.8rem] text-[#1A1A1A] flex-1">{stage}</span>
+          <span className="text-[0.65rem] text-[#999] bg-white px-2 py-0.5 rounded-full border" style={{ borderColor: T.border }}>
+            {deals.length}
+          </span>
+        </div>
+        <p className="text-[0.65rem] text-[#BBB] pl-[18px]">{fmtAmt(totalAmount)}</p>
+      </div>
+
+      {/* Cards */}
+      <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto" style={{ maxHeight: "calc(100vh - 420px)" }}>
+        {deals.map((deal) => (
+          <KanbanCard key={deal.id} deal={deal} onClick={onClickDeal} />
+        ))}
+      </div>
+
+      {/* Add Button */}
+      <div className="px-2 pb-3">
+        <button
+          onClick={onAddDeal}
+          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[0.7rem] text-[#999] hover:text-[#1A472A] hover:bg-white border border-transparent hover:border-[#E0E3E8] transition-all"
+        >
+          <Plus size={11} /> 딜 추가
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── KANBAN VIEW ─── */
+function KanbanView({
+  deals,
+  onMoveDeal,
+  onClickDeal,
+  onAddDeal,
+}: {
+  deals: Deal[];
+  onMoveDeal: (dealId: number, toStage: string) => void;
+  onClickDeal: (deal: Deal) => void;
+  onAddDeal: () => void;
+}) {
+  const stages = Object.keys(stageColors);
+  const dealsByStage = useMemo(() => {
+    const map: Record<string, Deal[]> = {};
+    stages.forEach((s) => { map[s] = []; });
+    deals.forEach((d) => {
+      if (map[d.stage]) map[d.stage].push(d);
+    });
+    return map;
+  }, [deals]);
+
+  return (
+    <DndProvider backend={HTML5Backend}>
+      <div className="flex gap-3 overflow-x-auto pb-4 px-1" style={{ minHeight: 320 }}>
+        {stages.map((stage) => (
+          <KanbanColumn
+            key={stage}
+            stage={stage}
+            deals={dealsByStage[stage] || []}
+            color={stageColors[stage]}
+            onDropDeal={onMoveDeal}
+            onClickDeal={onClickDeal}
+            onAddDeal={onAddDeal}
+          />
+        ))}
+      </div>
+    </DndProvider>
+  );
+}
+
+/* ─── TIMELINE VIEW ─── */
+function TimelineView({
+  deals,
+  onClickDeal,
+}: {
+  deals: Deal[];
+  onClickDeal: (deal: Deal) => void;
+}) {
+  const [offsetMonth, setOffsetMonth] = useState(0);
+
+  const now = new Date();
+  const baseDate = new Date(now.getFullYear(), now.getMonth() + offsetMonth, 1);
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + i, 1);
+    return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: `${d.getFullYear()}년 ${d.getMonth() + 1}월`, month: d.getMonth() + 1, year: d.getFullYear() };
+  });
+
+  const dealsByMonth = useMemo(() => {
+    const map: Record<string, Deal[]> = {};
+    months.forEach((m) => { map[m.key] = []; });
+    deals.forEach((d) => {
+      const key = d.date.slice(0, 7);
+      if (map[key]) map[key].push(d);
+    });
+    return map;
+  }, [deals, months.map((m) => m.key).join(",")]);
+
+  const totalInRange = months.reduce((s, m) => s + (dealsByMonth[m.key]?.length || 0), 0);
+
+  return (
+    <div>
+      {/* Timeline Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setOffsetMonth((p) => p - 3)} className="p-1.5 rounded-lg border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
+            <ChevronLeft size={13} color="#666" />
+          </button>
+          <span className="text-[0.8rem] text-[#1A1A1A] min-w-[200px] text-center">
+            {months[0].label} — {months[months.length - 1].label}
+          </span>
+          <button onClick={() => setOffsetMonth((p) => p + 3)} className="p-1.5 rounded-lg border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
+            <ChevronRightIcon size={13} color="#666" />
+          </button>
+          <button onClick={() => setOffsetMonth(0)} className="ml-2 px-3 py-1.5 rounded-lg text-[0.7rem] text-[#666] border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>
+            오늘
+          </button>
+        </div>
+        <span className="text-[0.7rem] text-[#999]">{totalInRange}건 표시</span>
+      </div>
+
+      {/* Timeline Grid */}
+      <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: T.border, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        {/* Month Headers */}
+        <div className="grid border-b" style={{ gridTemplateColumns: `repeat(${months.length}, 1fr)`, borderColor: T.border }}>
+          {months.map((m, i) => {
+            const isCurrentMonth = m.year === now.getFullYear() && m.month === now.getMonth() + 1 && offsetMonth <= 0;
+            return (
+              <div
+                key={m.key}
+                className="px-4 py-3 text-center border-r last:border-r-0"
+                style={{
+                  borderColor: T.border,
+                  background: isCurrentMonth ? "#EFF5F1" : "#FAFBFC",
+                }}
+              >
+                <p className="text-[0.7rem] text-[#999]">{m.year}</p>
+                <p className={`text-[0.85rem] ${isCurrentMonth ? "text-[#1A472A]" : "text-[#1A1A1A]"}`}>
+                  {m.month}월
+                </p>
+                <p className="text-[0.6rem] text-[#BBB] mt-0.5">{dealsByMonth[m.key]?.length || 0}건</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Deal Rows */}
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${months.length}, 1fr)` }}>
+          {months.map((m) => {
+            const monthDeals = dealsByMonth[m.key] || [];
+            return (
+              <div key={m.key} className="border-r last:border-r-0 min-h-[200px] p-2" style={{ borderColor: T.border }}>
+                {monthDeals.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <span className="text-[0.65rem] text-[#DDD]">—</span>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {monthDeals.map((deal) => (
+                      <div
+                        key={deal.id}
+                        onClick={() => onClickDeal(deal)}
+                        className="p-2.5 rounded-lg border cursor-pointer transition-all hover:shadow-sm hover:border-[#1A472A]"
+                        style={{ borderColor: T.border, borderLeft: `3px solid ${stageColors[deal.stage] || "#999"}` }}
+                      >
+                        <p className="text-[0.7rem] text-[#1A1A1A] mb-1 leading-snug">{deal.company}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[0.7rem] text-[#1A1A1A] tabular-nums">{deal.amount}</span>
+                          <span
+                            className="text-[0.55rem] px-1.5 py-0.5 rounded-full"
+                            style={{
+                              background: (stageColors[deal.stage] || "#999") + "14",
+                              color: stageColors[deal.stage] || "#999",
+                            }}
+                          >
+                            {deal.stage}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-1.5">
+                          <div className="w-4 h-4 rounded-full flex items-center justify-center text-[0.4rem] text-white" style={{ background: "#94A3B8" }}>
+                            {deal.manager.charAt(0)}
+                          </div>
+                          <span className="text-[0.55rem] text-[#999]">{deal.manager}</span>
+                          <span className="text-[0.55rem] text-[#CCC] ml-auto tabular-nums">{deal.date.slice(8)}일</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── MAIN PAGE ─── */
 function DealflowPageInner() {
+  const [activeView, setActiveView] = useState<ViewType>("table");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
@@ -890,6 +1190,12 @@ function DealflowPageInner() {
     });
     setShowOnboarding(false);
   };
+
+  const moveDealStage = useCallback((dealId: number, toStage: string) => {
+    setCustomerDeals((prev) =>
+      prev.map((d) => (d.id === dealId ? { ...d, stage: toStage } : d))
+    );
+  }, []);
 
   const toggleWidget = (id: string) => {
     setActiveWidgets((prev) => {
@@ -1049,10 +1355,34 @@ function DealflowPageInner() {
 
             {/* ZONE 2: 고객 데이터 */}
             <div>
-              {/* Section Header */}
+              {/* Section Header with View Tabs */}
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-3">
-                  <Table2 size={16} color={T.primary} />
+                  {/* View Switcher Tabs */}
+                  <div className="flex items-center bg-white border rounded-lg overflow-hidden" style={{ borderColor: T.border }}>
+                    {([
+                      { key: "table" as ViewType, label: "테이블", icon: Table2 },
+                      { key: "kanban" as ViewType, label: "칸반", icon: Columns3 },
+                      { key: "timeline" as ViewType, label: "타임라인", icon: CalendarRange },
+                    ]).map((v) => {
+                      const isActive = activeView === v.key;
+                      return (
+                        <button
+                          key={v.key}
+                          onClick={() => setActiveView(v.key)}
+                          className="flex items-center gap-1.5 px-3.5 py-2 text-[0.75rem] transition-colors border-r last:border-r-0"
+                          style={{
+                            borderColor: T.border,
+                            background: isActive ? T.primary : "transparent",
+                            color: isActive ? "#fff" : "#666",
+                          }}
+                        >
+                          <v.icon size={13} />
+                          {v.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <span className="text-[1.1rem] text-[#1A1A1A]">딜 데이터</span>
                   {customerDeals.length > 0 && (
                     <span className="px-2.5 py-0.5 rounded-full text-[0.7rem]" style={{ background: "#EFF5F1", color: T.primary }}>
@@ -1134,7 +1464,28 @@ function DealflowPageInner() {
                   </div>
                 </div>
               ) : (
-                /* ─── Data Table ─── */
+                /* ─── Views ─── */
+                <>
+                {/* Kanban View */}
+                {activeView === "kanban" && (
+                  <KanbanView
+                    deals={filteredDeals}
+                    onMoveDeal={moveDealStage}
+                    onClickDeal={setSelectedDeal}
+                    onAddDeal={() => setShowAddDeal(true)}
+                  />
+                )}
+
+                {/* Timeline View */}
+                {activeView === "timeline" && (
+                  <TimelineView
+                    deals={filteredDeals}
+                    onClickDeal={setSelectedDeal}
+                  />
+                )}
+
+                {/* Table View */}
+                {activeView === "table" && (
                 <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: T.border, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                   {/* Table Toolbar */}
                   <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: T.border }}>
@@ -1317,6 +1668,9 @@ function DealflowPageInner() {
                     </div>
                   </div>
                 </div>
+                )}
+
+                </>
               )}
 
               {/* Column Config Dialog */}
