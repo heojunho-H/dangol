@@ -1342,44 +1342,118 @@ interface DealDragItem {
   stage: string;
 }
 
+/* ─── KANBAN: CARD FIELD OPTIONS ─── */
+type KanbanCardField = "company" | "amount" | "manager" | "date" | "service" | "contact" | "status" | "quantity";
+
+const KANBAN_FIELD_OPTIONS: { key: KanbanCardField; label: string }[] = [
+  { key: "company", label: "기업명" },
+  { key: "amount", label: "견적금액" },
+  { key: "manager", label: "담당자" },
+  { key: "date", label: "등록일" },
+  { key: "service", label: "희망서비스" },
+  { key: "contact", label: "연락처" },
+  { key: "status", label: "성공여부" },
+  { key: "quantity", label: "수량" },
+];
+
+const DEFAULT_CARD_FIELDS: KanbanCardField[] = ["company", "amount", "manager", "date"];
+
 /* ─── KANBAN: DEAL CARD ─── */
-function KanbanCard({ deal, onClick }: { deal: Deal; onClick: (deal: Deal) => void }) {
+function KanbanCard({
+  deal,
+  color,
+  cardFields,
+  onClick,
+}: {
+  deal: Deal;
+  color: string;
+  cardFields: KanbanCardField[];
+  onClick: (deal: Deal) => void;
+}) {
   const [{ isDragging }, dragRef] = useDrag({
     type: DEAL_DRAG_TYPE,
     item: { id: deal.id, stage: deal.stage } as DealDragItem,
     collect: (monitor) => ({ isDragging: monitor.isDragging() }),
   });
 
+  const showField = (f: KanbanCardField) => cardFields.includes(f);
+
   return (
     <div
       ref={dragRef as unknown as React.Ref<HTMLDivElement>}
       onClick={() => onClick(deal)}
-      className="bg-white rounded-lg border p-3.5 cursor-grab active:cursor-grabbing transition-all hover:shadow-md group/card"
+      className="bg-white rounded-xl border p-4 cursor-grab active:cursor-grabbing transition-all hover:shadow-md group/card"
       style={{
         borderColor: T.border,
-        opacity: isDragging ? 0.4 : 1,
-        boxShadow: isDragging ? "none" : "0 1px 2px rgba(0,0,0,0.04)",
+        borderLeft: `3px solid ${color}`,
+        opacity: isDragging ? 0.35 : 1,
+        boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.12)" : "0 1px 3px rgba(0,0,0,0.04)",
+        transform: isDragging ? "rotate(2deg)" : "none",
       }}
     >
-      <div className="flex items-start justify-between mb-2">
-        <span className="text-[0.8rem] text-[#1A1A1A] leading-snug">{deal.company}</span>
+      {/* Company name — always shown */}
+      <div className="flex items-start justify-between mb-1.5">
+        <span className="text-[0.8rem] text-[#1A1A1A] leading-snug font-medium">{deal.company}</span>
         <button className="p-0.5 rounded opacity-0 group-hover/card:opacity-100 hover:bg-[#F7F8FA] transition-all shrink-0 ml-2">
           <MoreHorizontal size={12} className="text-[#BBB]" />
         </button>
       </div>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-2.5 tabular-nums">{deal.amount}</p>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 rounded-full flex items-center justify-center text-[0.5rem] text-white" style={{ background: "#94A3B8" }}>
-            {deal.manager.charAt(0)}
-          </div>
-          <span className="text-[0.65rem] text-[#999]">{deal.manager}</span>
+
+      {/* Amount */}
+      {showField("amount") && (
+        <p className="text-[0.9rem] text-[#1A1A1A] mb-2 tabular-nums font-semibold">{deal.amount}</p>
+      )}
+
+      {/* Service */}
+      {showField("service") && deal.service && (
+        <p className="text-[0.65rem] text-[#888] mb-2 leading-snug">{deal.service}</p>
+      )}
+
+      {/* Contact */}
+      {showField("contact") && deal.contact && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <User size={10} className="text-[#BBB]" />
+          <span className="text-[0.65rem] text-[#666]">{deal.contact}{deal.position ? ` · ${deal.position}` : ""}</span>
         </div>
-        <span className="text-[0.6rem] text-[#BBB] tabular-nums">{deal.date.slice(5)}</span>
-      </div>
-      {deal.service && (
-        <div className="mt-2 pt-2 border-t" style={{ borderColor: "#F0F1F3" }}>
-          <span className="text-[0.6rem] text-[#999]">{deal.service}</span>
+      )}
+
+      {/* Status badge */}
+      {showField("status") && (
+        <div className="mb-2">
+          <span
+            className="inline-flex items-center text-[0.6rem] px-2 py-0.5 rounded-full"
+            style={{
+              background: statusColors[deal.status]?.bg || "#F1F5F9",
+              color: statusColors[deal.status]?.text || "#64748B",
+            }}
+          >
+            {deal.status}
+          </span>
+        </div>
+      )}
+
+      {/* Quantity */}
+      {showField("quantity") && (
+        <div className="flex items-center gap-1.5 mb-2">
+          <span className="text-[0.6rem] text-[#BBB]">수량</span>
+          <span className="text-[0.65rem] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>
+        </div>
+      )}
+
+      {/* Footer: manager + date */}
+      {(showField("manager") || showField("date")) && (
+        <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "#F0F1F3" }}>
+          {showField("manager") ? (
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[0.45rem] text-white" style={{ background: "#94A3B8" }}>
+                {deal.manager.charAt(0)}
+              </div>
+              <span className="text-[0.65rem] text-[#999]">{deal.manager}</span>
+            </div>
+          ) : <div />}
+          {showField("date") && (
+            <span className="text-[0.6rem] text-[#BBB] tabular-nums">{deal.date.slice(5)}</span>
+          )}
         </div>
       )}
     </div>
@@ -1391,6 +1465,7 @@ function KanbanColumn({
   stage,
   deals,
   color,
+  cardFields,
   onDropDeal,
   onClickDeal,
   onAddDeal,
@@ -1398,18 +1473,19 @@ function KanbanColumn({
   stage: string;
   deals: Deal[];
   color: string;
+  cardFields: KanbanCardField[];
   onDropDeal: (dealId: number, toStage: string) => void;
   onClickDeal: (deal: Deal) => void;
   onAddDeal: () => void;
 }) {
-  const [{ isOver }, dropRef] = useDrop({
+  const [{ isOver, canDrop }, dropRef] = useDrop({
     accept: DEAL_DRAG_TYPE,
     drop: (item: DealDragItem) => {
       if (item.stage !== stage) {
         onDropDeal(item.id, stage);
       }
     },
-    collect: (monitor) => ({ isOver: monitor.isOver() }),
+    collect: (monitor) => ({ isOver: monitor.isOver(), canDrop: monitor.canDrop() }),
   });
 
   const totalAmount = deals.reduce((s, d) => s + parseAmt(d.amount), 0);
@@ -1417,39 +1493,106 @@ function KanbanColumn({
   return (
     <div
       ref={dropRef as unknown as React.Ref<HTMLDivElement>}
-      className="flex flex-col min-w-[232px] max-w-[280px] flex-1 rounded-xl transition-colors"
+      className="flex flex-col min-w-[240px] max-w-[288px] flex-1 rounded-xl transition-all"
       style={{
         background: isOver ? color + "08" : "#F8F9FB",
-        border: isOver ? `2px dashed ${color}40` : "2px solid transparent",
+        border: isOver ? `2px dashed ${color}` : canDrop ? `2px dashed ${color}30` : "2px solid transparent",
       }}
     >
       {/* Column Header */}
-      <div className="px-3.5 pt-3.5 pb-2">
+      <div className="px-3.5 pt-3 pb-2.5">
+        <div className="w-full h-[3px] rounded-full mb-3" style={{ background: color }} />
         <div className="flex items-center gap-2 mb-1">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-          <span className="text-[0.8rem] text-[#1A1A1A] flex-1">{stage}</span>
-          <span className="text-[0.65rem] text-[#999] bg-white px-2 py-0.5 rounded-full border" style={{ borderColor: T.border }}>
+          <span className="text-[0.8rem] text-[#1A1A1A] font-medium flex-1">{stage}</span>
+          <span
+            className="text-[0.65rem] px-2 py-0.5 rounded-full font-medium"
+            style={{ background: color + "14", color }}
+          >
             {deals.length}
           </span>
         </div>
-        <p className="text-[0.65rem] text-[#BBB] pl-[18px]">{fmtAmt(totalAmount)}</p>
+        <p className="text-[0.75rem] text-[#999] tabular-nums">{fmtAmt(totalAmount)}</p>
       </div>
 
       {/* Cards */}
-      <div className="flex-1 px-2 pb-2 space-y-2 overflow-y-auto" style={{ maxHeight: "calc(100vh - 420px)" }}>
+      <div className="flex-1 px-2 pb-2 space-y-2.5 overflow-y-auto" style={{ maxHeight: "calc(100vh - 420px)" }}>
+        {deals.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center mb-2" style={{ background: color + "10" }}>
+              <Plus size={12} color={color} />
+            </div>
+            <span className="text-[0.65rem] text-[#CCC]">딜을 여기에 드래그하세요</span>
+          </div>
+        )}
         {deals.map((deal) => (
-          <KanbanCard key={deal.id} deal={deal} onClick={onClickDeal} />
+          <KanbanCard key={deal.id} deal={deal} color={color} cardFields={cardFields} onClick={onClickDeal} />
         ))}
       </div>
 
       {/* Add Button */}
-      <div className="px-2 pb-3">
+      <div className="px-2.5 pb-3">
         <button
           onClick={onAddDeal}
-          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[0.7rem] text-[#999] hover:text-[#1A472A] hover:bg-white border border-transparent hover:border-[#E0E3E8] transition-all"
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[0.7rem] text-[#999] hover:text-[#1A472A] hover:bg-white border border-dashed hover:border-solid transition-all"
+          style={{ borderColor: T.border }}
         >
           <Plus size={11} /> 딜 추가
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── KANBAN: CARD FIELD SETTINGS POPOVER ─── */
+function KanbanFieldPopover({
+  cardFields,
+  onToggle,
+  onClose,
+}: {
+  cardFields: KanbanCardField[];
+  onToggle: (field: KanbanCardField) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-40" onClick={onClose}>
+      <div
+        className="absolute bg-white rounded-xl border w-[220px]"
+        style={{
+          borderColor: T.border,
+          boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+          top: "auto",
+          right: 24,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: T.border }}>
+          <span className="text-[0.8rem] text-[#1A1A1A]">카드 필드 설정</span>
+          <button onClick={onClose} className="p-1 rounded hover:bg-[#F7F8FA]">
+            <X size={12} color="#999" />
+          </button>
+        </div>
+        <div className="p-2.5 max-h-[280px] overflow-y-auto">
+          {KANBAN_FIELD_OPTIONS.map((opt) => {
+            const isLocked = opt.key === "company";
+            const isChecked = isLocked || cardFields.includes(opt.key);
+            return (
+              <label
+                key={opt.key}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#F8F9FA] cursor-pointer transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  disabled={isLocked}
+                  onChange={() => !isLocked && onToggle(opt.key)}
+                  className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]"
+                />
+                <span className="text-[0.75rem] text-[#333] flex-1">{opt.label}</span>
+                {isLocked && <span className="text-[0.6rem] text-[#CCC]">필수</span>}
+              </label>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -1471,6 +1614,15 @@ function KanbanView({
   onClickDeal: (deal: Deal) => void;
   onAddDeal: () => void;
 }) {
+  const [cardFields, setCardFields] = useState<KanbanCardField[]>(DEFAULT_CARD_FIELDS);
+  const [showFieldPopover, setShowFieldPopover] = useState(false);
+
+  const toggleCardField = (field: KanbanCardField) => {
+    setCardFields((prev) =>
+      prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]
+    );
+  };
+
   const stages = pipelineStages.map((s) => s.name);
   const dealsByStage = useMemo(() => {
     const map: Record<string, Deal[]> = {};
@@ -1481,15 +1633,45 @@ function KanbanView({
     return map;
   }, [deals, stages.join(",")]);
 
+  const totalDeals = deals.length;
+  const totalAmount = deals.reduce((s, d) => s + parseAmt(d.amount), 0);
+
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="flex gap-3 overflow-x-auto pb-4 px-1" style={{ minHeight: 320 }}>
+      {/* Kanban Toolbar */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <span className="text-[0.75rem] text-[#999]">
+            {pipelineStages.length}개 스테이지 · {totalDeals}건 · {fmtAmt(totalAmount)}
+          </span>
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setShowFieldPopover(!showFieldPopover)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[0.7rem] text-[#666] hover:bg-[#F7F8FA] transition-colors"
+            style={{ borderColor: T.border }}
+          >
+            <Settings size={11} /> 카드 필드
+          </button>
+          {showFieldPopover && (
+            <KanbanFieldPopover
+              cardFields={cardFields}
+              onToggle={toggleCardField}
+              onClose={() => setShowFieldPopover(false)}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Kanban Board */}
+      <div className="flex gap-3 overflow-x-auto pb-4" style={{ minHeight: 360 }}>
         {stages.map((stage) => (
           <KanbanColumn
             key={stage}
             stage={stage}
             deals={dealsByStage[stage] || []}
             color={stageColorMap[stage] || "#999"}
+            cardFields={cardFields}
             onDropDeal={onMoveDeal}
             onClickDeal={onClickDeal}
             onAddDeal={onAddDeal}
