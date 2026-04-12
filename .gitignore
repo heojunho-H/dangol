@@ -19,6 +19,13 @@ dangolui/
 .env
 .env.*
 
+# Local Claude Code state
+.claude/
+
+# User-uploaded sample files / screenshots (repo root only)
+/*.xlsx
+/*.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
