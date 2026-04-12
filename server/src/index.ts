@@ -1,12 +1,51 @@
 import express from "express";
 import { config } from "dotenv";
 import { aiRouter } from "./routes/ai.js";
+import { authRouter } from "./routes/auth.js";
+import { dealsRouter } from "./routes/deals.js";
+import { pipelineStagesRouter } from "./routes/pipeline-stages.js";
+import { customFieldsRouter } from "./routes/custom-fields.js";
+import { viewsRouter } from "./routes/views.js";
+import { widgetConfigRouter } from "./routes/widget-config.js";
+import { customKpisRouter } from "./routes/custom-kpis.js";
+import { goalsRouter } from "./routes/goals.js";
+import { activityLogsRouter } from "./routes/activity-logs.js";
+import { filesRouter, fileDownloadRouter } from "./routes/files.js";
+import { customersRouter } from "./routes/customers.js";
+import { chatRouter } from "./routes/chat.js";
 
 config({ path: "../.env" });
 
 const app = express();
 app.use(express.json({ limit: "2mb" }));
+
+// Public routes
+app.use("/api/auth", authRouter);
+
+// AI routes (will be protected later)
 app.use("/api/ai", aiRouter);
+
+// Deal routes (protected)
+app.use("/api/deals", dealsRouter);
+
+// Settings routes (protected)
+app.use("/api/pipeline-stages", pipelineStagesRouter);
+app.use("/api/custom-fields", customFieldsRouter);
+app.use("/api/views", viewsRouter);
+
+// Dashboard config routes (protected)
+app.use("/api/widget-config", widgetConfigRouter);
+app.use("/api/custom-kpis", customKpisRouter);
+app.use("/api/goals", goalsRouter);
+
+// Activity logs + files (nested under deals)
+app.use("/api/deals/:dealId/activity-logs", activityLogsRouter);
+app.use("/api/deals/:dealId/files", filesRouter);
+app.use("/api/files", fileDownloadRouter);
+
+// Customers + Chat (protected)
+app.use("/api/customers", customersRouter);
+app.use("/api/chat", chatRouter);
 
 // Global error handler
 app.use(

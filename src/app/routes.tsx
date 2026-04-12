@@ -4,6 +4,8 @@ import { HomePage } from "./components/home-page";
 import { SalesPage } from "./components/sales-page";
 import { CustomersPage } from "./components/customers-page";
 import { DealflowPage } from "./components/dealflow-page";
+import { PipelineSettingsPage } from "./components/pipeline-settings-page";
+import { FieldSettingsPage } from "./components/field-settings-page";
 
 export const router = createBrowserRouter([
   {
@@ -12,7 +14,9 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: HomePage },
       { path: "sales", Component: SalesPage },
-      { path: "dealflow/:pageId", Component: DealflowPage },
+      { path: "dealflow/:pageId/:viewType?", Component: DealflowPage },
+      { path: "settings/pipeline", Component: PipelineSettingsPage },
+      { path: "settings/fields", Component: FieldSettingsPage },
       { path: "customers", Component: CustomersPage },
       { path: "*", Component: HomePage },
     ],

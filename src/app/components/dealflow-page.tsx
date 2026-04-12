@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { useDrag, useDrop, DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import {
@@ -2456,300 +2456,9 @@ function AddDealModal({ onClose, onAdd, visibleColumns, stageNames }: { onClose:
 }
 
 /* ─── PIPELINE SETTINGS MODAL ─── */
-function PipelineSettingsModal({
-  stages,
-  onSave,
-  onClose,
-}: {
-  stages: PipelineStage[];
-  onSave: (stages: PipelineStage[]) => void;
-  onClose: () => void;
-}) {
-  const [draft, setDraft] = useState<PipelineStage[]>(() => stages.map((s) => ({ ...s })));
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-
-  const updateStage = (id: string, patch: Partial<PipelineStage>) => {
-    setDraft((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  };
-
-  const removeStage = (id: string) => {
-    setDraft((prev) => prev.filter((s) => s.id !== id));
-  };
-
-  const addStage = () => {
-    const id = `s-${Date.now()}`;
-    const usedColors = new Set(draft.map((s) => s.color));
-    const nextColor = STAGE_PALETTE.find((c) => !usedColors.has(c)) || STAGE_PALETTE[0];
-    setDraft((prev) => [...prev, { id, name: "새 단계", color: nextColor, type: "active" }]);
-  };
-
-  const handleDragStart = (idx: number) => setDragIdx(idx);
-  const handleDragOver = (e: React.DragEvent, idx: number) => {
-    e.preventDefault();
-    if (dragIdx === null || dragIdx === idx) return;
-    setDraft((prev) => {
-      const next = [...prev];
-      const [item] = next.splice(dragIdx, 1);
-      next.splice(idx, 0, item);
-      return next;
-    });
-    setDragIdx(idx);
-  };
-  const handleDragEnd = () => setDragIdx(null);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-[480px] max-h-[85vh] flex flex-col" style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-7 py-5 border-b" style={{ borderColor: T.border }}>
-          <div>
-            <h2 className="text-[1.1rem] text-[#1A1A1A]">파이프라인 설정</h2>
-            <p className="text-[0.7rem] text-[#999] mt-1">영업 프로세스에 맞게 단계를 구성하세요</p>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#F7F8FA]"><X size={16} color="#999" /></button>
-        </div>
-
-        {/* Stage List */}
-        <div className="flex-1 overflow-y-auto px-7 py-5">
-          <div className="space-y-2">
-            {draft.map((stage, idx) => (
-              <div
-                key={stage.id}
-                draggable
-                onDragStart={() => handleDragStart(idx)}
-                onDragOver={(e) => handleDragOver(e, idx)}
-                onDragEnd={handleDragEnd}
-                className="flex items-center gap-3 p-3 rounded-xl border transition-all"
-                style={{
-                  borderColor: dragIdx === idx ? T.primary : T.border,
-                  background: dragIdx === idx ? "#F0F7F2" : "#fff",
-                  cursor: "grab",
-                }}
-              >
-                {/* Drag Handle */}
-                <GripVertical size={14} className="text-[#CCC] shrink-0 cursor-grab" />
-
-                {/* Color Picker */}
-                <div className="relative shrink-0">
-                  <input
-                    type="color"
-                    value={stage.color}
-                    onChange={(e) => updateStage(stage.id, { color: e.target.value })}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div className="w-7 h-7 rounded-lg" style={{ background: stage.color }} />
-                </div>
-
-                {/* Name */}
-                <input
-                  className="flex-1 text-[0.8rem] text-[#1A1A1A] bg-transparent focus:outline-none focus:bg-[#F8F9FA] rounded px-2 py-1 transition-colors"
-                  value={stage.name}
-                  onChange={(e) => updateStage(stage.id, { name: e.target.value })}
-                />
-
-                {/* Type Badge */}
-                <select
-                  className="text-[0.65rem] px-2 py-1 rounded-lg border bg-white text-[#666] cursor-pointer"
-                  style={{ borderColor: T.border }}
-                  value={stage.type}
-                  onChange={(e) => updateStage(stage.id, { type: e.target.value as PipelineStage["type"] })}
-                >
-                  <option value="active">진행</option>
-                  <option value="won">승인(Win)</option>
-                  <option value="lost">실패(Lost)</option>
-                </select>
-
-                {/* Delete */}
-                <button
-                  onClick={() => removeStage(stage.id)}
-                  className="p-1.5 rounded-lg hover:bg-[#FEF2F2] transition-colors shrink-0"
-                  title="삭제"
-                >
-                  <Trash2 size={12} color={T.danger} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Add Stage */}
-          <button
-            onClick={addStage}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed text-[0.8rem] text-[#999] hover:text-[#1A472A] hover:border-[#1A472A] hover:bg-[#FAFDFB] transition-all"
-            style={{ borderColor: T.border }}
-          >
-            <Plus size={14} /> 스테이지 추가
-          </button>
-
-          {/* Quick color palette */}
-          <div className="mt-5 pt-4 border-t" style={{ borderColor: T.border }}>
-            <p className="text-[0.65rem] text-[#999] mb-2">빠른 색상 팔레트</p>
-            <div className="flex flex-wrap gap-1.5">
-              {STAGE_PALETTE.map((c) => (
-                <div key={c} className="w-6 h-6 rounded-md cursor-pointer hover:scale-110 transition-transform" style={{ background: c }} title={c} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-7 py-4 border-t" style={{ borderColor: T.border }}>
-          <span className="text-[0.7rem] text-[#999]">{draft.length}개 스테이지</span>
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="px-5 py-2.5 rounded-lg text-[0.75rem] text-[#666] border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>취소</button>
-            <button onClick={() => { onSave(draft); onClose(); }} className="px-6 py-2.5 rounded-lg text-[0.75rem] text-white" style={{ background: T.primary }}>저장</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── FIELD MANAGEMENT MODAL ─── */
-function FieldManagementModal({
-  fields,
-  onSave,
-  onClose,
-}: {
-  fields: CustomField[];
-  onSave: (fields: CustomField[]) => void;
-  onClose: () => void;
-}) {
-  const [draft, setDraft] = useState<CustomField[]>(() => fields.map((f) => ({ ...f })));
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const updateField = (id: string, patch: Partial<CustomField>) => {
-    setDraft((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
-  };
-
-  const removeField = (id: string) => {
-    const field = draft.find((f) => f.id === id);
-    if (field?.locked) return;
-    setDraft((prev) => prev.filter((f) => f.id !== id));
-  };
-
-  const addField = () => {
-    const id = `f-${Date.now()}`;
-    setDraft((prev) => [...prev, {
-      id, key: `custom_${Date.now()}`, label: "새 필드", type: "text" as FieldType,
-      required: false, locked: false, visible: true,
-    }]);
-    setEditingId(id);
-  };
-
-  const toggleVisible = (id: string) => {
-    const f = draft.find((x) => x.id === id);
-    if (f?.locked) return;
-    updateField(id, { visible: !f?.visible });
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-[540px] max-h-[85vh] flex flex-col" style={{ boxShadow: "0 24px 64px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-7 py-5 border-b" style={{ borderColor: T.border }}>
-          <div>
-            <h2 className="text-[1.1rem] text-[#1A1A1A]">필드 관리</h2>
-            <p className="text-[0.7rem] text-[#999] mt-1">딜 데이터의 필드를 추가하거나 수정하세요</p>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#F7F8FA]"><X size={16} color="#999" /></button>
-        </div>
-
-        {/* Field List */}
-        <div className="flex-1 overflow-y-auto px-7 py-5">
-          <div className="space-y-1.5">
-            {draft.map((field) => (
-              <div
-                key={field.id}
-                className="flex items-center gap-3 px-3.5 py-3 rounded-xl border transition-all hover:shadow-sm"
-                style={{ borderColor: editingId === field.id ? T.primary : T.border }}
-              >
-                {/* Icon */}
-                <span className="text-[1rem] shrink-0">{FIELD_TYPE_ICONS[field.type]}</span>
-
-                {/* Label */}
-                {editingId === field.id ? (
-                  <input
-                    autoFocus
-                    className="flex-1 text-[0.8rem] text-[#1A1A1A] border rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#1A472A]"
-                    style={{ borderColor: T.border }}
-                    value={field.label}
-                    onChange={(e) => updateField(field.id, { label: e.target.value })}
-                    onBlur={() => setEditingId(null)}
-                    onKeyDown={(e) => { if (e.key === "Enter") setEditingId(null); }}
-                  />
-                ) : (
-                  <span
-                    className="flex-1 text-[0.8rem] text-[#1A1A1A] cursor-pointer hover:text-[#1A472A] transition-colors"
-                    onClick={() => !field.locked && setEditingId(field.id)}
-                  >
-                    {field.label}
-                  </span>
-                )}
-
-                {/* Type */}
-                {field.locked ? (
-                  <span className="text-[0.65rem] text-[#BBB] px-2 py-1 rounded-lg bg-[#F8F9FA]">{FIELD_TYPE_LABELS[field.type]}</span>
-                ) : (
-                  <select
-                    className="text-[0.65rem] px-2 py-1 rounded-lg border bg-white text-[#666] cursor-pointer"
-                    style={{ borderColor: T.border }}
-                    value={field.type}
-                    onChange={(e) => updateField(field.id, { type: e.target.value as FieldType })}
-                  >
-                    {Object.entries(FIELD_TYPE_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                )}
-
-                {/* Badges */}
-                {field.required && (
-                  <span className="text-[0.6rem] px-2 py-0.5 rounded-full bg-[#FEF2F2] text-[#DC2626]">필수</span>
-                )}
-
-                {/* Lock */}
-                {field.locked ? (
-                  <Lock size={12} className="text-[#CCC] shrink-0" />
-                ) : (
-                  <>
-                    {/* Visibility Toggle */}
-                    <button onClick={() => toggleVisible(field.id)} className="p-1 rounded hover:bg-[#F7F8FA] transition-colors shrink-0" title={field.visible ? "숨기기" : "보이기"}>
-                      {field.visible ? <Eye size={12} color="#999" /> : <EyeOff size={12} color="#CCC" />}
-                    </button>
-                    {/* Delete */}
-                    <button onClick={() => removeField(field.id)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0" title="삭제">
-                      <Trash2 size={12} color={T.danger} />
-                    </button>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Add Field */}
-          <button
-            onClick={addField}
-            className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed text-[0.8rem] text-[#999] hover:text-[#1A472A] hover:border-[#1A472A] hover:bg-[#FAFDFB] transition-all"
-            style={{ borderColor: T.border }}
-          >
-            <Plus size={14} /> 새 필드 추가
-          </button>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between px-7 py-4 border-t" style={{ borderColor: T.border }}>
-          <span className="text-[0.7rem] text-[#999]">
-            {draft.filter((f) => f.visible).length} / {draft.length}개 필드 표시
-          </span>
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="px-5 py-2.5 rounded-lg text-[0.75rem] text-[#666] border hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }}>취소</button>
-            <button onClick={() => { onSave(draft); onClose(); }} className="px-6 py-2.5 rounded-lg text-[0.75rem] text-white" style={{ background: T.primary }}>저장</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+/* PipelineSettingsModal and FieldManagementModal moved to dedicated pages:
+   /settings/pipeline → pipeline-settings-page.tsx
+   /settings/fields   → field-settings-page.tsx */
 
 /* ─── ADD VIEW MODAL ─── */
 function AddViewModal({
@@ -3508,31 +3217,28 @@ function TimelineView({
 }
 
 /* ─── MAIN PAGE ─── */
-function DealflowPageInner() {
+function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   /* ── Customization State ── */
   const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(DEFAULT_STAGES);
   const [savedViews, setSavedViews] = useState<SavedView[]>(DEFAULT_VIEWS);
-  const [activeViewId, setActiveViewId] = useState<string>("v1");
   const [customFields, setCustomFields] = useState<CustomField[]>(DEFAULT_FIELDS);
 
+  /* ── Navigation ── */
+  const navigate = useNavigate();
+  const { pageId } = useParams<{ pageId: string }>();
+
   /* ── Modal Toggles ── */
-  const [showPipelineSettings, setShowPipelineSettings] = useState(false);
-  const [showFieldManagement, setShowFieldManagement] = useState(false);
   const [showAddView, setShowAddView] = useState(false);
 
   /* ── Derived: stageColors map ── */
   const stageColors = useMemo(() => buildStageColors(pipelineStages), [pipelineStages]);
 
-  /* ── Active View ── */
-  const activeViewObj = savedViews.find((v) => v.id === activeViewId) || savedViews[0];
-  const activeView = activeViewObj.viewType;
+  /* ��─ Active View (URL-driven) ── */
+  const activeView = urlViewType;
+  const activeViewId = savedViews.find((v) => v.viewType === urlViewType)?.id || savedViews[0]?.id || "v1";
 
   const setActiveView = (vt: ViewType) => {
-    // find or create matching view
-    const existing = savedViews.find((v) => v.id === activeViewId);
-    if (existing) {
-      setSavedViews((prev) => prev.map((v) => v.id === activeViewId ? { ...v, viewType: vt } : v));
-    }
+    navigate(`/dealflow/${pageId || "main"}/${vt}`, { replace: true });
   };
 
   /* ── Original State ── */
@@ -3603,7 +3309,7 @@ function DealflowPageInner() {
   /* ── View Management ── */
   const addView = (view: SavedView) => {
     setSavedViews((prev) => [...prev, view]);
-    setActiveViewId(view.id);
+    setActiveView(view.viewType);
   };
 
   const [confirmDeleteViewId, setConfirmDeleteViewId] = useState<string | null>(null);
@@ -3613,8 +3319,12 @@ function DealflowPageInner() {
   };
   const confirmRemoveView = () => {
     if (!confirmDeleteViewId) return;
+    const deletedView = savedViews.find((v) => v.id === confirmDeleteViewId);
     setSavedViews((prev) => prev.filter((v) => v.id !== confirmDeleteViewId));
-    if (activeViewId === confirmDeleteViewId) setActiveViewId(savedViews[0].id);
+    if (deletedView && deletedView.viewType === activeView) {
+      const remaining = savedViews.filter((v) => v.id !== confirmDeleteViewId);
+      if (remaining.length > 0) setActiveView(remaining[0].viewType);
+    }
     setConfirmDeleteViewId(null);
   };
 
@@ -3757,10 +3467,10 @@ function DealflowPageInner() {
           <h1 className="text-[24px] text-[#1A1A1A]">영업 관리</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowPipelineSettings(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="파이프라인 설정">
+          <button onClick={() => navigate("/settings/pipeline")} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="파이프라인 설정">
             <Settings size={12} /> 파이프라인
           </button>
-          <button onClick={() => setShowFieldManagement(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="필드 관리">
+          <button onClick={() => navigate("/settings/fields")} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="필드 관리">
             <Grid3X3 size={12} /> 필드
           </button>
           <div className="w-px h-5" style={{ background: T.border }} />
@@ -4030,7 +3740,7 @@ function DealflowPageInner() {
                 </div>
                 <div className="flex items-center bg-white border rounded-lg overflow-hidden w-fit" style={{ borderColor: T.border }}>
                   {savedViews.map((v) => {
-                    const isActive = activeViewId === v.id;
+                    const isActive = v.viewType === activeView;
                     const ViewIcon = v.viewType === "table" ? Table2 : v.viewType === "kanban" ? Columns3 : CalendarRange;
                     return (
                       <div
@@ -4041,7 +3751,7 @@ function DealflowPageInner() {
                           background: isActive ? T.primary : "transparent",
                           color: isActive ? "#fff" : "#666",
                         }}
-                        onClick={() => setActiveViewId(v.id)}
+                        onClick={() => setActiveView(v.viewType)}
                       >
                         <ViewIcon size={13} />
                         {v.name}
@@ -4657,24 +4367,6 @@ function DealflowPageInner() {
         />
       )}
 
-      {/* Pipeline Settings Modal */}
-      {showPipelineSettings && (
-        <PipelineSettingsModal
-          stages={pipelineStages}
-          onSave={setPipelineStages}
-          onClose={() => setShowPipelineSettings(false)}
-        />
-      )}
-
-      {/* Field Management Modal */}
-      {showFieldManagement && (
-        <FieldManagementModal
-          fields={customFields}
-          onSave={setCustomFields}
-          onClose={() => setShowFieldManagement(false)}
-        />
-      )}
-
       {/* Add View Modal */}
       {showAddView && (
         <AddViewModal
@@ -4719,7 +4411,12 @@ function DealflowPageInner() {
   );
 }
 
+const VALID_VIEW_TYPES: ViewType[] = ["table", "kanban", "timeline"];
+
 export function DealflowPage() {
-  const { pageId } = useParams<{ pageId: string }>();
-  return <DealflowPageInner key={pageId} />;
+  const { pageId, viewType } = useParams<{ pageId: string; viewType?: string }>();
+  const resolvedViewType: ViewType = VALID_VIEW_TYPES.includes(viewType as ViewType)
+    ? (viewType as ViewType)
+    : "table";
+  return <DealflowPageInner key={pageId} urlViewType={resolvedViewType} />;
 }
