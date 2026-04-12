@@ -116,20 +116,180 @@ function buildStageColors(stages: PipelineStage[]): Record<string, string> {
   return map;
 }
 
+/* ─── FILTER / SORT / GROUP TYPES ─── */
+type FilterOp =
+  | "eq" | "neq" | "contains" | "not_contains"          // text
+  | "gt" | "gte" | "lt" | "lte" | "between"              // number
+  | "in" | "not_in"                                        // select / multi-select
+  | "after" | "before" | "date_between"                   // date
+  | "is_empty" | "is_not_empty";                           // universal
+
+interface FilterRule {
+  id: string;
+  field: string;       // key from ALL_COLUMNS
+  op: FilterOp;
+  value: string;       // comma-separated for "in", pipe-separated for "between"
+}
+
+interface SortRule {
+  field: string;
+  dir: "asc" | "desc";
+}
+
+type GroupByField = "" | "stage" | "manager" | "status" | "service";
+
+const FILTER_OPS_BY_TYPE: Record<string, { op: FilterOp; label: string }[]> = {
+  text:   [{ op: "contains", label: "포함" }, { op: "eq", label: "같음" }, { op: "neq", label: "같지 않음" }, { op: "not_contains", label: "포함하지 않음" }, { op: "is_empty", label: "비어있음" }, { op: "is_not_empty", label: "비어있지 않음" }],
+  number: [{ op: "gte", label: "이상" }, { op: "lte", label: "이하" }, { op: "gt", label: "초과" }, { op: "lt", label: "미만" }, { op: "between", label: "범위" }, { op: "is_empty", label: "비어있음" }],
+  select: [{ op: "in", label: "는" }, { op: "not_in", label: "아닌" }, { op: "is_empty", label: "비어있음" }],
+  date:   [{ op: "after", label: "이후" }, { op: "before", label: "이전" }, { op: "date_between", label: "범위" }, { op: "is_empty", label: "비어있음" }],
+  person: [{ op: "in", label: "는" }, { op: "not_in", label: "아닌" }, { op: "is_empty", label: "비어있음" }],
+};
+
+const FIELD_FILTER_TYPE: Record<string, string> = {
+  company: "text", stage: "select", contact: "text", position: "text",
+  service: "text", amount: "number", quantity: "number", manager: "person",
+  status: "select", date: "date", phone: "text", email: "text", memo: "text",
+};
+
+const FILTERABLE_FIELDS = [
+  { key: "stage", label: "진행상태" }, { key: "amount", label: "견적금액" },
+  { key: "manager", label: "담당자" }, { key: "status", label: "성공여부" },
+  { key: "date", label: "등록일" }, { key: "company", label: "기업명" },
+  { key: "contact", label: "연락처" }, { key: "service", label: "희망서비스" },
+  { key: "quantity", label: "수량" },
+];
+
+const SORTABLE_FIELDS = [
+  { key: "company", label: "기업명" }, { key: "stage", label: "진행상태" },
+  { key: "amount", label: "견적금액" }, { key: "quantity", label: "수량" },
+  { key: "manager", label: "담당자" }, { key: "status", label: "성공여부" },
+  { key: "date", label: "등록일" },
+];
+
+const GROUPABLE_FIELDS: { key: GroupByField; label: string }[] = [
+  { key: "", label: "없음" }, { key: "stage", label: "진행상태" },
+  { key: "manager", label: "담당자" }, { key: "status", label: "성공여부" },
+  { key: "service", label: "희망서비스" },
+];
+
+/* helper: get unique values for a field from deals */
+function uniqueValues(deals: Deal[], field: string): string[] {
+  const set = new Set<string>();
+  deals.forEach((d) => {
+    const v = String(d[field] ?? "");
+    if (v) set.add(v);
+  });
+  return Array.from(set).sort();
+}
+
+/* helper: apply filters */
+function applyFilters(deals: Deal[], filters: FilterRule[], searchQuery: string): Deal[] {
+  let result = deals;
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    result = result.filter((d) => d.company.toLowerCase().includes(q) || d.contact.toLowerCase().includes(q));
+  }
+  for (const f of filters) {
+    result = result.filter((d) => {
+      const raw = d[f.field];
+      const val = String(raw ?? "");
+      switch (f.op) {
+        case "eq": return val === f.value;
+        case "neq": return val !== f.value;
+        case "contains": return val.toLowerCase().includes(f.value.toLowerCase());
+        case "not_contains": return !val.toLowerCase().includes(f.value.toLowerCase());
+        case "in": { const arr = f.value.split(",").map((s) => s.trim()); return arr.includes(val); }
+        case "not_in": { const arr = f.value.split(",").map((s) => s.trim()); return !arr.includes(val); }
+        case "gt": case "gte": case "lt": case "lte": {
+          const n = f.field === "amount" ? parseAmt(val) : parseFloat(val);
+          const t = parseFloat(f.value);
+          if (isNaN(n) || isNaN(t)) return true;
+          if (f.op === "gt") return n > t;
+          if (f.op === "gte") return n >= t;
+          if (f.op === "lt") return n < t;
+          return n <= t;
+        }
+        case "between": {
+          const [lo, hi] = f.value.split("|").map((s) => parseFloat(s.trim()));
+          const n = f.field === "amount" ? parseAmt(val) : parseFloat(val);
+          if (isNaN(n)) return true;
+          return n >= lo && n <= hi;
+        }
+        case "after": return val >= f.value;
+        case "before": return val <= f.value;
+        case "date_between": { const [a, b] = f.value.split("|"); return val >= a && val <= b; }
+        case "is_empty": return !val || val === "0";
+        case "is_not_empty": return !!val && val !== "0";
+        default: return true;
+      }
+    });
+  }
+  return result;
+}
+
+/* helper: apply sorts */
+function applySorts(deals: Deal[], sorts: SortRule[]): Deal[] {
+  if (sorts.length === 0) return deals;
+  return [...deals].sort((a, b) => {
+    for (const s of sorts) {
+      const av = String(a[s.field] ?? "");
+      const bv = String(b[s.field] ?? "");
+      // numeric compare for amount/quantity
+      if (s.field === "amount") {
+        const diff = parseAmt(av) - parseAmt(bv);
+        if (diff !== 0) return s.dir === "asc" ? diff : -diff;
+      } else if (s.field === "quantity") {
+        const diff = (Number(av) || 0) - (Number(bv) || 0);
+        if (diff !== 0) return s.dir === "asc" ? diff : -diff;
+      } else {
+        const cmp = av.localeCompare(bv, "ko");
+        if (cmp !== 0) return s.dir === "asc" ? cmp : -cmp;
+      }
+    }
+    return 0;
+  });
+}
+
+/* helper: group deals */
+interface DealGroup {
+  key: string;
+  label: string;
+  deals: Deal[];
+  totalAmount: number;
+}
+
+function groupDeals(deals: Deal[], groupBy: GroupByField): DealGroup[] {
+  if (!groupBy) return [{ key: "__all__", label: "", deals, totalAmount: deals.reduce((s, d) => s + parseAmt(d.amount), 0) }];
+  const map = new Map<string, Deal[]>();
+  deals.forEach((d) => {
+    const key = String(d[groupBy] ?? "미지정");
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(d);
+  });
+  return Array.from(map.entries()).map(([key, gDeals]) => ({
+    key,
+    label: key,
+    deals: gDeals,
+    totalAmount: gDeals.reduce((s, d) => s + parseAmt(d.amount), 0),
+  }));
+}
+
 /* ─── SAVED VIEW TYPE ─── */
 interface SavedView {
   id: string;
   name: string;
   viewType: ViewType;
-  stageFilter: string;
-  statusFilter: string;
+  filters: FilterRule[];
+  sorts: SortRule[];
+  groupBy: GroupByField;
   searchQuery: string;
 }
 
 const DEFAULT_VIEWS: SavedView[] = [
-  { id: "v1", name: "전체 딜",     viewType: "table",    stageFilter: "전체", statusFilter: "전체", searchQuery: "" },
-  { id: "v2", name: "파이프라인",  viewType: "kanban",   stageFilter: "전체", statusFilter: "전체", searchQuery: "" },
-  { id: "v3", name: "일정",       viewType: "timeline", stageFilter: "전체", statusFilter: "전체", searchQuery: "" },
+  { id: "v1", name: "전체 딜",     viewType: "table",    filters: [], sorts: [], groupBy: "", searchQuery: "" },
+  { id: "v2", name: "파이프라인",  viewType: "kanban",   filters: [], sorts: [], groupBy: "", searchQuery: "" },
+  { id: "v3", name: "일정",       viewType: "timeline", filters: [], sorts: [], groupBy: "", searchQuery: "" },
 ];
 
 /* ─── CUSTOM FIELD TYPE ─── */
@@ -1262,8 +1422,9 @@ function AddViewModal({
       id: `v-${Date.now()}`,
       name: name.trim(),
       viewType,
-      stageFilter: "전체",
-      statusFilter: "전체",
+      filters: [],
+      sorts: [],
+      groupBy: "",
       searchQuery: "",
     });
     onClose();
@@ -1847,8 +2008,12 @@ function DealflowPageInner() {
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [stageFilter, setStageFilter] = useState("전체");
-  const [statusFilter, setStatusFilter] = useState("전체");
+  const [filters, setFilters] = useState<FilterRule[]>([]);
+  const [sorts, setSorts] = useState<SortRule[]>([]);
+  const [groupBy, setGroupBy] = useState<GroupByField>("");
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showSortPanel, setShowSortPanel] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [activeWidgets, setActiveWidgets] = useState<Set<string>>(new Set(DEFAULT_ACTIVE_WIDGETS));
   const [dashboardCollapsed, setDashboardCollapsed] = useState(false);
   const [customerDeals, setCustomerDeals] = useState<Deal[]>([]);
@@ -1914,13 +2079,45 @@ function DealflowPageInner() {
   };
 
   const filteredDeals = useMemo(() => {
-    return customerDeals.filter((d) => {
-      if (searchQuery && !d.company.includes(searchQuery) && !d.contact.includes(searchQuery)) return false;
-      if (stageFilter !== "전체" && d.stage !== stageFilter) return false;
-      if (statusFilter !== "전체" && d.status !== statusFilter) return false;
-      return true;
+    const filtered = applyFilters(customerDeals, filters, searchQuery);
+    return applySorts(filtered, sorts);
+  }, [searchQuery, filters, sorts, customerDeals]);
+
+  const groupedDeals = useMemo(() => groupDeals(filteredDeals, groupBy), [filteredDeals, groupBy]);
+
+  const toggleGroup = (key: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
     });
-  }, [searchQuery, stageFilter, statusFilter, customerDeals]);
+  };
+
+  const addFilter = () => {
+    setFilters((prev) => [...prev, { id: `fl-${Date.now()}`, field: "stage", op: "in", value: "" }]);
+    setShowFilterPanel(true);
+  };
+
+  const updateFilter = (id: string, patch: Partial<FilterRule>) => {
+    setFilters((prev) => prev.map((f) => f.id === id ? { ...f, ...patch } : f));
+  };
+
+  const removeFilter = (id: string) => {
+    setFilters((prev) => prev.filter((f) => f.id !== id));
+  };
+
+  const addSort = () => {
+    setSorts((prev) => [...prev, { field: "date", dir: "desc" }]);
+    setShowSortPanel(true);
+  };
+
+  const updateSort = (idx: number, patch: Partial<SortRule>) => {
+    setSorts((prev) => prev.map((s, i) => i === idx ? { ...s, ...patch } : s));
+  };
+
+  const removeSort = (idx: number) => {
+    setSorts((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const toggleAll = () => {
     if (selectedIds.size === filteredDeals.length) setSelectedIds(new Set());
@@ -2235,32 +2432,53 @@ function DealflowPageInner() {
                             />
                           </div>
                           <div className="w-px h-5" style={{ background: T.border }} />
-                          <select
-                            className="px-3 py-[6px] rounded-lg border text-[0.7rem] text-[#555] bg-white focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
-                            style={{ borderColor: T.border }}
-                            value={stageFilter}
-                            onChange={(e) => setStageFilter(e.target.value)}
+                          {/* Filter button */}
+                          <button
+                            onClick={() => setShowFilterPanel(!showFilterPanel)}
+                            className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
+                            style={{
+                              borderColor: filters.length > 0 ? T.primary : T.border,
+                              color: filters.length > 0 ? T.primary : "#666",
+                              background: filters.length > 0 ? "#F0F7F2" : "transparent",
+                            }}
                           >
-                            <option value="전체">진행상태: 전체</option>
-                            {pipelineStages.map((s) => <option key={s.id}>{s.name}</option>)}
-                          </select>
-                          <select
-                            className="px-3 py-[6px] rounded-lg border text-[0.7rem] text-[#555] bg-white focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
-                            style={{ borderColor: T.border }}
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
+                            <ListFilter size={11} /> 필터{filters.length > 0 && ` (${filters.length})`}
+                          </button>
+                          {/* Sort button */}
+                          <button
+                            onClick={() => setShowSortPanel(!showSortPanel)}
+                            className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
+                            style={{
+                              borderColor: sorts.length > 0 ? "#6366F1" : T.border,
+                              color: sorts.length > 0 ? "#6366F1" : "#666",
+                              background: sorts.length > 0 ? "#EEF2FF" : "transparent",
+                            }}
                           >
-                            <option value="전체">성공여부: 전체</option>
-                            <option>진행중</option>
-                            <option>성공</option>
-                            <option>실패</option>
+                            <ArrowUpDown size={11} /> 정렬{sorts.length > 0 && ` (${sorts.length})`}
+                          </button>
+                          {/* Group button */}
+                          <select
+                            className="px-3 py-[6px] rounded-lg border text-[0.7rem] bg-white focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
+                            style={{
+                              borderColor: groupBy ? "#F59E0B" : T.border,
+                              color: groupBy ? "#B45309" : "#666",
+                              background: groupBy ? "#FFFBEB" : "white",
+                            }}
+                            value={groupBy}
+                            onChange={(e) => { setGroupBy(e.target.value as GroupByField); setCollapsedGroups(new Set()); }}
+                          >
+                            <option value="">그룹핑</option>
+                            {GROUPABLE_FIELDS.filter((g) => g.key).map((g) => (
+                              <option key={g.key} value={g.key}>{g.label}별</option>
+                            ))}
                           </select>
-                          {(searchQuery || stageFilter !== "전체" || statusFilter !== "전체") && (
+                          {/* Clear all */}
+                          {(searchQuery || filters.length > 0 || sorts.length > 0 || groupBy) && (
                             <button
-                              onClick={() => { setSearchQuery(""); setStageFilter("전체"); setStatusFilter("전체"); }}
+                              onClick={() => { setSearchQuery(""); setFilters([]); setSorts([]); setGroupBy(""); setCollapsedGroups(new Set()); }}
                               className="text-[0.65rem] text-[#999] hover:text-[#666] transition-colors px-2"
                             >
-                              필터 초기화
+                              초기화
                             </button>
                           )}
                         </div>
@@ -2276,6 +2494,135 @@ function DealflowPageInner() {
                     )}
                   </div>
 
+                  {/* Filter Panel */}
+                  {showFilterPanel && (
+                    <div className="px-5 py-3 border-b space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
+                      {filters.map((f) => {
+                        const fType = FIELD_FILTER_TYPE[f.field] || "text";
+                        const ops = FILTER_OPS_BY_TYPE[fType] || FILTER_OPS_BY_TYPE.text;
+                        const isSelectType = fType === "select" || fType === "person";
+                        const fieldOptions = isSelectType ? uniqueValues(customerDeals, f.field) : [];
+                        return (
+                          <div key={f.id} className="flex items-center gap-2">
+                            {/* Field */}
+                            <select
+                              className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]"
+                              style={{ borderColor: T.border }}
+                              value={f.field}
+                              onChange={(e) => {
+                                const newType = FIELD_FILTER_TYPE[e.target.value] || "text";
+                                const newOps = FILTER_OPS_BY_TYPE[newType] || FILTER_OPS_BY_TYPE.text;
+                                updateFilter(f.id, { field: e.target.value, op: newOps[0].op, value: "" });
+                              }}
+                            >
+                              {FILTERABLE_FIELDS.map((ff) => <option key={ff.key} value={ff.key}>{ff.label}</option>)}
+                            </select>
+                            {/* Operator */}
+                            <select
+                              className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[80px]"
+                              style={{ borderColor: T.border }}
+                              value={f.op}
+                              onChange={(e) => updateFilter(f.id, { op: e.target.value as FilterOp })}
+                            >
+                              {ops.map((o) => <option key={o.op} value={o.op}>{o.label}</option>)}
+                            </select>
+                            {/* Value */}
+                            {f.op !== "is_empty" && f.op !== "is_not_empty" && (
+                              isSelectType ? (
+                                <div className="flex items-center gap-1 flex-wrap flex-1">
+                                  {fieldOptions.map((opt) => {
+                                    const selected = f.value.split(",").map((s) => s.trim()).includes(opt);
+                                    return (
+                                      <button
+                                        key={opt}
+                                        onClick={() => {
+                                          const arr = f.value ? f.value.split(",").map((s) => s.trim()).filter(Boolean) : [];
+                                          const next = selected ? arr.filter((v) => v !== opt) : [...arr, opt];
+                                          updateFilter(f.id, { value: next.join(",") });
+                                        }}
+                                        className="px-2 py-1 rounded-md text-[0.65rem] border transition-colors"
+                                        style={{
+                                          borderColor: selected ? T.primary : T.border,
+                                          background: selected ? "#F0F7F2" : "white",
+                                          color: selected ? T.primary : "#666",
+                                        }}
+                                      >
+                                        {opt}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : fType === "date" && (f.op === "date_between") ? (
+                                <div className="flex items-center gap-1.5">
+                                  <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
+                                  <span className="text-[0.65rem] text-[#999]">~</span>
+                                  <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
+                                </div>
+                              ) : fType === "date" ? (
+                                <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white flex-1 max-w-[160px]" style={{ borderColor: T.border }} value={f.value} onChange={(e) => updateFilter(f.id, { value: e.target.value })} />
+                              ) : fType === "number" && f.op === "between" ? (
+                                <div className="flex items-center gap-1.5">
+                                  <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최소" value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
+                                  <span className="text-[0.65rem] text-[#999]">~</span>
+                                  <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최대" value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
+                                </div>
+                              ) : (
+                                <input
+                                  className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white flex-1 max-w-[200px] placeholder-[#CCC]"
+                                  style={{ borderColor: T.border }}
+                                  placeholder={fType === "number" ? "숫자 입력 (만원 단위)" : "값 입력"}
+                                  value={f.value}
+                                  onChange={(e) => updateFilter(f.id, { value: e.target.value })}
+                                />
+                              )
+                            )}
+                            {/* Remove */}
+                            <button onClick={() => removeFilter(f.id)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0">
+                              <X size={12} color={T.danger} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      <button onClick={addFilter} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: T.primary }}>
+                        <Plus size={11} /> 필터 추가
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Sort Panel */}
+                  {showSortPanel && (
+                    <div className="px-5 py-3 border-b space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
+                      {sorts.map((s, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-[0.65rem] text-[#BBB] w-[28px] shrink-0">{idx === 0 ? "1차" : `${idx + 1}차`}</span>
+                          <select
+                            className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]"
+                            style={{ borderColor: T.border }}
+                            value={s.field}
+                            onChange={(e) => updateSort(idx, { field: e.target.value })}
+                          >
+                            {SORTABLE_FIELDS.map((sf) => <option key={sf.key} value={sf.key}>{sf.label}</option>)}
+                          </select>
+                          <select
+                            className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white"
+                            style={{ borderColor: T.border }}
+                            value={s.dir}
+                            onChange={(e) => updateSort(idx, { dir: e.target.value as "asc" | "desc" })}
+                          >
+                            <option value="asc">오름차순</option>
+                            <option value="desc">내림차순</option>
+                          </select>
+                          <button onClick={() => removeSort(idx)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0">
+                            <X size={12} color={T.danger} />
+                          </button>
+                        </div>
+                      ))}
+                      <button onClick={addSort} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: "#6366F1" }}>
+                        <Plus size={11} /> 정렬 추가
+                      </button>
+                    </div>
+                  )}
+
                   {/* Table */}
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[720px]">
@@ -2284,18 +2631,37 @@ function DealflowPageInner() {
                           <th className="py-3 px-4 w-12 border-b" style={{ borderColor: T.border }}>
                             <input type="checkbox" checked={selectedIds.size === filteredDeals.length && filteredDeals.length > 0} onChange={toggleAll} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                           </th>
-                          {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((h) => (
-                            <th key={h.key} className="text-left py-3 px-4 whitespace-nowrap border-b" style={{ borderColor: T.border }}>
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[0.65rem] text-[#888] tracking-wide">{h.label}</span>
-                                {h.sort && (
-                                  <button className="p-0.5 rounded hover:bg-[#EDEEF0] transition-colors">
-                                    <ArrowUpDown size={9} className="text-[#CCC]" />
-                                  </button>
-                                )}
-                              </div>
-                            </th>
-                          ))}
+                          {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((h) => {
+                            const sortIdx = sorts.findIndex((s) => s.field === h.key);
+                            const sortDir = sortIdx >= 0 ? sorts[sortIdx].dir : null;
+                            return (
+                              <th
+                                key={h.key}
+                                className="text-left py-3 px-4 whitespace-nowrap border-b cursor-pointer select-none"
+                                style={{ borderColor: T.border }}
+                                onClick={() => {
+                                  if (!h.sort) return;
+                                  if (sortIdx >= 0) {
+                                    if (sortDir === "asc") updateSort(sortIdx, { dir: "desc" });
+                                    else removeSort(sortIdx);
+                                  } else {
+                                    setSorts((prev) => [...prev, { field: h.key, dir: "asc" }]);
+                                  }
+                                  setShowSortPanel(true);
+                                }}
+                              >
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[0.65rem] text-[#888] tracking-wide">{h.label}</span>
+                                  {h.sort && (
+                                    <span className={`text-[0.55rem] ${sortDir ? "text-[#6366F1]" : "text-[#CCC]"}`}>
+                                      {sortDir === "asc" ? "▲" : sortDir === "desc" ? "▼" : "⇅"}
+                                      {sortIdx >= 0 && sorts.length > 1 && <sup className="text-[0.45rem] ml-0.5">{sortIdx + 1}</sup>}
+                                    </span>
+                                  )}
+                                </div>
+                              </th>
+                            );
+                          })}
                         </tr>
                       </thead>
                       <tbody>
@@ -2310,67 +2676,109 @@ function DealflowPageInner() {
                             </td>
                           </tr>
                         ) : (
-                          filteredDeals.map((deal) => {
-                            const isSelected = selectedIds.has(deal.id);
-                            const cellMap: Record<string, React.ReactNode> = {
-                              company: (
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[0.65rem] text-white shrink-0" style={{ background: stageColors[deal.stage] || T.primary }}>
-                                    {deal.company.replace(/[\(\)주]/g, "").charAt(0)}
-                                  </div>
-                                  <span className="text-[0.75rem] text-[#1A1A1A]">{deal.company}</span>
-                                </div>
-                              ),
-                              stage: (
-                                <span className="inline-flex items-center gap-1.5 text-[0.65rem] px-2.5 py-1 rounded-full" style={{ background: (stageColors[deal.stage] || "#999") + "14", color: stageColors[deal.stage] || "#999" }}>
-                                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] || "#999" }} />
-                                  {deal.stage}
-                                </span>
-                              ),
-                              contact: (
-                                <div className="flex flex-col">
-                                  <span className="text-[0.75rem] text-[#1A1A1A]">{deal.contact}</span>
-                                  {!visibleColumns.has("position") && <span className="text-[0.6rem] text-[#BBB]">{deal.position}</span>}
-                                </div>
-                              ),
-                              position: <span className="text-[0.7rem] text-[#666]">{deal.position}</span>,
-                              service: <span className="text-[0.7rem] text-[#555]">{deal.service}</span>,
-                              amount: <span className="text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.amount}</span>,
-                              quantity: <span className="text-[0.7rem] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>,
-                              manager: (
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[0.55rem] text-white" style={{ background: "#94A3B8" }}>
-                                    {deal.manager.charAt(0)}
-                                  </div>
-                                  <span className="text-[0.7rem] text-[#555]">{deal.manager}</span>
-                                </div>
-                              ),
-                              status: (
-                                <span className="inline-flex items-center text-[0.65rem] px-2.5 py-1 rounded-full" style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}>
-                                  {deal.status}
-                                </span>
-                              ),
-                              date: <span className="text-[0.7rem] text-[#999] whitespace-nowrap tabular-nums">{deal.date}</span>,
-                              phone: <span className="text-[0.7rem] text-[#555]">—</span>,
-                              email: <span className="text-[0.7rem] text-[#555]">—</span>,
-                              memo: <span className="text-[0.7rem] text-[#BBB]">—</span>,
-                            };
+                          groupedDeals.map((group) => {
+                            const isCollapsed = collapsedGroups.has(group.key);
+                            const showGroupHeader = groupBy && group.key !== "__all__";
                             return (
-                              <tr
-                                key={deal.id}
-                                className="border-b cursor-pointer transition-colors"
-                                style={{ borderColor: T.border, background: isSelected ? "#F0F7F2" : "#fff" }}
-                                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#FAFBFC"; }}
-                                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "#fff"; }}
-                                onClick={() => setSelectedDeal(deal)}
-                              >
-                                <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                                  <input type="checkbox" checked={isSelected} onChange={() => toggleOne(deal.id)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
-                                </td>
-                                {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((col) => (
-                                  <td key={col.key} className="py-3.5 px-4">{cellMap[col.key]}</td>
-                                ))}
-                              </tr>
+                              <React.Fragment key={group.key}>
+                                {/* Group Header Row */}
+                                {showGroupHeader && (
+                                  <tr
+                                    className="cursor-pointer select-none"
+                                    style={{ background: "#F8F9FB" }}
+                                    onClick={() => toggleGroup(group.key)}
+                                  >
+                                    <td colSpan={visibleColumns.size + 1} className="py-2.5 px-4 border-b" style={{ borderColor: T.border }}>
+                                      <div className="flex items-center gap-3">
+                                        {isCollapsed ? <ChevronRightIcon size={13} color="#999" /> : <ChevronDown size={13} color="#999" />}
+                                        <span className="text-[0.8rem] text-[#1A1A1A] font-medium">{group.label}</span>
+                                        <span className="text-[0.65rem] px-2 py-0.5 rounded-full" style={{ background: "#EFF5F1", color: T.primary }}>
+                                          {group.deals.length}건
+                                        </span>
+                                        <span className="text-[0.65rem] text-[#999] tabular-nums">
+                                          {fmtAmt(group.totalAmount)}
+                                        </span>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                                {/* Group Deal Rows */}
+                                {!isCollapsed && group.deals.map((deal) => {
+                                  const isSelected = selectedIds.has(deal.id);
+                                  const cellMap: Record<string, React.ReactNode> = {
+                                    company: (
+                                      <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[0.65rem] text-white shrink-0" style={{ background: stageColors[deal.stage] || T.primary }}>
+                                          {deal.company.replace(/[\(\)주]/g, "").charAt(0)}
+                                        </div>
+                                        <span className="text-[0.75rem] text-[#1A1A1A]">{deal.company}</span>
+                                      </div>
+                                    ),
+                                    stage: (
+                                      <span className="inline-flex items-center gap-1.5 text-[0.65rem] px-2.5 py-1 rounded-full" style={{ background: (stageColors[deal.stage] || "#999") + "14", color: stageColors[deal.stage] || "#999" }}>
+                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: stageColors[deal.stage] || "#999" }} />
+                                        {deal.stage}
+                                      </span>
+                                    ),
+                                    contact: (
+                                      <div className="flex flex-col">
+                                        <span className="text-[0.75rem] text-[#1A1A1A]">{deal.contact}</span>
+                                        {!visibleColumns.has("position") && <span className="text-[0.6rem] text-[#BBB]">{deal.position}</span>}
+                                      </div>
+                                    ),
+                                    position: <span className="text-[0.7rem] text-[#666]">{deal.position}</span>,
+                                    service: <span className="text-[0.7rem] text-[#555]">{deal.service}</span>,
+                                    amount: <span className="text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.amount}</span>,
+                                    quantity: <span className="text-[0.7rem] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>,
+                                    manager: (
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[0.55rem] text-white" style={{ background: "#94A3B8" }}>
+                                          {deal.manager.charAt(0)}
+                                        </div>
+                                        <span className="text-[0.7rem] text-[#555]">{deal.manager}</span>
+                                      </div>
+                                    ),
+                                    status: (
+                                      <span className="inline-flex items-center text-[0.65rem] px-2.5 py-1 rounded-full" style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}>
+                                        {deal.status}
+                                      </span>
+                                    ),
+                                    date: <span className="text-[0.7rem] text-[#999] whitespace-nowrap tabular-nums">{deal.date}</span>,
+                                    phone: <span className="text-[0.7rem] text-[#555]">—</span>,
+                                    email: <span className="text-[0.7rem] text-[#555]">—</span>,
+                                    memo: <span className="text-[0.7rem] text-[#BBB]">—</span>,
+                                  };
+                                  return (
+                                    <tr
+                                      key={deal.id}
+                                      className="border-b cursor-pointer transition-colors"
+                                      style={{ borderColor: T.border, background: isSelected ? "#F0F7F2" : "#fff" }}
+                                      onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = "#FAFBFC"; }}
+                                      onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = "#fff"; }}
+                                      onClick={() => setSelectedDeal(deal)}
+                                    >
+                                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                                        <input type="checkbox" checked={isSelected} onChange={() => toggleOne(deal.id)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
+                                      </td>
+                                      {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((col) => (
+                                        <td key={col.key} className="py-3.5 px-4">{cellMap[col.key]}</td>
+                                      ))}
+                                    </tr>
+                                  );
+                                })}
+                                {/* Group Subtotal Row */}
+                                {showGroupHeader && !isCollapsed && (
+                                  <tr style={{ background: "#FAFBFC" }}>
+                                    <td colSpan={visibleColumns.size + 1} className="py-2 px-4 border-b" style={{ borderColor: T.border }}>
+                                      <div className="flex items-center gap-4 pl-[30px]">
+                                        <span className="text-[0.65rem] text-[#999]">소계: {group.deals.length}건</span>
+                                        <span className="text-[0.65rem] text-[#999] tabular-nums">{fmtAmt(group.totalAmount)}</span>
+                                        <span className="text-[0.65rem] text-[#BBB]">평균 {fmtAmt(group.deals.length > 0 ? Math.round(group.totalAmount / group.deals.length) : 0)}</span>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
                             );
                           })
                         )}
@@ -2384,6 +2792,7 @@ function DealflowPageInner() {
                       {filteredDeals.length < customerDeals.length
                         ? `필터 결과 ${filteredDeals.length}건 (전체 ${customerDeals.length}건)`
                         : `전체 ${customerDeals.length}건`}
+                      {groupBy && ` · ${groupedDeals.length}개 그룹`}
                     </span>
                     <div className="flex items-center gap-1.5">
                       <button className="w-8 h-8 rounded-lg text-[0.7rem] transition-colors" style={{ background: T.primary, color: "#fff" }}>1</button>
