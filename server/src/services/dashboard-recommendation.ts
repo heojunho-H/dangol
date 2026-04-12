@@ -79,8 +79,9 @@ ${JSON.stringify(req.deals, null, 2)}
 ${req.availableWidgets.map((w) => `- id: "${w.id}", name: "${w.name}", category: "${w.category}"`).join("\n")}`;
 
   const response = await getClient().messages.create({
-    model: "claude-sonnet-4-20250514",
-    max_tokens: 1500,
+    model: "claude-opus-4-6",
+    max_tokens: 2048,
+    temperature: 0.2,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: userMessage }],
   });

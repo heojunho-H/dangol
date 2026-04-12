@@ -6,7 +6,9 @@ import { existsSync, mkdirSync, unlinkSync } from "fs";
 import prisma from "../lib/prisma.js";
 import { authMiddleware } from "../middleware/auth.js";
 
-const UPLOAD_DIR = join(import.meta.dirname, "../../uploads");
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+  ? process.env.UPLOAD_DIR
+  : join(import.meta.dirname, "../../uploads");
 if (!existsSync(UPLOAD_DIR)) mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({

@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { config } from "dotenv";
 import { aiRouter } from "./routes/ai.js";
 import { authRouter } from "./routes/auth.js";
@@ -17,6 +18,19 @@ import { chatRouter } from "./routes/chat.js";
 config({ path: "../.env" });
 
 const app = express();
+
+// CORS: comma-separated origins in FRONTEND_URL (e.g. "https://dangol.app,https://dangol.pages.dev")
+// In dev (no FRONTEND_URL set), allow all origins — Vite proxy handles same-origin anyway.
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((s) => s.trim()).filter(Boolean)
+  : null;
+app.use(
+  cors({
+    origin: allowedOrigins ?? true,
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: "2mb" }));
 
 // Public routes
