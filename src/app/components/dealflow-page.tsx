@@ -784,7 +784,7 @@ function computeSmartMappings(
 }
 
 /* ─── ONBOARDING FLOW ─── */
-function OnboardingFlow({ onComplete, customFields, pipelineStages }: { onComplete: (deals: Deal[], recommendedWidgets?: string[]) => void; customFields: CustomField[]; pipelineStages: PipelineStage[] }) {
+function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineStages }: { onComplete: (deals: Deal[], recommendedWidgets?: string[]) => void; customFields: CustomField[]; setCustomFields: React.Dispatch<React.SetStateAction<CustomField[]>>; pipelineStages: PipelineStage[] }) {
   const [step, setStep] = useState(1);
   const [fileSelected, setFileSelected] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -1046,13 +1046,100 @@ function OnboardingFlow({ onComplete, customFields, pipelineStages }: { onComple
 
       const data = await response.json();
       setAnalysisProgress(3);
-      setAnalysisResults(data.mappings);
+
+      // Build displayable analysis results: existing mappings + new-field entries
+      const combinedResults: MappingResult[] = (data.mappings ?? []).map((m: {excelColumn:string;dealflowField:string;confidence:number;reason:string}) => ({
+        excelColumn: m.excelColumn,
+        dealflowField: m.dealflowField,
+        confidence: m.confidence,
+        nameScore: 0,
+        patternScore: 0,
+        reason: m.reason,
+      }));
+      const newFields: Array<{
+        excelColumn: string;
+        type: string;
+        suggestedOptions?: string[];
+        confidence: number;
+        reason: string;
+      }> = data.newFields ?? [];
+
+      // Register auto-created custom fields for unmapped columns
+      const existingKeys = new Set(customFields.map((f) => f.key));
+      const existingLabels = new Set(customFields.map((f) => f.label));
+      const createdFields: CustomField[] = [];
+      const labelsByExcel: Record<string, string> = {};
+
+      const slugify = (s: string) => {
+        const base = s
+          .toLowerCase()
+          .replace(/[()\[\]{}%₩,]/g, "")
+          .replace(/\s+/g, "_")
+          .replace(/[^a-z0-9_\uac00-\ud7a3]/g, "")
+          .slice(0, 40) || "field";
+        let key = base;
+        let i = 2;
+        while (existingKeys.has(key)) key = `${base}_${i++}`;
+        existingKeys.add(key);
+        return key;
+      };
+
+      const toFieldType = (t: string): FieldType => {
+        if (t === "amount") return "number";
+        if (t === "text" || t === "number" || t === "date" || t === "person" || t === "phone" || t === "email" || t === "select") return t;
+        return "text";
+      };
+
+      for (const nf of newFields) {
+        // Skip if a field with same label already exists (avoid duplicates)
+        let label = nf.excelColumn;
+        if (existingLabels.has(label)) {
+          // Still record the mapping to the existing label
+          labelsByExcel[nf.excelColumn] = label;
+          continue;
+        }
+        existingLabels.add(label);
+        const field: CustomField = {
+          id: `f_auto_${Date.now()}_${createdFields.length}`,
+          key: slugify(nf.excelColumn),
+          label,
+          type: toFieldType(nf.type),
+          required: false,
+          locked: false,
+          visible: true,
+          options:
+            nf.type === "select" && nf.suggestedOptions
+              ? nf.suggestedOptions
+              : undefined,
+        };
+        createdFields.push(field);
+        labelsByExcel[nf.excelColumn] = label;
+
+        // Surface in analysisResults so user sees what the AI did
+        combinedResults.push({
+          excelColumn: nf.excelColumn,
+          dealflowField: label,
+          confidence: nf.confidence,
+          nameScore: 0,
+          patternScore: 0,
+          reason: `새 필드 생성 (${nf.type}): ${nf.reason}`,
+        });
+      }
+
+      if (createdFields.length > 0) {
+        setCustomFields((prev) => [...prev, ...createdFields]);
+      }
+
+      setAnalysisResults(combinedResults);
 
       const newMappings: Record<string, string> = {};
-      for (const r of data.mappings) {
+      for (const r of data.mappings ?? []) {
         if (r.confidence >= 0.4) {
           newMappings[r.dealflowField] = r.excelColumn;
         }
+      }
+      for (const [excelCol, label] of Object.entries(labelsByExcel)) {
+        newMappings[label] = excelCol;
       }
       setMappings(newMappings);
     } catch (err) {
@@ -3920,7 +4007,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const managers = useMemo(() => [...new Set(customerDeals.map((d) => d.manager))].sort(), [customerDeals]);
 
   if (showOnboarding) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} customFields={customFields} pipelineStages={pipelineStages} />;
+    return <OnboardingFlow onComplete={handleOnboardingComplete} customFields={customFields} setCustomFields={setCustomFields} pipelineStages={pipelineStages} />;
   }
   if (showWebFormOnboarding) {
     return <WebFormOnboarding onComplete={(deals) => { handleOnboardingComplete(deals); setShowWebFormOnboarding(false); }} />;
