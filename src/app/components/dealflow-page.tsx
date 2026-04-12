@@ -3984,13 +3984,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     />
                   </div>
                   <div className="w-px h-5" style={{ background: T.border }} />
-                  {activeView === "table" && (
-                    <span className="text-[0.65rem] text-[#999] px-1">
-                      {filters.length + sorts.length > 0
-                        ? `컬럼에서 필터·정렬 적용됨 (${filters.length + sorts.length})`
-                        : "컬럼 헤더 클릭으로 필터·정렬"}
-                    </span>
-                  )}
                   <select
                     className="px-3 py-[6px] rounded-lg border text-[0.7rem] focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
                     style={{
