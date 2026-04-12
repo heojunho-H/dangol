@@ -2662,6 +2662,9 @@ function DealflowPageInner() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showSortPanel, setShowSortPanel] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
+  const [bulkActionMenu, setBulkActionMenu] = useState<"" | "status" | "manager" | "delete">("");
+  const PAGE_SIZE = 20;
   const [widgetOrder, setWidgetOrder] = useState<string[]>(DEFAULT_ACTIVE_WIDGETS);
   const [widgetSizes, setWidgetSizes] = useState<Record<string, number>>({});
   const [customKpis, setCustomKpis] = useState<CustomKpiDef[]>([]);
@@ -2793,9 +2796,20 @@ function DealflowPageInner() {
     setSorts((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  /* ── Pagination ── */
+  const totalPages = Math.max(1, Math.ceil(filteredDeals.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedDeals = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PAGE_SIZE;
+    return filteredDeals.slice(start, start + PAGE_SIZE);
+  }, [filteredDeals, safeCurrentPage]);
+
+  // Reset page when filters change
+  React.useEffect(() => { setCurrentPage(1); }, [searchQuery, filters, sorts, dateRange]);
+
   const toggleAll = () => {
-    if (selectedIds.size === filteredDeals.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(filteredDeals.map((d) => d.id)));
+    if (selectedIds.size === paginatedDeals.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(paginatedDeals.map((d) => d.id)));
   };
 
   const toggleOne = (id: number) => {
@@ -2805,6 +2819,27 @@ function DealflowPageInner() {
       return next;
     });
   };
+
+  /* ── Bulk Actions ── */
+  const bulkChangeStatus = (newStatus: string) => {
+    setCustomerDeals((prev) => prev.map((d) => selectedIds.has(d.id) ? { ...d, status: newStatus } : d));
+    setSelectedIds(new Set());
+    setBulkActionMenu("");
+  };
+
+  const bulkChangeManager = (newManager: string) => {
+    setCustomerDeals((prev) => prev.map((d) => selectedIds.has(d.id) ? { ...d, manager: newManager } : d));
+    setSelectedIds(new Set());
+    setBulkActionMenu("");
+  };
+
+  const bulkDelete = () => {
+    setCustomerDeals((prev) => prev.filter((d) => !selectedIds.has(d.id)));
+    setSelectedIds(new Set());
+    setBulkActionMenu("");
+  };
+
+  const managers = useMemo(() => [...new Set(customerDeals.map((d) => d.manager))].sort(), [customerDeals]);
 
   if (showOnboarding) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
@@ -3125,6 +3160,159 @@ function DealflowPageInner() {
                 </div>
               </div>
 
+              {/* Shared Filter/Sort/Search Toolbar — visible across all views */}
+              {customerDeals.length > 0 && (
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="relative">
+                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#BBB]" />
+                    <input
+                      className="pl-9 pr-3 py-[6px] rounded-lg border text-[0.75rem] text-[#1A1A1A] placeholder-[#BBB] focus:outline-none focus:border-[#1A472A] w-[176px] transition-colors"
+                      style={{ borderColor: T.border, background: "#fff" }}
+                      placeholder="기업명, 담당자 검색"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <div className="w-px h-5" style={{ background: T.border }} />
+                  <button
+                    onClick={() => setShowFilterPanel(!showFilterPanel)}
+                    className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
+                    style={{
+                      borderColor: filters.length > 0 ? T.primary : T.border,
+                      color: filters.length > 0 ? T.primary : "#666",
+                      background: filters.length > 0 ? "#F0F7F2" : "#fff",
+                    }}
+                  >
+                    <ListFilter size={11} /> 필터{filters.length > 0 && ` (${filters.length})`}
+                  </button>
+                  <button
+                    onClick={() => setShowSortPanel(!showSortPanel)}
+                    className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
+                    style={{
+                      borderColor: sorts.length > 0 ? "#6366F1" : T.border,
+                      color: sorts.length > 0 ? "#6366F1" : "#666",
+                      background: sorts.length > 0 ? "#EEF2FF" : "#fff",
+                    }}
+                  >
+                    <ArrowUpDown size={11} /> 정렬{sorts.length > 0 && ` (${sorts.length})`}
+                  </button>
+                  <select
+                    className="px-3 py-[6px] rounded-lg border text-[0.7rem] focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
+                    style={{
+                      borderColor: groupBy ? "#F59E0B" : T.border,
+                      color: groupBy ? "#B45309" : "#666",
+                      background: groupBy ? "#FFFBEB" : "white",
+                    }}
+                    value={groupBy}
+                    onChange={(e) => { setGroupBy(e.target.value as GroupByField); setCollapsedGroups(new Set()); }}
+                  >
+                    <option value="">그룹핑</option>
+                    {GROUPABLE_FIELDS.filter((g) => g.key).map((g) => (
+                      <option key={g.key} value={g.key}>{g.label}별</option>
+                    ))}
+                  </select>
+                  {(searchQuery || filters.length > 0 || sorts.length > 0 || groupBy) && (
+                    <button
+                      onClick={() => { setSearchQuery(""); setFilters([]); setSorts([]); setGroupBy(""); setCollapsedGroups(new Set()); }}
+                      className="text-[0.65rem] text-[#999] hover:text-[#666] transition-colors px-2"
+                    >
+                      초기화
+                    </button>
+                  )}
+                  {activeView === "table" && (
+                    <>
+                      <div className="flex-1" />
+                      <button
+                        onClick={() => setShowColumnConfig(!showColumnConfig)}
+                        className="p-[6px] rounded-lg border hover:bg-[#F7F8FA] transition-colors"
+                        style={{ borderColor: T.border, background: "#fff" }}
+                        title="컬럼 설정"
+                      >
+                        <Grid3X3 size={12} color="#888" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Shared Filter Panel */}
+              {customerDeals.length > 0 && showFilterPanel && (
+                <div className="px-5 py-3 mb-4 rounded-xl border space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
+                  {filters.map((f) => {
+                    const fType = FIELD_FILTER_TYPE[f.field] || "text";
+                    const ops = FILTER_OPS_BY_TYPE[fType] || FILTER_OPS_BY_TYPE.text;
+                    const isSelectType = fType === "select" || fType === "person";
+                    const fieldOptions = isSelectType ? uniqueValues(customerDeals, f.field) : [];
+                    return (
+                      <div key={f.id} className="flex items-center gap-2">
+                        <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]" style={{ borderColor: T.border }} value={f.field} onChange={(e) => { const newType = FIELD_FILTER_TYPE[e.target.value] || "text"; const newOps = FILTER_OPS_BY_TYPE[newType] || FILTER_OPS_BY_TYPE.text; updateFilter(f.id, { field: e.target.value, op: newOps[0].op, value: "" }); }}>
+                          {FILTERABLE_FIELDS.map((ff) => <option key={ff.key} value={ff.key}>{ff.label}</option>)}
+                        </select>
+                        <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[80px]" style={{ borderColor: T.border }} value={f.op} onChange={(e) => updateFilter(f.id, { op: e.target.value as FilterOp })}>
+                          {ops.map((o) => <option key={o.op} value={o.op}>{o.label}</option>)}
+                        </select>
+                        {f.op !== "is_empty" && f.op !== "is_not_empty" && (
+                          isSelectType ? (
+                            <div className="flex items-center gap-1 flex-wrap flex-1">
+                              {fieldOptions.map((opt) => {
+                                const selected = f.value.split(",").map((s) => s.trim()).includes(opt);
+                                return (
+                                  <button key={opt} onClick={() => { const arr = f.value ? f.value.split(",").map((s) => s.trim()).filter(Boolean) : []; const next = selected ? arr.filter((v) => v !== opt) : [...arr, opt]; updateFilter(f.id, { value: next.join(",") }); }} className="px-2 py-1 rounded-md text-[0.65rem] border transition-colors" style={{ borderColor: selected ? T.primary : T.border, background: selected ? "#F0F7F2" : "white", color: selected ? T.primary : "#666" }}>
+                                    {opt}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : fType === "date" && f.op === "date_between" ? (
+                            <div className="flex items-center gap-1.5">
+                              <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
+                              <span className="text-[0.65rem] text-[#999]">~</span>
+                              <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
+                            </div>
+                          ) : fType === "date" ? (
+                            <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white flex-1 max-w-[160px]" style={{ borderColor: T.border }} value={f.value} onChange={(e) => updateFilter(f.id, { value: e.target.value })} />
+                          ) : fType === "number" && f.op === "between" ? (
+                            <div className="flex items-center gap-1.5">
+                              <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최소" value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
+                              <span className="text-[0.65rem] text-[#999]">~</span>
+                              <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최대" value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
+                            </div>
+                          ) : (
+                            <input className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white flex-1 max-w-[200px] placeholder-[#CCC]" style={{ borderColor: T.border }} placeholder={fType === "number" ? "숫자 입력 (만원 단위)" : "값 입력"} value={f.value} onChange={(e) => updateFilter(f.id, { value: e.target.value })} />
+                          )
+                        )}
+                        <button onClick={() => removeFilter(f.id)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0"><X size={12} color={T.danger} /></button>
+                      </div>
+                    );
+                  })}
+                  <button onClick={addFilter} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: T.primary }}>
+                    <Plus size={11} /> 필터 추가
+                  </button>
+                </div>
+              )}
+
+              {/* Shared Sort Panel */}
+              {customerDeals.length > 0 && showSortPanel && (
+                <div className="px-5 py-3 mb-4 rounded-xl border space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
+                  {sorts.map((s, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-[0.65rem] text-[#BBB] w-[28px] shrink-0">{idx === 0 ? "1차" : `${idx + 1}차`}</span>
+                      <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]" style={{ borderColor: T.border }} value={s.field} onChange={(e) => updateSort(idx, { field: e.target.value })}>
+                        {SORTABLE_FIELDS.map((sf) => <option key={sf.key} value={sf.key}>{sf.label}</option>)}
+                      </select>
+                      <select className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={s.dir} onChange={(e) => updateSort(idx, { dir: e.target.value as "asc" | "desc" })}>
+                        <option value="asc">오름차순</option>
+                        <option value="desc">내림차순</option>
+                      </select>
+                      <button onClick={() => removeSort(idx)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0"><X size={12} color={T.danger} /></button>
+                    </div>
+                  ))}
+                  <button onClick={addSort} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: "#6366F1" }}>
+                    <Plus size={11} /> 정렬 추가
+                  </button>
+                </div>
+              )}
+
               {customerDeals.length === 0 ? (
                 /* ─── Empty State ─── */
                 <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: T.border, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
@@ -3214,220 +3402,64 @@ function DealflowPageInner() {
                 {/* Table View */}
                 {activeView === "table" && (
                 <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: T.border, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                  {/* Table Toolbar */}
-                  <div className="flex items-center justify-between px-5 py-3 border-b" style={{ borderColor: T.border }}>
-                    {selectedIds.size > 0 ? (
-                      <div className="flex items-center gap-3 w-full">
-                        <span className="text-[0.75rem] text-[#1A1A1A]">{selectedIds.size}건 선택</span>
-                        <div className="w-px h-5" style={{ background: T.border }} />
-                        <button className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-[#F7F8FA] transition-colors text-[#555]">상태 변경</button>
-                        <button className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-[#EFF5F1] transition-colors" style={{ color: T.primary }}>담당자 배정</button>
-                        <button className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-[#FEF2F2] transition-colors" style={{ color: T.danger }}>삭제</button>
-                        <div className="flex-1" />
-                        <button onClick={() => setSelectedIds(new Set())} className="text-[0.7rem] text-[#999] hover:text-[#666] transition-colors">선택 해제</button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <div className="relative">
-                            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#BBB]" />
-                            <input
-                              className="pl-9 pr-3 py-[6px] rounded-lg border text-[0.75rem] text-[#1A1A1A] placeholder-[#BBB] focus:outline-none focus:border-[#1A472A] w-[176px] transition-colors"
-                              style={{ borderColor: T.border, background: "#fff" }}
-                              placeholder="기업명, 담당자 검색"
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                          </div>
-                          <div className="w-px h-5" style={{ background: T.border }} />
-                          {/* Filter button */}
-                          <button
-                            onClick={() => setShowFilterPanel(!showFilterPanel)}
-                            className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
-                            style={{
-                              borderColor: filters.length > 0 ? T.primary : T.border,
-                              color: filters.length > 0 ? T.primary : "#666",
-                              background: filters.length > 0 ? "#F0F7F2" : "transparent",
-                            }}
-                          >
-                            <ListFilter size={11} /> 필터{filters.length > 0 && ` (${filters.length})`}
-                          </button>
-                          {/* Sort button */}
-                          <button
-                            onClick={() => setShowSortPanel(!showSortPanel)}
-                            className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] transition-colors"
-                            style={{
-                              borderColor: sorts.length > 0 ? "#6366F1" : T.border,
-                              color: sorts.length > 0 ? "#6366F1" : "#666",
-                              background: sorts.length > 0 ? "#EEF2FF" : "transparent",
-                            }}
-                          >
-                            <ArrowUpDown size={11} /> 정렬{sorts.length > 0 && ` (${sorts.length})`}
-                          </button>
-                          {/* Group button */}
-                          <select
-                            className="px-3 py-[6px] rounded-lg border text-[0.7rem] bg-white focus:outline-none focus:border-[#1A472A] transition-colors cursor-pointer"
-                            style={{
-                              borderColor: groupBy ? "#F59E0B" : T.border,
-                              color: groupBy ? "#B45309" : "#666",
-                              background: groupBy ? "#FFFBEB" : "white",
-                            }}
-                            value={groupBy}
-                            onChange={(e) => { setGroupBy(e.target.value as GroupByField); setCollapsedGroups(new Set()); }}
-                          >
-                            <option value="">그룹핑</option>
-                            {GROUPABLE_FIELDS.filter((g) => g.key).map((g) => (
-                              <option key={g.key} value={g.key}>{g.label}별</option>
-                            ))}
-                          </select>
-                          {/* Clear all */}
-                          {(searchQuery || filters.length > 0 || sorts.length > 0 || groupBy) && (
-                            <button
-                              onClick={() => { setSearchQuery(""); setFilters([]); setSorts([]); setGroupBy(""); setCollapsedGroups(new Set()); }}
-                              className="text-[0.65rem] text-[#999] hover:text-[#666] transition-colors px-2"
-                            >
-                              초기화
-                            </button>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => setShowColumnConfig(!showColumnConfig)}
-                          className="p-[6px] rounded-lg border hover:bg-[#F7F8FA] transition-colors"
-                          style={{ borderColor: T.border }}
-                          title="컬럼 설정"
-                        >
-                          <Grid3X3 size={12} color="#888" />
+                  {/* Bulk Action Bar — only when items selected */}
+                  {selectedIds.size > 0 && (
+                    <div className="flex items-center gap-3 px-5 py-2.5 border-b" style={{ borderColor: T.border, background: "#F0F7F2" }}>
+                      <span className="text-[0.75rem] text-[#1A1A1A] font-medium">{selectedIds.size}건 선택</span>
+                      <div className="w-px h-5" style={{ background: T.border }} />
+                      {/* Status change */}
+                      <div className="relative">
+                        <button onClick={() => setBulkActionMenu(bulkActionMenu === "status" ? "" : "status")} className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-white transition-colors text-[#555] flex items-center gap-1">
+                          상태 변경 <ChevronDown size={10} />
                         </button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Filter Panel */}
-                  {showFilterPanel && (
-                    <div className="px-5 py-3 border-b space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
-                      {filters.map((f) => {
-                        const fType = FIELD_FILTER_TYPE[f.field] || "text";
-                        const ops = FILTER_OPS_BY_TYPE[fType] || FILTER_OPS_BY_TYPE.text;
-                        const isSelectType = fType === "select" || fType === "person";
-                        const fieldOptions = isSelectType ? uniqueValues(customerDeals, f.field) : [];
-                        return (
-                          <div key={f.id} className="flex items-center gap-2">
-                            {/* Field */}
-                            <select
-                              className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]"
-                              style={{ borderColor: T.border }}
-                              value={f.field}
-                              onChange={(e) => {
-                                const newType = FIELD_FILTER_TYPE[e.target.value] || "text";
-                                const newOps = FILTER_OPS_BY_TYPE[newType] || FILTER_OPS_BY_TYPE.text;
-                                updateFilter(f.id, { field: e.target.value, op: newOps[0].op, value: "" });
-                              }}
-                            >
-                              {FILTERABLE_FIELDS.map((ff) => <option key={ff.key} value={ff.key}>{ff.label}</option>)}
-                            </select>
-                            {/* Operator */}
-                            <select
-                              className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[80px]"
-                              style={{ borderColor: T.border }}
-                              value={f.op}
-                              onChange={(e) => updateFilter(f.id, { op: e.target.value as FilterOp })}
-                            >
-                              {ops.map((o) => <option key={o.op} value={o.op}>{o.label}</option>)}
-                            </select>
-                            {/* Value */}
-                            {f.op !== "is_empty" && f.op !== "is_not_empty" && (
-                              isSelectType ? (
-                                <div className="flex items-center gap-1 flex-wrap flex-1">
-                                  {fieldOptions.map((opt) => {
-                                    const selected = f.value.split(",").map((s) => s.trim()).includes(opt);
-                                    return (
-                                      <button
-                                        key={opt}
-                                        onClick={() => {
-                                          const arr = f.value ? f.value.split(",").map((s) => s.trim()).filter(Boolean) : [];
-                                          const next = selected ? arr.filter((v) => v !== opt) : [...arr, opt];
-                                          updateFilter(f.id, { value: next.join(",") });
-                                        }}
-                                        className="px-2 py-1 rounded-md text-[0.65rem] border transition-colors"
-                                        style={{
-                                          borderColor: selected ? T.primary : T.border,
-                                          background: selected ? "#F0F7F2" : "white",
-                                          color: selected ? T.primary : "#666",
-                                        }}
-                                      >
-                                        {opt}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              ) : fType === "date" && (f.op === "date_between") ? (
-                                <div className="flex items-center gap-1.5">
-                                  <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
-                                  <span className="text-[0.65rem] text-[#999]">~</span>
-                                  <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white" style={{ borderColor: T.border }} value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
-                                </div>
-                              ) : fType === "date" ? (
-                                <input type="date" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white flex-1 max-w-[160px]" style={{ borderColor: T.border }} value={f.value} onChange={(e) => updateFilter(f.id, { value: e.target.value })} />
-                              ) : fType === "number" && f.op === "between" ? (
-                                <div className="flex items-center gap-1.5">
-                                  <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최소" value={f.value.split("|")[0] || ""} onChange={(e) => updateFilter(f.id, { value: `${e.target.value}|${f.value.split("|")[1] || ""}` })} />
-                                  <span className="text-[0.65rem] text-[#999]">~</span>
-                                  <input type="number" className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white w-[100px]" style={{ borderColor: T.border }} placeholder="최대" value={f.value.split("|")[1] || ""} onChange={(e) => updateFilter(f.id, { value: `${f.value.split("|")[0] || ""}|${e.target.value}` })} />
-                                </div>
-                              ) : (
-                                <input
-                                  className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white flex-1 max-w-[200px] placeholder-[#CCC]"
-                                  style={{ borderColor: T.border }}
-                                  placeholder={fType === "number" ? "숫자 입력 (만원 단위)" : "값 입력"}
-                                  value={f.value}
-                                  onChange={(e) => updateFilter(f.id, { value: e.target.value })}
-                                />
-                              )
-                            )}
-                            {/* Remove */}
-                            <button onClick={() => removeFilter(f.id)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0">
-                              <X size={12} color={T.danger} />
-                            </button>
-                          </div>
-                        );
-                      })}
-                      <button onClick={addFilter} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: T.primary }}>
-                        <Plus size={11} /> 필터 추가
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Sort Panel */}
-                  {showSortPanel && (
-                    <div className="px-5 py-3 border-b space-y-2" style={{ borderColor: T.border, background: "#FAFBFC" }}>
-                      {sorts.map((s, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <span className="text-[0.65rem] text-[#BBB] w-[28px] shrink-0">{idx === 0 ? "1차" : `${idx + 1}차`}</span>
-                          <select
-                            className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white min-w-[100px]"
-                            style={{ borderColor: T.border }}
-                            value={s.field}
-                            onChange={(e) => updateSort(idx, { field: e.target.value })}
-                          >
-                            {SORTABLE_FIELDS.map((sf) => <option key={sf.key} value={sf.key}>{sf.label}</option>)}
-                          </select>
-                          <select
-                            className="px-2.5 py-1.5 rounded-lg border text-[0.7rem] text-[#555] bg-white"
-                            style={{ borderColor: T.border }}
-                            value={s.dir}
-                            onChange={(e) => updateSort(idx, { dir: e.target.value as "asc" | "desc" })}
-                          >
-                            <option value="asc">오름차순</option>
-                            <option value="desc">내림차순</option>
-                          </select>
-                          <button onClick={() => removeSort(idx)} className="p-1 rounded hover:bg-[#FEF2F2] transition-colors shrink-0">
-                            <X size={12} color={T.danger} />
-                          </button>
-                        </div>
-                      ))}
-                      <button onClick={addSort} className="flex items-center gap-1.5 text-[0.7rem] px-2 py-1 rounded-lg hover:bg-white transition-colors" style={{ color: "#6366F1" }}>
-                        <Plus size={11} /> 정렬 추가
-                      </button>
+                        {bulkActionMenu === "status" && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setBulkActionMenu("")} />
+                            <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg z-50 py-1 w-[120px]" style={{ borderColor: T.border }}>
+                              {["진행중", "성공", "실패"].map((s) => (
+                                <button key={s} onClick={() => bulkChangeStatus(s)} className="w-full text-left px-3 py-2 text-[0.75rem] text-[#444] hover:bg-[#F7F8FA] transition-colors">{s}</button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {/* Manager assign */}
+                      <div className="relative">
+                        <button onClick={() => setBulkActionMenu(bulkActionMenu === "manager" ? "" : "manager")} className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-white transition-colors flex items-center gap-1" style={{ color: T.primary }}>
+                          담당자 배정 <ChevronDown size={10} />
+                        </button>
+                        {bulkActionMenu === "manager" && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setBulkActionMenu("")} />
+                            <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg z-50 py-1 w-[120px]" style={{ borderColor: T.border }}>
+                              {managers.map((m) => (
+                                <button key={m} onClick={() => bulkChangeManager(m)} className="w-full text-left px-3 py-2 text-[0.75rem] text-[#444] hover:bg-[#F7F8FA] transition-colors">{m}</button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      {/* Delete */}
+                      <div className="relative">
+                        <button onClick={() => setBulkActionMenu(bulkActionMenu === "delete" ? "" : "delete")} className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-[#FEF2F2] transition-colors" style={{ color: T.danger }}>
+                          삭제
+                        </button>
+                        {bulkActionMenu === "delete" && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={() => setBulkActionMenu("")} />
+                            <div className="absolute top-full left-0 mt-1 bg-white border rounded-xl shadow-lg z-50 p-4 w-[220px]" style={{ borderColor: T.border }}>
+                              <p className="text-[0.8rem] text-[#1A1A1A] mb-1">선택한 {selectedIds.size}건을 삭제할까요?</p>
+                              <p className="text-[0.7rem] text-[#999] mb-3">이 작업은 되돌릴 수 없습니다.</p>
+                              <div className="flex items-center gap-2 justify-end">
+                                <button onClick={() => setBulkActionMenu("")} className="px-3 py-1.5 rounded-md text-[0.7rem] text-[#666] hover:bg-[#F7F8FA] transition-colors border" style={{ borderColor: T.border }}>취소</button>
+                                <button onClick={bulkDelete} className="px-3 py-1.5 rounded-md text-[0.7rem] text-white transition-colors" style={{ background: T.danger }}>삭제</button>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex-1" />
+                      <button onClick={() => { setSelectedIds(new Set()); setBulkActionMenu(""); }} className="text-[0.7rem] text-[#999] hover:text-[#666] transition-colors">선택 해제</button>
                     </div>
                   )}
 
@@ -3437,7 +3469,7 @@ function DealflowPageInner() {
                       <thead>
                         <tr style={{ background: "#FAFBFC" }}>
                           <th className="py-3 px-4 w-12 border-b" style={{ borderColor: T.border }}>
-                            <input type="checkbox" checked={selectedIds.size === filteredDeals.length && filteredDeals.length > 0} onChange={toggleAll} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
+                            <input type="checkbox" checked={selectedIds.size === paginatedDeals.length && paginatedDeals.length > 0} onChange={toggleAll} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                           </th>
                           {ALL_COLUMNS.filter((c) => visibleColumns.has(c.key)).map((h) => {
                             const sortIdx = sorts.findIndex((s) => s.field === h.key);
@@ -3484,7 +3516,7 @@ function DealflowPageInner() {
                             </td>
                           </tr>
                         ) : (
-                          groupedDeals.map((group) => {
+                          (groupBy ? groupedDeals : [{ key: "__all__", label: "", deals: paginatedDeals, totalAmount: 0 }]).map((group) => {
                             const isCollapsed = collapsedGroups.has(group.key);
                             const showGroupHeader = groupBy && group.key !== "__all__";
                             return (
@@ -3601,10 +3633,53 @@ function DealflowPageInner() {
                         ? `필터 결과 ${filteredDeals.length}건 (전체 ${customerDeals.length}건)`
                         : `전체 ${customerDeals.length}건`}
                       {groupBy && ` · ${groupedDeals.length}개 그룹`}
+                      {!groupBy && filteredDeals.length > PAGE_SIZE && ` · ${(safeCurrentPage - 1) * PAGE_SIZE + 1}-${Math.min(safeCurrentPage * PAGE_SIZE, filteredDeals.length)}건 표시`}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      <button className="w-8 h-8 rounded-lg text-[0.7rem] transition-colors" style={{ background: T.primary, color: "#fff" }}>1</button>
-                    </div>
+                    {!groupBy && totalPages > 1 && (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={safeCurrentPage <= 1}
+                          className="w-8 h-8 rounded-lg text-[0.7rem] flex items-center justify-center transition-colors border disabled:opacity-30"
+                          style={{ borderColor: T.border, color: "#666" }}
+                        >
+                          <ChevronLeft size={13} />
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter((p) => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                          .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                            if (idx > 0 && p - (arr[idx - 1]) > 1) acc.push("...");
+                            acc.push(p);
+                            return acc;
+                          }, [])
+                          .map((p, idx) =>
+                            p === "..." ? (
+                              <span key={`e${idx}`} className="w-6 text-center text-[0.65rem] text-[#BBB]">...</span>
+                            ) : (
+                              <button
+                                key={p}
+                                onClick={() => setCurrentPage(p)}
+                                className="w-8 h-8 rounded-lg text-[0.7rem] transition-colors"
+                                style={{
+                                  background: safeCurrentPage === p ? T.primary : "transparent",
+                                  color: safeCurrentPage === p ? "#fff" : "#666",
+                                  border: safeCurrentPage === p ? "none" : `1px solid ${T.border}`,
+                                }}
+                              >
+                                {p}
+                              </button>
+                            )
+                          )}
+                        <button
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={safeCurrentPage >= totalPages}
+                          className="w-8 h-8 rounded-lg text-[0.7rem] flex items-center justify-center transition-colors border disabled:opacity-30"
+                          style={{ borderColor: T.border, color: "#666" }}
+                        >
+                          <ChevronRightIcon size={13} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 )}
