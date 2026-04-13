@@ -471,14 +471,14 @@ const allWidgets: WidgetDef[] = [
   { id: "kpi-amount", name: "총 견적 금액", description: "전체 견적 금액 합계를 표시합니다", category: "kpi", icon: DollarSign, colSpan: 1 },
   { id: "kpi-winrate-amount", name: "수주율 (금액)", description: "금액 기준 수주 성공률을 표시합니다", category: "kpi", icon: TrendingUp, colSpan: 1 },
   { id: "kpi-active", name: "활성 고객", description: "현재 진행중인 고객 건수를 표시합니다", category: "kpi", icon: Activity, colSpan: 1 },
-  { id: "kpi-avg-cycle", name: "평균 영업 주기", description: "고객 등록부터 종료까지 평균 일수입니다", category: "kpi", icon: Clock, colSpan: 1 },
+  { id: "kpi-avg-cycle", name: "평균 고객 수명", description: "고객 등록부터 종료까지 평균 일수입니다", category: "kpi", icon: Clock, colSpan: 1 },
   { id: "kpi-at-risk", name: "위험 고객", description: "장기 미진행 또는 지연된 고객 수입니다", category: "kpi", icon: AlertTriangle, colSpan: 1 },
   { id: "kpi-new-month", name: "이달 신규", description: "이번 달 새로 생성된 고객 건수입니다", category: "kpi", icon: Plus, colSpan: 1 },
   { id: "funnel", name: "파이프라인 퍼널", description: "각 스테이지별 고객 분포를 막대 차트로 표시합니다", category: "chart", icon: Filter, colSpan: 4 },
   { id: "donut", name: "성공여부 분포", description: "고객의 성공/실패/진행중 비율을 도넛 차트로 표시합니다", category: "chart", icon: PieIcon, colSpan: 1 },
   { id: "trend", name: "월별 추이", description: "최근 6개월간 고객 수와 금액 추이를 꺾은선 그래프로 표시합니다", category: "chart", icon: TrendingUp, colSpan: 2 },
   { id: "stage-bar", name: "스테이지별 금액", description: "각 스테이지별 누적 금액을 가로 막대로 표시합니다", category: "chart", icon: BarChart3, colSpan: 2 },
-  { id: "performance", name: "담당자별 성과", description: "영업 담당자별 고객 수, 수주율, 금액을 테이블로 표시합니다", category: "table", icon: Users, colSpan: 2 },
+  { id: "performance", name: "담당자별 성과", description: "담당자별 고객 수, 수주율, 금액을 테이블로 표시합니다", category: "table", icon: Users, colSpan: 2 },
   { id: "recent-deals", name: "최근 고객 목록", description: "최근 등록된 고객 5건을 간략히 표시합니다", category: "table", icon: Table2, colSpan: 2 },
   { id: "memo", name: "메모", description: "자유롭게 텍스트 메모를 작성할 수 있습니다", category: "utility", icon: StickyNote, colSpan: 1 },
   { id: "shortcuts", name: "빠른 실행", description: "자주 사용하는 기능에 빠르게 접근합니다", category: "utility", icon: Zap, colSpan: 1 },
@@ -684,7 +684,7 @@ const SYNONYM_MAP: Record<string, string[]> = {
   "연락처": ["전화번호", "휴대폰", "핸드폰", "phone", "tel"],
   "email": ["이메일", "메일", "e-mail"],
   "금액": ["견적금액", "가격", "비용", "단가", "매출액"],
-  "영업담당": ["담당자", "매니저", "고객책임자", "영업사원"],
+  "고객담당": ["담당자", "매니저", "고객책임자", "영업사원"],
   "상태": ["진행상태", "단계", "스테이지", "stage"],
   "등록일자": ["문의 등록일", "날짜", "date", "등록일", "생성일"],
   "서비스": ["희망서비스", "제품", "상품", "품목"],
@@ -824,7 +824,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
     { name: "서비스", preview: "ERP 구축" },
     { name: "수량", preview: "120" },
     { name: "금액", preview: "32000000" },
-    { name: "영업담당", preview: "박지은" },
+    { name: "고객담당", preview: "박지은" },
     { name: "상태", preview: "견적서 발송" },
     { name: "등록일자", preview: "2026-03-15" },
   ], []);
@@ -1209,7 +1209,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
             <div className="w-16 h-16 rounded-full flex items-center justify-center mb-5" style={{ background: "#EBF5FF" }}>
               <FileSpreadsheet size={22} color={T.primary} />
             </div>
-            <h2 className="text-[22px] text-[#1A1A1A] mb-2">영업 데이터를 가져오세요</h2>
+            <h2 className="text-[22px] text-[#1A1A1A] mb-2">고객 데이터를 가져오세요</h2>
             <p className="text-[0.85rem] text-[#999] mb-8">기존 Excel 파일을 업로드하면 자동으로 고객 데이터가 생성됩니다.</p>
 
             <div
@@ -2777,7 +2777,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
       "kpi-amount":        { title: "총 견적 금액",    value: fmtAmt(totalAmt),   sub: "VAT 미포함",         trend: `수주 ${fmtAmt(wonAmt)}`,   trendColor: T.primary,    icon: DollarSign,   iconBg: "#EFF5F1" },
       "kpi-winrate-amount":{ title: "수주율 (금액)",   value: totalAmt > 0 ? `${Math.round((wonAmt / totalAmt) * 100)}%` : "0%", sub: `수주액 ${fmtAmt(wonAmt)}`, trend: `총 ${fmtAmt(totalAmt)}`, trendColor: T.primary, icon: TrendingUp, iconBg: "#EFF5F1" },
       "kpi-active":        { title: "활성 고객",        value: `${activeCount}건`,  sub: "진행중 고객",          trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#4A7B5A", icon: Activity, iconBg: "#EDF3EE" },
-      "kpi-avg-cycle":     { title: "평균 영업 주기", value: `${avgCycle}일`,     sub: "종료 계약 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#6B7280", icon: Clock,      iconBg: "#F3F4F6" },
+      "kpi-avg-cycle":     { title: "평균 고객 수명", value: `${avgCycle}일`,     sub: "종료 계약 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#6B7280", icon: Clock,      iconBg: "#F3F4F6" },
       "kpi-at-risk":       { title: "위험 고객",        value: `${atRisk}건`,       sub: "30일+ 미진행",       trend: activeCount > 0 ? `활성의 ${Math.round((atRisk / activeCount) * 100)}%` : "0%", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
       "kpi-new-month":     { title: "이달 신규",      value: `${newThisMonth}건`, sub: thisMonth,            trend: `전체의 ${total > 0 ? Math.round((newThisMonth / total) * 100) : 0}%`, trendColor: "#5B9170", icon: Plus, iconBg: "#EDF3EE" },
     };
@@ -2805,7 +2805,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     count: deals.filter((d) => d.stage === stage).length,
   }));
 
-  if (widgetId === "funnel") return <><p className="text-[0.85rem] text-[#1A1A1A] mb-4">영업 파이프라인 현황</p><FunnelBar data={funnelData} stageColorMap={stageColorMap} /></>;
+  if (widgetId === "funnel") return <><p className="text-[0.85rem] text-[#1A1A1A] mb-4">고객 라이프사이클 현황</p><FunnelBar data={funnelData} stageColorMap={stageColorMap} /></>;
 
   /* ── Donut data ── */
   const statusCounts: Record<string, number> = { 진행중: 0, 성공: 0, 실패: 0 };
@@ -4239,7 +4239,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       <div className="flex items-center justify-between px-8 py-4 bg-white border-b shrink-0" style={{ borderColor: T.border }}>
         <div>
           <p className="text-[0.7rem] text-[#BBB] mb-0.5">고객관리 &gt; CustomerFlow</p>
-          <h1 className="text-[24px] text-[#1A1A1A]">영업 관리</h1>
+          <h1 className="text-[24px] text-[#1A1A1A]">고객 관리</h1>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate("/settings/pipeline")} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="파이프라인 설정">
@@ -4658,7 +4658,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     </div>
                     <p className="text-[1.1rem] text-[#1A1A1A] mb-2">고객 데이터를 추가해보세요</p>
                     <p className="text-[0.8rem] text-[#999] mb-9 text-center leading-relaxed">
-                      고객 정보와 영업 기회를 등록하면 파이프라인을 한 눈에 관리할 수 있습니다.
+                      고객 정보와 고객 정보를 등록하면 파이프라인을 한 눈에 관리할 수 있습니다.
                     </p>
                     <div className="flex items-stretch gap-4 w-full max-w-[512px]">
                       <button
