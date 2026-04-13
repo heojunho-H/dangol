@@ -3651,6 +3651,27 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     }
   }, [customFields]);
 
+  const startBlankTable = useCallback(() => {
+    setVisibleColumns(new Set(["company"]));
+    setActiveView("table");
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    const blank: Customer = {
+      id,
+      company: "",
+      stage: pipelineStages[0]?.name || "온보딩",
+      contact: "",
+      position: "",
+      service: "",
+      quantity: 0,
+      amount: "",
+      manager: "",
+      status: "온보딩",
+      date: new Date().toISOString().slice(0, 10),
+    };
+    setCustomerDeals([blank]);
+    setEditingCell({ id, key: "company" });
+  }, [pipelineStages]);
+
   const addBlankDeal = useCallback(() => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
     const blank: Customer = {
@@ -4454,7 +4475,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     </p>
                     <div className="flex items-stretch gap-4 w-full max-w-[512px]">
                       <button
-                        onClick={() => { setActiveView("table"); addBlankDeal(); }}
+                        onClick={startBlankTable}
                         className="flex-1 flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all hover:border-[#1A472A] hover:bg-[#FAFDFB]"
                         style={{ borderColor: T.primary, background: "#FAFDFB" }}
                       >
@@ -4462,8 +4483,8 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           <Plus size={16} color="#fff" />
                         </div>
                         <div>
-                          <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">직접 추가</p>
-                          <p className="text-[0.65rem] text-[#999]">테이블에서 바로 입력</p>
+                          <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">빈 테이블에서 시작</p>
+                          <p className="text-[0.65rem] text-[#999]">컬럼부터 직접 정의</p>
                         </div>
                       </button>
                       <button
@@ -4917,6 +4938,16 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                       </tbody>
                     </table>
                   </div>
+                  {visibleColumns.size <= 1 && customerDeals.length <= 1 && (
+                    <div className="px-4 py-2.5 text-[0.65rem] text-[#999] border-t flex items-center gap-3 flex-wrap" style={{ borderColor: T.border, background: "#FAFDFB" }}>
+                      <span>💡</span>
+                      <span><b className="text-[#1A472A]">셀 더블클릭</b>으로 값 입력</span>
+                      <span className="text-[#DDD]">·</span>
+                      <span>우측 <b className="text-[#1A472A]">+</b>로 컬럼 추가</span>
+                      <span className="text-[#DDD]">·</span>
+                      <span>헤더 <b className="text-[#1A472A]">우클릭</b>으로 이름 변경/삭제</span>
+                    </div>
+                  )}
 
                   {/* Footer */}
                   <div className="flex items-center justify-between px-5 py-3 border-t" style={{ borderColor: T.border, background: "#FAFBFC" }}>
