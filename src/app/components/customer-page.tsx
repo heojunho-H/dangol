@@ -2168,7 +2168,17 @@ type DrawerTab = "basic" | "activity" | "files";
 
 interface ActivityLog {
   id: string;
-  type: "stage_change" | "memo" | "email" | "call" | "file" | "created";
+  type:
+    | "created"
+    | "lifecycle_change"
+    | "health_change"
+    | "contract_renewed"
+    | "contract_expired"
+    | "upsell_proposed"
+    | "memo"
+    | "email"
+    | "call"
+    | "file";
   title: string;
   detail: string;
   date: string;
@@ -2178,7 +2188,7 @@ interface ActivityLog {
 interface AttachedFile {
   id: string;
   name: string;
-  type: "견적서" | "계약서" | "제안서" | "기타";
+  type: "계약서" | "갱신서" | "연장계약서" | "미팅노트" | "기타";
   size: string;
   date: string;
 }
@@ -2186,34 +2196,39 @@ interface AttachedFile {
 function generateActivityLogs(deal: Customer): ActivityLog[] {
   return [
     { id: "a1", type: "created", title: "고객 등록됨", detail: `${deal.company} 고객이 생성되었습니다`, date: deal.date, user: deal.manager },
-    { id: "a2", type: "stage_change", title: `스테이지 변경: 신규 → ${deal.stage}`, detail: "파이프라인 스테이지가 변경되었습니다", date: deal.date, user: deal.manager },
-    { id: "a3", type: "call", title: `${deal.contact}에게 전화`, detail: "초기 컨택 완료. 서비스 소개 진행", date: deal.date, user: deal.manager },
-    { id: "a4", type: "email", title: "견적서 이메일 발송", detail: `${deal.contact}에게 견적서를 발송했습니다`, date: deal.date, user: deal.manager },
-    { id: "a5", type: "memo", title: "메모 추가", detail: "초기 미팅 후 긍정적 반응. 다음 주 데모 예정.", date: deal.date, user: deal.manager },
+    { id: "a2", type: "lifecycle_change", title: `라이프사이클 변경: 온보딩 → ${deal.stage}`, detail: "고객 라이프사이클 단계가 변경되었습니다", date: deal.date, user: deal.manager },
+    { id: "a3", type: "health_change", title: `헬스 스코어 업데이트: ${deal.healthScore ?? "-"}`, detail: "최근 활동/계약 기반 헬스 스코어가 갱신되었습니다", date: deal.date, user: deal.manager },
+    { id: "a4", type: "call", title: `${deal.contact} 성공 미팅`, detail: "분기 리뷰 통화 완료. 만족도 양호.", date: deal.date, user: deal.manager },
+    { id: "a5", type: "memo", title: "메모 추가", detail: "추가 모듈 관심 표명. 업셀 기회 검토.", date: deal.date, user: deal.manager },
   ];
 }
 
 function generateFiles(deal: Customer): AttachedFile[] {
   return [
-    { id: "f1", name: `${deal.company}_견적서_v1.pdf`, type: "견적서", size: "2.4 MB", date: deal.date },
-    { id: "f2", name: `${deal.company}_제안서.pptx`, type: "제안서", size: "5.1 MB", date: deal.date },
+    { id: "f1", name: `${deal.company}_계약서_v1.pdf`, type: "계약서", size: "2.4 MB", date: deal.date },
+    { id: "f2", name: `${deal.company}_미팅노트.docx`, type: "미팅노트", size: "180 KB", date: deal.date },
   ];
 }
 
 const ACTIVITY_ICONS: Record<ActivityLog["type"], { icon: typeof Phone; color: string; bg: string }> = {
-  stage_change: { icon: ArrowRight, color: "#1A472A", bg: "#EFF5F1" },
-  memo: { icon: StickyNote, color: "#6B7280", bg: "#F3F4F6" },
-  email: { icon: Mail, color: "#4A7B5A", bg: "#EDF3EE" },
-  call: { icon: Phone, color: "#4A7B5A", bg: "#EDF3EE" },
-  file: { icon: FileSpreadsheet, color: "#6B7280", bg: "#F3F4F6" },
-  created: { icon: Plus, color: "#1A472A", bg: "#EFF5F1" },
+  created:           { icon: Plus,           color: "#1A472A", bg: "#EFF5F1" },
+  lifecycle_change:  { icon: ArrowRight,     color: "#1A472A", bg: "#EFF5F1" },
+  health_change:     { icon: Activity,       color: "#4A7B5A", bg: "#EDF3EE" },
+  contract_renewed:  { icon: RefreshCw,      color: "#1A472A", bg: "#EFF5F1" },
+  contract_expired:  { icon: AlertTriangle,  color: "#DC2626", bg: "#FEF2F2" },
+  upsell_proposed:   { icon: Sparkles,       color: "#8B7355", bg: "#F7F4EF" },
+  memo:              { icon: StickyNote,     color: "#6B7280", bg: "#F3F4F6" },
+  email:             { icon: Mail,           color: "#4A7B5A", bg: "#EDF3EE" },
+  call:              { icon: Phone,          color: "#4A7B5A", bg: "#EDF3EE" },
+  file:              { icon: FileSpreadsheet, color: "#6B7280", bg: "#F3F4F6" },
 };
 
 const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
-  "견적서": { bg: "#EFF5F1", color: "#1A472A" },
-  "계약서": { bg: "#F1F5F9", color: "#475569" },
-  "제안서": { bg: "#F7F4EF", color: "#8B7355" },
-  "기타": { bg: "#F3F4F6", color: "#6B7280" },
+  "계약서":     { bg: "#F1F5F9", color: "#475569" },
+  "갱신서":     { bg: "#EFF5F1", color: "#1A472A" },
+  "연장계약서": { bg: "#EDF3EE", color: "#4A7B5A" },
+  "미팅노트":   { bg: "#F7F4EF", color: "#8B7355" },
+  "기타":       { bg: "#F3F4F6", color: "#6B7280" },
 };
 
 function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields }: { deal: Customer; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void; customFields: CustomField[] }) {
@@ -2565,9 +2580,10 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
                   const added: AttachedFile[] = Array.from(list).map((f, i) => {
                     const ext = f.name.split(".").pop()?.toLowerCase() || "";
                     const type: AttachedFile["type"] =
-                      f.name.includes("견적") ? "견적서" :
+                      f.name.includes("연장") ? "연장계약서" :
+                      f.name.includes("갱신") ? "갱신서" :
                       f.name.includes("계약") ? "계약서" :
-                      f.name.includes("제안") ? "제안서" : "기타";
+                      f.name.includes("미팅") || f.name.includes("노트") ? "미팅노트" : "기타";
                     const sizeMb = (f.size / (1024 * 1024)).toFixed(1);
                     return {
                       id: `f-${Date.now()}-${i}`,
@@ -2631,7 +2647,7 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
               <div className="flex flex-col items-center py-10 text-center">
                 <FileSpreadsheet size={24} color="#DDD" className="mb-3" />
                 <p className="text-[0.75rem] text-[#999]">첨부된 파일이 없습니다</p>
-                <p className="text-[0.65rem] text-[#CCC] mt-1">견적서, 계약서, 제안서 등을 추가하세요</p>
+                <p className="text-[0.65rem] text-[#CCC] mt-1">계약서, 갱신서, 미팅노트 등을 추가하세요</p>
               </div>
             )}
           </div>
