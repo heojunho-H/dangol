@@ -26,6 +26,13 @@ const DEFAULT_FIELDS = [
   { key: "memo", label: "메모", type: "text", required: false, locked: false, sortOrder: 12 },
 ];
 
+const DEFAULT_LIFECYCLE_STAGES = [
+  { name: "온보딩", color: "#3B82F6", type: "ONBOARDING", sortOrder: 0 },
+  { name: "활성",   color: "#10B981", type: "ACTIVE",     sortOrder: 1 },
+  { name: "휴면",   color: "#F59E0B", type: "DORMANT",    sortOrder: 2 },
+  { name: "이탈",   color: "#9CA3AF", type: "CHURNED",    sortOrder: 3 },
+];
+
 const DEFAULT_VIEWS = [
   { name: "전체 딜", viewType: "table" },
   { name: "파이프라인", viewType: "kanban" },
@@ -35,6 +42,10 @@ const DEFAULT_VIEWS = [
 export async function seedWorkspace(workspaceId: string): Promise<void> {
   await prisma.pipelineStage.createMany({
     data: DEFAULT_STAGES.map((s) => ({ ...s, workspaceId })),
+  });
+
+  await prisma.customerLifecycleStage.createMany({
+    data: DEFAULT_LIFECYCLE_STAGES.map((s) => ({ ...s, workspaceId })),
   });
 
   await prisma.customField.createMany({

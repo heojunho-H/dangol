@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { buildDealWhere, buildDealOrderBy } from "../services/deal-filters.js";
+import { convertDealToCustomer } from "../services/customer-conversion.js";
 
 export const dealsRouter = Router();
 dealsRouter.use(authMiddleware);
@@ -264,6 +265,14 @@ dealsRouter.patch("/:id", async (req: Request, res: Response, next: NextFunction
       },
     });
 
+    if (deal.status === "WON" && existing.status !== "WON") {
+      try {
+        await convertDealToCustomer(deal.id);
+      } catch (e) {
+        console.error("convertDealToCustomer failed", e);
+      }
+    }
+
     res.json(deal);
   } catch (err) {
     next(err);
@@ -331,6 +340,27 @@ dealsRouter.patch(
         },
       });
 
+      // Auto-convert to customer when newly WON
+      if (newStatus === "WON" && existing.status !== "WON") {
+        try {
+          const { customerId, reused } = await convertDealToCustomer(deal.id);
+          await prisma.activityLog.create({
+            data: {
+              workspaceId: req.workspaceId,
+              dealId: deal.id,
+              type: "customer_converted",
+              title: reused
+                ? `기존 고객에 계약 추가됨`
+                : `신규 고객으로 자동 등록됨`,
+              detail: customerId,
+              userId: req.userId,
+            },
+          });
+        } catch (e) {
+          console.error("convertDealToCustomer failed", e);
+        }
+      }
+
       res.json(deal);
     } catch (err) {
       next(err);
@@ -381,6 +411,16 @@ dealsRouter.post(
         where: { id: { in: ids }, workspaceId: req.workspaceId },
         data: updateData,
       });
+
+      if (data.status === "WON") {
+        for (const id of ids) {
+          try {
+            await convertDealToCustomer(id);
+          } catch (e) {
+            console.error("convertDealToCustomer failed", id, e);
+          }
+        }
+      }
 
       res.json({ updated: result.count });
     } catch (err) {

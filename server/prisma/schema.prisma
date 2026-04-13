@@ -25,6 +25,8 @@ model Workspace {
   widgetConfigs  WidgetConfig[]
   customers      Customer[]
   chatSessions   ChatSession[]
+  lifecycleStages CustomerLifecycleStage[]
+  contracts       Contract[]
 }
 
 // ─── Auth ───
@@ -83,6 +85,9 @@ model Deal {
 
   customFieldValues String @default("{}") // JSON string
 
+  customerId String?
+  customer   Customer? @relation("CustomerSourceDeals", fields: [customerId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -93,6 +98,7 @@ model Deal {
   @@index([workspaceId, stageId])
   @@index([workspaceId, status])
   @@index([workspaceId, date])
+  @@index([customerId])
 }
 
 // ─── Pipeline Stages ───
@@ -242,10 +248,58 @@ model Customer {
   email       String   @default("")
   phone       String   @default("")
   location    String   @default("")
+
+  lifecycleStageId String?
+  lifecycleStage   CustomerLifecycleStage? @relation(fields: [lifecycleStageId], references: [id])
+  healthScore      Int     @default(70)
+  customFieldValues String @default("{}") // JSON
+
+  sourceDeals Deal[]     @relation("CustomerSourceDeals")
+  contracts   Contract[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([workspaceId])
+  @@index([workspaceId, lifecycleStageId])
+}
+
+// ─── Customer Lifecycle Stages ───
+
+model CustomerLifecycleStage {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  name        String
+  color       String   @default("#3B82F6")
+  type        String   @default("ACTIVE") // ONBOARDING, ACTIVE, DORMANT, CHURNED
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customers Customer[]
+
+  @@index([workspaceId])
+}
+
+// ─── Contracts ───
+
+model Contract {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  name        String
+  amount      Int      @default(0) // 만원
+  status      String   @default("ACTIVE") // ACTIVE, RENEWED, EXPIRED, CHURNED
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([workspaceId])
+  @@index([customerId])
 }
 
 // ─── Chat ───
