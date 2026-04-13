@@ -128,7 +128,7 @@ function dateRangeLabel(dr: DateRange): string {
   if (dr.to) return `~ ${dr.to.slice(5)}`;
   return "기간 선택";
 }
-function filterByDateRange(deals: Deal[], dr: DateRange): Deal[] {
+function filterByDateRange(deals: Customer[], dr: DateRange): Customer[] {
   if (dr.preset === "all") return deals;
   if (!dr.from && !dr.to) return deals;
   return deals.filter((d) => {
@@ -226,7 +226,7 @@ const GROUPABLE_FIELDS: { key: GroupByField; label: string }[] = [
 ];
 
 /* helper: get unique values for a field from deals */
-function uniqueValues(deals: Deal[], field: string): string[] {
+function uniqueValues(deals: Customer[], field: string): string[] {
   const set = new Set<string>();
   deals.forEach((d) => {
     const v = String(d[field] ?? "");
@@ -236,7 +236,7 @@ function uniqueValues(deals: Deal[], field: string): string[] {
 }
 
 /* helper: apply filters */
-function applyFilters(deals: Deal[], filters: FilterRule[], searchQuery: string): Deal[] {
+function applyFilters(deals: Customer[], filters: FilterRule[], searchQuery: string): Customer[] {
   let result = deals;
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -292,7 +292,7 @@ function applyFilters(deals: Deal[], filters: FilterRule[], searchQuery: string)
 }
 
 /* helper: apply sorts */
-function applySorts(deals: Deal[], sorts: SortRule[]): Deal[] {
+function applySorts(deals: Customer[], sorts: SortRule[]): Customer[] {
   if (sorts.length === 0) return deals;
   return [...deals].sort((a, b) => {
     for (const s of sorts) {
@@ -318,13 +318,13 @@ function applySorts(deals: Deal[], sorts: SortRule[]): Deal[] {
 interface DealGroup {
   key: string;
   label: string;
-  deals: Deal[];
+  deals: Customer[];
   totalAmount: number;
 }
 
-function groupDeals(deals: Deal[], groupBy: GroupByField): DealGroup[] {
+function groupDeals(deals: Customer[], groupBy: GroupByField): DealGroup[] {
   if (!groupBy) return [{ key: "__all__", label: "", deals, totalAmount: deals.reduce((s, d) => s + parseAmt(d.amount), 0) }];
-  const map = new Map<string, Deal[]>();
+  const map = new Map<string, Customer[]>();
   deals.forEach((d) => {
     const key = String(d[groupBy] ?? "미지정");
     if (!map.has(key)) map.set(key, []);
@@ -387,61 +387,66 @@ const FIELD_TYPE_ICONS: Record<FieldType, string> = {
 };
 
 const DEFAULT_FIELDS: CustomField[] = [
-  { id: "f1",  key: "company",  label: "기업명",           type: "text",    required: true,  locked: true,  visible: true },
-  { id: "f2",  key: "stage",    label: "진행상태",         type: "select",  required: false, locked: false, visible: true, options: [] },
-  { id: "f3",  key: "contact",  label: "담당자",           type: "text",    required: false, locked: false, visible: true },
-  { id: "f4",  key: "position", label: "직책",             type: "text",    required: false, locked: false, visible: false },
-  { id: "f5",  key: "service",  label: "희망서비스",       type: "text",    required: false, locked: false, visible: true },
-  { id: "f6",  key: "amount",   label: "견적금액(VAT미포함)", type: "number",  required: false, locked: false, visible: true },
-  { id: "f7",  key: "quantity", label: "총수량",           type: "number",  required: false, locked: false, visible: true },
-  { id: "f8",  key: "manager",  label: "고객책임자",       type: "person",  required: false, locked: false, visible: true },
-  { id: "f9",  key: "status",   label: "성공여부",         type: "select",  required: false, locked: false, visible: true, options: ["진행중", "성공", "실패"] },
-  { id: "f10", key: "date",     label: "등록일",           type: "date",    required: false, locked: false, visible: true },
-  { id: "f11", key: "phone",    label: "전화번호",         type: "phone",   required: false, locked: false, visible: false },
-  { id: "f12", key: "email",    label: "이메일",           type: "email",   required: false, locked: false, visible: false },
-  { id: "f13", key: "memo",     label: "비고",             type: "text",    required: false, locked: false, visible: false },
+  { id: "f1",  key: "company",      label: "고객사",           type: "text",   required: true,  locked: true,  visible: true },
+  { id: "f2",  key: "stage",        label: "라이프사이클",     type: "select", required: false, locked: false, visible: true, options: ["온보딩", "활성", "휴면", "이탈"] },
+  { id: "f3",  key: "contact",      label: "담당자",           type: "text",   required: false, locked: false, visible: true },
+  { id: "f4",  key: "position",     label: "직책",             type: "text",   required: false, locked: false, visible: false },
+  { id: "f6",  key: "amount",       label: "계약 금액",        type: "number", required: false, locked: false, visible: true },
+  { id: "f14", key: "healthScore",  label: "헬스 스코어",      type: "number", required: false, locked: false, visible: true },
+  { id: "f15", key: "ltv",          label: "누적 LTV",         type: "number", required: false, locked: false, visible: true },
+  { id: "f16", key: "renewalDate",  label: "갱신 예정일",      type: "date",   required: false, locked: false, visible: true },
+  { id: "f8",  key: "manager",      label: "고객 책임자",      type: "person", required: false, locked: false, visible: true },
+  { id: "f9",  key: "status",       label: "상태",             type: "select", required: false, locked: false, visible: false, options: ["온보딩", "활성", "휴면", "이탈"] },
+  { id: "f10", key: "date",         label: "등록일",           type: "date",   required: false, locked: false, visible: true },
+  { id: "f11", key: "phone",        label: "전화번호",         type: "phone",  required: false, locked: false, visible: false },
+  { id: "f12", key: "email",        label: "이메일",           type: "email",  required: false, locked: false, visible: false },
+  { id: "f13", key: "memo",         label: "비고",             type: "text",   required: false, locked: false, visible: false },
 ];
 
 /* ─── SAMPLE DATA ─── */
 const statusColors: Record<string, { bg: string; text: string }> = {
-  진행중: { bg: "#F1F5F9", text: "#64748B" },
-  성공: { bg: "#ECFDF5", text: "#059669" },
-  실패: { bg: "#FEF2F2", text: "#DC2626" },
+  온보딩: { bg: "#EFF6FF", text: "#3B82F6" },
+  활성:   { bg: "#ECFDF5", text: "#10B981" },
+  휴면:   { bg: "#FFFBEB", text: "#F59E0B" },
+  이탈:   { bg: "#F3F4F6", text: "#6B7280" },
 };
 
-interface Deal {
+interface Customer {
   id: number;
   company: string;
-  stage: string;
+  stage: string; // lifecycle stage: 온보딩 | 활성 | 휴면 | 이탈
   contact: string;
   position: string;
   service: string;
   quantity: number;
-  amount: string;
+  amount: string;       // contract value (formatted)
+  healthScore?: number; // 0-100
+  ltv?: string;         // lifetime value (formatted)
+  renewalDate?: string; // YYYY-MM-DD
   manager: string;
-  status: string;
+  status: string;       // mirror of lifecycle stage
   date: string;
   [key: string]: unknown;
 }
 
 
-/* ─── SAMPLE DEALS (onboarding 완료 시 로드) ─── */
-const SAMPLE_DEALS: Deal[] = [
-  { id: 1,  company: "(주)테크솔루션",     stage: "활성",    contact: "김영호", position: "이사",  service: "ERP 구축",            quantity: 120, amount: "₩3,200만", manager: "박지은", status: "성공",  date: "2026-03-15" },
-  { id: 2,  company: "스마트팩토리(주)",   stage: "활성",    contact: "이수진", position: "부장",  service: "MES 도입",            quantity: 85,  amount: "₩2,800만", manager: "김태현", status: "진행중", date: "2026-03-18" },
-  { id: 3,  company: "(주)글로벌트레이드", stage: "온보딩", contact: "박민수", position: "과장",  service: "SCM 컨설팅",          quantity: 200, amount: "₩5,500만", manager: "이서연", status: "진행중", date: "2026-03-20" },
-  { id: 4,  company: "디지털커머스(주)",   stage: "온보딩",        contact: "최지아", position: "대리",  service: "CRM 솔루션",          quantity: 50,  amount: "₩1,200만", manager: "박지은", status: "진행중", date: "2026-03-22" },
-  { id: 5,  company: "(주)바이오헬스",     stage: "온보딩",    contact: "정대현", position: "팀장",  service: "데이터 분석",         quantity: 30,  amount: "₩980만",  manager: "김태현", status: "진행중", date: "2026-03-25" },
-  { id: 6,  company: "에너지플러스(주)",   stage: "활성",    contact: "한소희", position: "차장",  service: "IoT 플랫폼",          quantity: 150, amount: "₩4,100만", manager: "이서연", status: "진행중", date: "2026-03-28" },
-  { id: 7,  company: "(주)푸드테크",       stage: "온보딩",contact: "오재석", position: "과장",  service: "POS 시스템",          quantity: 90,  amount: "₩1,500만", manager: "박지은", status: "진행중", date: "2026-04-01" },
-  { id: 8,  company: "클라우드원(주)",     stage: "활성",    contact: "윤미래", position: "부장",  service: "클라우드 마이그레이션",quantity: 40,  amount: "₩6,200만", manager: "김태현", status: "성공",  date: "2026-04-03" },
-  { id: 9,  company: "(주)핀테크랩",       stage: "온보딩", contact: "서준혁", position: "이사",  service: "결제 시스템",         quantity: 60,  amount: "₩2,300만", manager: "이서연", status: "진행중", date: "2026-04-05" },
-  { id: 10, company: "모빌리티솔루션(주)", stage: "온보딩",        contact: "강하은", position: "대리",  service: "차량 관제 시스템",    quantity: 200, amount: "₩8,500만", manager: "박지은", status: "진행중", date: "2026-04-07" },
-  { id: 11, company: "(주)헬스케어AI",     stage: "활성",    contact: "윤성민", position: "팀장",  service: "의료 AI 솔루션",      quantity: 1,   amount: "₩1.2억",   manager: "김태현", status: "진행중", date: "2026-03-10" },
-  { id: 12, company: "리테일허브(주)",     stage: "활성",    contact: "조은지", position: "과장",  service: "POS 통합 시스템",     quantity: 300, amount: "₩4,700만", manager: "이서연", status: "성공",  date: "2026-02-28" },
-  { id: 13, company: "(주)스마트물류",     stage: "온보딩",    contact: "임재현", position: "부장",  service: "WMS 도입",            quantity: 80,  amount: "₩3,400만", manager: "박지은", status: "실패",  date: "2026-02-14" },
-  { id: 14, company: "에듀테크파트너(주)", stage: "온보딩",contact: "노지수", position: "이사",  service: "LMS 구축",            quantity: 500, amount: "₩9,800만", manager: "김태현", status: "진행중", date: "2026-04-08" },
-  { id: 15, company: "(주)그린에너지",     stage: "활성",    contact: "배소연", position: "차장",  service: "에너지 모니터링",     quantity: 100, amount: "₩2,100만", manager: "이서연", status: "진행중", date: "2026-01-20" },
+/* ─── SAMPLE CUSTOMERS (onboarding 완료 시 로드) ─── */
+const SAMPLE_DEALS: Customer[] = [
+  { id: 1,  company: "(주)테크솔루션",     stage: "활성",   contact: "김영호", position: "이사",  service: "",          quantity: 0, amount: "₩3,200만", healthScore: 88, ltv: "₩1.2억", renewalDate: "2026-09-15", manager: "박지은", status: "활성",   date: "2025-03-15" },
+  { id: 2,  company: "스마트팩토리(주)",   stage: "활성",   contact: "이수진", position: "부장",  service: "",          quantity: 0, amount: "₩2,800만", healthScore: 76, ltv: "₩8,400만", renewalDate: "2026-08-18", manager: "김태현", status: "활성",   date: "2025-08-18" },
+  { id: 3,  company: "(주)글로벌트레이드", stage: "온보딩", contact: "박민수", position: "과장",  service: "",          quantity: 0, amount: "₩5,500만", healthScore: 65, ltv: "₩5,500만", renewalDate: "2027-03-20", manager: "이서연", status: "온보딩", date: "2026-03-20" },
+  { id: 4,  company: "디지털커머스(주)",   stage: "온보딩", contact: "최지아", position: "대리",  service: "",          quantity: 0, amount: "₩1,200만", healthScore: 72, ltv: "₩1,200만", renewalDate: "2027-03-22", manager: "박지은", status: "온보딩", date: "2026-03-22" },
+  { id: 5,  company: "(주)바이오헬스",     stage: "휴면",   contact: "정대현", position: "팀장",  service: "",          quantity: 0, amount: "₩980만",   healthScore: 42, ltv: "₩2,940만", renewalDate: "2026-05-25", manager: "김태현", status: "휴면",   date: "2024-09-25" },
+  { id: 6,  company: "에너지플러스(주)",   stage: "활성",   contact: "한소희", position: "차장",  service: "",          quantity: 0, amount: "₩4,100만", healthScore: 91, ltv: "₩9,200만", renewalDate: "2026-09-28", manager: "이서연", status: "활성",   date: "2025-09-28" },
+  { id: 7,  company: "(주)푸드테크",       stage: "온보딩", contact: "오재석", position: "과장",  service: "",          quantity: 0, amount: "₩1,500만", healthScore: 68, ltv: "₩1,500만", renewalDate: "2027-04-01", manager: "박지은", status: "온보딩", date: "2026-04-01" },
+  { id: 8,  company: "클라우드원(주)",     stage: "활성",   contact: "윤미래", position: "부장",  service: "",          quantity: 0, amount: "₩6,200만", healthScore: 84, ltv: "₩1.4억", renewalDate: "2026-10-03", manager: "김태현", status: "활성",   date: "2024-10-03" },
+  { id: 9,  company: "(주)핀테크랩",       stage: "활성",   contact: "서준혁", position: "이사",  service: "",          quantity: 0, amount: "₩2,300만", healthScore: 79, ltv: "₩4,600만", renewalDate: "2026-07-05", manager: "이서연", status: "활성",   date: "2025-07-05" },
+  { id: 10, company: "모빌리티솔루션(주)", stage: "온보딩", contact: "강하은", position: "대리",  service: "",          quantity: 0, amount: "₩8,500만", healthScore: 71, ltv: "₩8,500만", renewalDate: "2027-04-07", manager: "박지은", status: "온보딩", date: "2026-04-07" },
+  { id: 11, company: "(주)헬스케어AI",     stage: "활성",   contact: "윤성민", position: "팀장",  service: "",          quantity: 0, amount: "₩1.2억",  healthScore: 93, ltv: "₩2.8억", renewalDate: "2026-09-10", manager: "김태현", status: "활성",   date: "2024-03-10" },
+  { id: 12, company: "리테일허브(주)",     stage: "활성",   contact: "조은지", position: "과장",  service: "",          quantity: 0, amount: "₩4,700만", healthScore: 82, ltv: "₩1.1억", renewalDate: "2026-08-28", manager: "이서연", status: "활성",   date: "2024-08-28" },
+  { id: 13, company: "(주)스마트물류",     stage: "이탈",   contact: "임재현", position: "부장",  service: "",          quantity: 0, amount: "₩3,400만", healthScore: 28, ltv: "₩3,400만", renewalDate: "",           manager: "박지은", status: "이탈",   date: "2024-02-14" },
+  { id: 14, company: "에듀테크파트너(주)", stage: "활성",   contact: "노지수", position: "이사",  service: "",          quantity: 0, amount: "₩9,800만", healthScore: 87, ltv: "₩1.9억", renewalDate: "2026-10-08", manager: "김태현", status: "활성",   date: "2025-04-08" },
+  { id: 15, company: "(주)그린에너지",     stage: "휴면",   contact: "배소연", position: "차장",  service: "",          quantity: 0, amount: "₩2,100만", healthScore: 48, ltv: "₩2,100만", renewalDate: "2026-07-20", manager: "이서연", status: "휴면",   date: "2025-01-20" },
 ];
 
 /* ─── WIDGET DEFINITIONS ─── */
@@ -514,7 +519,7 @@ interface DealAnalysis {
   hasManagerData: boolean;
 }
 
-function analyzeDealData(deals: Deal[]): DealAnalysis {
+function analyzeDealData(deals: Customer[]): DealAnalysis {
   const stages = new Set(deals.map(d => d.stage));
   const managers = new Set(deals.map(d => d.manager).filter(Boolean));
   const services = new Set(deals.map(d => d.service).filter(Boolean));
@@ -788,7 +793,7 @@ function computeSmartMappings(
 }
 
 /* ─── ONBOARDING FLOW ─── */
-function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineStages }: { onComplete: (deals: Deal[], recommendedWidgets?: string[]) => void; customFields: CustomField[]; setCustomFields: React.Dispatch<React.SetStateAction<CustomField[]>>; pipelineStages: PipelineStage[] }) {
+function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineStages }: { onComplete: (deals: Customer[], recommendedWidgets?: string[]) => void; customFields: CustomField[]; setCustomFields: React.Dispatch<React.SetStateAction<CustomField[]>>; pipelineStages: PipelineStage[] }) {
   const [step, setStep] = useState(1);
   const [fileSelected, setFileSelected] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -809,7 +814,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
   const [stageAliases, setStageAliases] = useState<Record<string, string>>({});
 
   /* ── Ref holding the deals we'll analyze in step 3 (real or fallback) ── */
-  const dealsForAnalysisRef = useRef<Deal[]>(SAMPLE_DEALS);
+  const dealsForAnalysisRef = useRef<Customer[]>(SAMPLE_DEALS);
 
   /* ── Static fallback (used only if user proceeds without a real file, for demo) ── */
   const FALLBACK_EXCEL_COLUMNS = useMemo(() => [
@@ -911,8 +916,8 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
     return { unknowns, stageColumn };
   }, [parsedSheet, customFields, mappings, pipelineStages]);
 
-  /* ── Build Deal[] from parsed sheet + current mappings (used by both AI analysis and commit) ── */
-  const buildDealsFromSheet = useCallback((): Deal[] => {
+  /* ── Build Customer[] from parsed sheet + current mappings (used by both AI analysis and commit) ── */
+  const buildDealsFromSheet = useCallback((): Customer[] => {
     if (!parsedSheet) return SAMPLE_DEALS;
     const fieldMappings = buildFieldMappings();
     const firstActive = pipelineStages.find((s) => s.type === "active");
@@ -1841,10 +1846,10 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
 }
 
 /* ─── WEB FORM SAMPLE DEALS ─── */
-const WEB_FORM_SAMPLE_DEALS: Deal[] = [
-  { id: 101, company: "(주)넥스트커머스", stage: "온보딩", contact: "김서현", position: "마케팅 팀장", service: "CRM 솔루션 도입 문의", quantity: 1, amount: "₩0", manager: "박지은", status: "진행중", date: "2026-04-12" },
-  { id: 102, company: "스마트로직(주)", stage: "온보딩", contact: "이동훈", position: "대표이사", service: "ERP 연동 문의", quantity: 1, amount: "₩0", manager: "김태현", status: "진행중", date: "2026-04-12" },
-  { id: 103, company: "(주)블루오션테크", stage: "온보딩", contact: "정하나", position: "기획팀", service: "데이터 분석 플랫폼 문의", quantity: 1, amount: "₩0", manager: "이서연", status: "진행중", date: "2026-04-11" },
+const WEB_FORM_SAMPLE_DEALS: Customer[] = [
+  { id: 101, company: "(주)넥스트커머스", stage: "온보딩", contact: "김서현", position: "마케팅 팀장", service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "박지은", status: "온보딩", date: "2026-04-12" },
+  { id: 102, company: "스마트로직(주)",   stage: "온보딩", contact: "이동훈", position: "대표이사",   service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "김태현", status: "온보딩", date: "2026-04-12" },
+  { id: 103, company: "(주)블루오션테크", stage: "온보딩", contact: "정하나", position: "기획팀",     service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "이서연", status: "온보딩", date: "2026-04-11" },
 ];
 
 /* ─── WEB FORM ONBOARDING FLOW ─── */
@@ -1859,7 +1864,7 @@ const DEFAULT_WEB_FORM_FIELDS: WebFormField[] = [
   { key: "message", label: "문의내용", required: false, locked: false },
 ];
 
-function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void }) {
+function WebFormOnboarding({ onComplete }: { onComplete: (deals: Customer[]) => void }) {
   const [step, setStep] = useState(1);
   const [formName, setFormName] = useState("홈페이지 문의하기");
   const [fields, setFields] = useState<WebFormField[]>(DEFAULT_WEB_FORM_FIELDS);
@@ -2221,7 +2226,7 @@ interface AttachedFile {
   date: string;
 }
 
-function generateActivityLogs(deal: Deal): ActivityLog[] {
+function generateActivityLogs(deal: Customer): ActivityLog[] {
   return [
     { id: "a1", type: "created", title: "고객 등록됨", detail: `${deal.company} 고객이 생성되었습니다`, date: deal.date, user: deal.manager },
     { id: "a2", type: "stage_change", title: `스테이지 변경: 신규 → ${deal.stage}`, detail: "파이프라인 스테이지가 변경되었습니다", date: deal.date, user: deal.manager },
@@ -2231,7 +2236,7 @@ function generateActivityLogs(deal: Deal): ActivityLog[] {
   ];
 }
 
-function generateFiles(deal: Deal): AttachedFile[] {
+function generateFiles(deal: Customer): AttachedFile[] {
   return [
     { id: "f1", name: `${deal.company}_견적서_v1.pdf`, type: "견적서", size: "2.4 MB", date: deal.date },
     { id: "f2", name: `${deal.company}_제안서.pptx`, type: "제안서", size: "5.1 MB", date: deal.date },
@@ -2254,7 +2259,7 @@ const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   "기타": { bg: "#F3F4F6", color: "#6B7280" },
 };
 
-function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void; customFields: CustomField[] }) {
+function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields }: { deal: Customer; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void; customFields: CustomField[] }) {
   const [tab, setTab] = useState<DrawerTab>("basic");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -2743,7 +2748,7 @@ function WidgetPalette({ onClose, activeWidgets, onToggleWidget }: { onClose: ()
 }
 
 /* ─── WIDGET CONTENT RENDERER ─── */
-function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExcel, onExport, onAnalytics }: { widgetId: string; deals: Deal[]; stageColorMap: Record<string, string>; onAddDeal?: () => void; onImportExcel?: () => void; onExport?: () => void; onAnalytics?: () => void }) {
+function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExcel, onExport, onAnalytics }: { widgetId: string; deals: Customer[]; stageColorMap: Record<string, string>; onAddDeal?: () => void; onImportExcel?: () => void; onExport?: () => void; onAnalytics?: () => void }) {
   /* ── KPI computations ── */
   const total = deals.length;
   const wonDeals = deals.filter((d) => d.status === "성공");
@@ -2956,7 +2961,7 @@ const ALL_COLUMNS: ColumnDef[] = [
 ];
 
 /* ─── ADD DEAL MODAL (customField-driven) ─── */
-function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields }: { onClose: () => void; onAdd: (deal: Deal) => void; visibleColumns: Set<string>; stageNames: string[]; customFields: CustomField[] }) {
+function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields }: { onClose: () => void; onAdd: (deal: Customer) => void; visibleColumns: Set<string>; stageNames: string[]; customFields: CustomField[] }) {
   // Render fields driven by customFields (single source of truth). Show required + visible fields.
   const fieldDefs = customFields.filter((f) => f.required || f.visible || visibleColumns.has(f.key));
 
@@ -2975,7 +2980,7 @@ function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields
 
   const handleSubmit = () => {
     if (!form.company?.trim()) return;
-    const deal: Deal = {
+    const deal: Customer = {
       id: Date.now(),
       company: form.company,
       stage: form.stage || stageNames[0] || "신규",
@@ -3353,9 +3358,9 @@ function CardGridView({
   onClickDeal,
   onAddDeal,
 }: {
-  deals: Deal[];
+  deals: Customer[];
   stageColorMap: Record<string, string>;
-  onClickDeal: (deal: Deal) => void;
+  onClickDeal: (deal: Customer) => void;
   onAddDeal: () => void;
 }) {
   if (deals.length === 0) {
@@ -3436,15 +3441,15 @@ function RelationView({
   stageColorMap,
   onClickDeal,
 }: {
-  deals: Deal[];
+  deals: Customer[];
   pipelineStages: PipelineStage[];
   stageColorMap: Record<string, string>;
-  onClickDeal: (deal: Deal) => void;
+  onClickDeal: (deal: Customer) => void;
 }) {
   const stages = pipelineStages.map((s) => s.name);
 
   const dealsByStage = useMemo(() => {
-    const map: Record<string, Deal[]> = {};
+    const map: Record<string, Customer[]> = {};
     stages.forEach((s) => { map[s] = []; });
     deals.forEach((d) => {
       if (map[d.stage]) map[d.stage].push(d);
@@ -3536,7 +3541,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [showColumnConfig, setShowColumnConfig] = useState(false);
   const [customizeMode, setCustomizeMode] = useState(false);
-  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [selectedDeal, setSelectedDeal] = useState<Customer | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterRule[]>([]);
@@ -3558,11 +3563,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [dateRange, setDateRange] = useState<DateRange>({ preset: "all", from: "", to: "" });
   const [showDateRangePicker, setShowDateRangePicker] = useState(false);
   const [showHeaderMore, setShowHeaderMore] = useState(false);
-  const [hoveredDeal, setHoveredDeal] = useState<Deal | null>(null);
+  const [hoveredDeal, setHoveredDeal] = useState<Customer | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const [customerDeals, setCustomerDeals] = useState<Deal[]>([]);
+  const [customerDeals, setCustomerDeals] = useState<Customer[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
   );
@@ -3651,7 +3656,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   }, [customFields]);
 
   /* ── CSV Export (dynamic: built-ins + custom fields) ── */
-  const exportDealsCsv = useCallback((list: Deal[]) => {
+  const exportDealsCsv = useCallback((list: Customer[]) => {
     const headers = mergedColumns.map((c) => c.label);
     const keys = mergedColumns.map((c) => c.key);
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -3678,11 +3683,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     });
   };
 
-  const addDeal = (deal: Deal) => {
+  const addDeal = (deal: Customer) => {
     setCustomerDeals((prev) => [deal, ...prev]);
   };
 
-  const handleOnboardingComplete = (importedDeals: Deal[], recommendedWidgets?: string[]) => {
+  const handleOnboardingComplete = (importedDeals: Customer[], recommendedWidgets?: string[]) => {
     setCustomerDeals((prev) => {
       const existingIds = new Set(prev.map((d) => d.id));
       const newDeals = importedDeals.filter((d) => !existingIds.has(d.id));
