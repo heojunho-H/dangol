@@ -468,22 +468,20 @@ const WIDGET_CATEGORIES = [
 ];
 
 const allWidgets: WidgetDef[] = [
-  { id: "kpi-deals", name: "총 고객 수", description: "현재 진행중인 전체 고객 수를 표시합니다", category: "kpi", icon: BarChart3, colSpan: 1 },
-  { id: "kpi-winrate", name: "수주율 (건수)", description: "건수 기준 수주 성공률을 표시합니다", category: "kpi", icon: Target, colSpan: 1 },
-  { id: "kpi-amount", name: "총 견적 금액", description: "전체 견적 금액 합계를 표시합니다", category: "kpi", icon: DollarSign, colSpan: 1 },
-  { id: "kpi-winrate-amount", name: "수주율 (금액)", description: "금액 기준 수주 성공률을 표시합니다", category: "kpi", icon: TrendingUp, colSpan: 1 },
-  { id: "kpi-active", name: "활성 고객", description: "현재 진행중인 고객 건수를 표시합니다", category: "kpi", icon: Activity, colSpan: 1 },
-  { id: "kpi-avg-cycle", name: "평균 고객 수명", description: "고객 등록부터 종료까지 평균 일수입니다", category: "kpi", icon: Clock, colSpan: 1 },
-  { id: "kpi-at-risk", name: "위험 고객", description: "장기 미진행 또는 지연된 고객 수입니다", category: "kpi", icon: AlertTriangle, colSpan: 1 },
-  { id: "kpi-new-month", name: "이달 신규", description: "이번 달 새로 생성된 고객 건수입니다", category: "kpi", icon: Plus, colSpan: 1 },
-  { id: "funnel", name: "파이프라인 퍼널", description: "각 스테이지별 고객 분포를 막대 차트로 표시합니다", category: "chart", icon: Filter, colSpan: 4 },
-  { id: "donut", name: "성공여부 분포", description: "고객의 성공/실패/진행중 비율을 도넛 차트로 표시합니다", category: "chart", icon: PieIcon, colSpan: 1 },
-  { id: "trend", name: "월별 추이", description: "최근 6개월간 고객 수와 금액 추이를 꺾은선 그래프로 표시합니다", category: "chart", icon: TrendingUp, colSpan: 2 },
-  { id: "stage-bar", name: "스테이지별 금액", description: "각 스테이지별 누적 금액을 가로 막대로 표시합니다", category: "chart", icon: BarChart3, colSpan: 2 },
-  { id: "performance", name: "담당자별 성과", description: "담당자별 고객 수, 수주율, 금액을 테이블로 표시합니다", category: "table", icon: Users, colSpan: 2 },
-  { id: "recent-deals", name: "최근 고객 목록", description: "최근 등록된 고객 5건을 간략히 표시합니다", category: "table", icon: Table2, colSpan: 2 },
-  { id: "memo", name: "메모", description: "자유롭게 텍스트 메모를 작성할 수 있습니다", category: "utility", icon: StickyNote, colSpan: 1 },
-  { id: "shortcuts", name: "빠른 실행", description: "자주 사용하는 기능에 빠르게 접근합니다", category: "utility", icon: Zap, colSpan: 1 },
+  { id: "kpi-customers",    name: "전체 고객",        description: "워크스페이스 전체 고객 수",                      category: "kpi",   icon: Users,         colSpan: 1 },
+  { id: "kpi-new-month",    name: "이달 신규",        description: "이번 달 신규 등록 고객 수",                      category: "kpi",   icon: Plus,          colSpan: 1 },
+  { id: "kpi-churn",        name: "이탈률",            description: "전체 대비 이탈 고객 비율",                        category: "kpi",   icon: AlertTriangle, colSpan: 1 },
+  { id: "kpi-ltv",          name: "누적 LTV",          description: "전체 고객 누적 계약 금액 (LTV)",                category: "kpi",   icon: DollarSign,    colSpan: 1 },
+  { id: "kpi-avg-contract", name: "평균 계약 금액",    description: "계약 1건당 평균 금액",                            category: "kpi",   icon: Target,        colSpan: 1 },
+  { id: "kpi-renewals",     name: "갱신 예정",         description: "향후 90일 내 갱신 예정 고객 수",                category: "kpi",   icon: Calendar,      colSpan: 1 },
+  { id: "chart-health",     name: "헬스 분포",         description: "활발/주의/위험 헬스 스코어 분포를 도넛으로 표시", category: "chart", icon: PieIcon,       colSpan: 1 },
+  { id: "chart-retention",  name: "리텐션 추이",       description: "최근 6개월 리텐션률 추이",                        category: "chart", icon: TrendingUp,    colSpan: 2 },
+  { id: "chart-lifecycle",  name: "라이프사이클 분포", description: "온보딩/활성/휴면/이탈 단계별 고객 분포",        category: "chart", icon: BarChart3,     colSpan: 2 },
+  { id: "table-renewals",   name: "갱신 예정 목록",    description: "가까운 순서로 갱신 예정 고객 최대 10건",        category: "table", icon: Calendar,      colSpan: 2 },
+  { id: "table-upsell",     name: "업셀 Top 5",        description: "헬스 양호 + 계약 여력 있는 업셀 후보 5건",      category: "table", icon: Sparkles,      colSpan: 2 },
+  { id: "table-recent-customers", name: "최근 등록 고객", description: "최근 등록된 고객 5건",                      category: "table", icon: Clock,         colSpan: 2 },
+  { id: "memo",             name: "메모",              description: "자유롭게 텍스트 메모를 작성할 수 있습니다",      category: "utility", icon: StickyNote,  colSpan: 1 },
+  { id: "shortcuts",        name: "빠른 실행",         description: "자주 사용하는 기능에 빠르게 접근합니다",          category: "utility", icon: Zap,         colSpan: 1 },
 ];
 
 /* ─── AMOUNT PARSER (₩3,200만 → 3200, ₩1.8억 → 18000) ─── */
@@ -503,7 +501,7 @@ function fmtAmt(manWon: number): string {
   return "₩0";
 }
 
-const DEFAULT_ACTIVE_WIDGETS = ["kpi-deals", "kpi-winrate", "kpi-amount", "kpi-winrate-amount", "funnel", "donut"];
+const DEFAULT_ACTIVE_WIDGETS = ["kpi-customers", "kpi-churn", "kpi-ltv", "kpi-renewals", "chart-health", "chart-lifecycle"];
 
 /* ─── SMART DASHBOARD RECOMMENDATION (Dashboard AI) ─── */
 
@@ -564,59 +562,18 @@ interface WidgetRecommendation {
   priority: number;
 }
 
-function recommendWidgets(a: DealAnalysis, scenario: ScenarioType): WidgetRecommendation[] {
-  const recs: WidgetRecommendation[] = [];
-  const add = (id: string, reason: string, priority: number) => recs.push({ widgetId: id, reason, priority });
-
-  // Always recommend
-  add("kpi-deals", "전체 고객 현황을 한눈에 파악", 100);
-
-  if (a.hasAmountData) {
-    add("kpi-amount", "총 견적 금액으로 파이프라인 가치 확인", 95);
-    add("kpi-winrate-amount", "금액 기준 수주율로 매출 효율 측정", 85);
-    add("stage-bar", `${a.uniqueStages}개 스테이지별 금액 분포 시각화`, 70);
-  }
-
-  if (a.uniqueStages >= 3) {
-    add("funnel", `${a.uniqueStages}개 스테이지 퍼널로 병목 구간 발견`, 90);
-  }
-
-  if (a.winRate > 0) {
-    add("kpi-winrate", `현재 수주율 ${Math.round(a.winRate * 100)}% 추적`, 88);
-    add("donut", "성공/실패/진행중 비율을 직관적으로 파악", 75);
-  }
-
-  if (a.hasManagerData && a.uniqueManagers >= 2) {
-    add("performance", `${a.uniqueManagers}명 담당자별 성과 비교`, 80);
-  }
-
-  if (a.dateRange.spanDays > 60) {
-    add("trend", `${a.dateRange.spanDays}일간 추이로 성장세 확인`, 72);
-  }
-
-  // Scenario-specific
-  if (scenario === "소규모 팀") {
-    add("recent-deals", "최근 고객 목록으로 빠른 현황 파악", 82);
-    add("shortcuts", "자주 쓰는 기능에 빠르게 접근", 60);
-  } else if (scenario === "중규모 팀") {
-    add("kpi-active", "현재 진행중인 활성 고객 수 모니터링", 78);
-    add("kpi-at-risk", "지연된 위험 고객 조기 발견", 76);
-  } else {
-    // 단순 고객 목록
-    add("recent-deals", "최근 등록된 고객 목록 확인", 85);
-    add("donut", "고객 상태 분포 파악", 70);
-  }
-
-  // Sort by priority, return top 8
-  recs.sort((a, b) => b.priority - a.priority);
-  // Deduplicate
-  const seen = new Set<string>();
-  const unique = recs.filter(r => {
-    if (seen.has(r.widgetId)) return false;
-    seen.add(r.widgetId);
-    return true;
-  });
-  return unique.slice(0, 8);
+function recommendWidgets(a: DealAnalysis, _scenario: ScenarioType): WidgetRecommendation[] {
+  const recs: WidgetRecommendation[] = [
+    { widgetId: "kpi-customers",   reason: "전체 고객 현황 파악", priority: 100 },
+    { widgetId: "kpi-churn",       reason: "이탈률은 고객 성공의 핵심 지표", priority: 95 },
+    { widgetId: "kpi-ltv",         reason: "누적 LTV로 고객 자산 가치 확인", priority: 90 },
+    { widgetId: "kpi-renewals",    reason: "다가오는 갱신 기회를 놓치지 않도록", priority: 85 },
+    { widgetId: "chart-health",    reason: "건강한 고객과 위험 고객 비율 파악", priority: 80 },
+    { widgetId: "chart-lifecycle", reason: `${a.uniqueStages}개 라이프사이클 단계별 분포 시각화`, priority: 75 },
+    { widgetId: "table-renewals",  reason: "임박한 갱신 고객을 가까운 순으로 확인", priority: 70 },
+    { widgetId: "table-upsell",    reason: "업셀 후보를 자동 추천", priority: 65 },
+  ];
+  return recs;
 }
 
 /* ─── CUSTOM KPI / GOAL TYPES ─── */
@@ -2749,39 +2706,46 @@ function WidgetPalette({ onClose, activeWidgets, onToggleWidget }: { onClose: ()
 
 /* ─── WIDGET CONTENT RENDERER ─── */
 function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExcel, onExport, onAnalytics }: { widgetId: string; deals: Customer[]; stageColorMap: Record<string, string>; onAddDeal?: () => void; onImportExcel?: () => void; onExport?: () => void; onAnalytics?: () => void }) {
-  /* ── KPI computations ── */
+  /* ── Customer KPI computations ── */
   const total = deals.length;
-  const wonDeals = deals.filter((d) => d.status === "성공");
-  const wonCount = wonDeals.length;
-  const totalAmt = deals.reduce((s, d) => s + parseAmt(d.amount), 0);
-  const wonAmt = wonDeals.reduce((s, d) => s + parseAmt(d.amount), 0);
-  const activeCount = deals.filter((d) => d.status === "진행중").length;
   const now = new Date();
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   const newThisMonth = deals.filter((d) => d.date.startsWith(thisMonth)).length;
-  /* at-risk: 진행중이며 30일 이상 경과 */
-  const atRisk = deals.filter((d) => {
-    if (d.status !== "진행중") return false;
-    const diff = (now.getTime() - new Date(d.date).getTime()) / 86400000;
-    return diff >= 30;
-  }).length;
-  /* avg cycle: 성공/실패 계약만 */
-  const closedDeals = deals.filter((d) => d.status !== "진행중");
-  const avgCycle = closedDeals.length > 0
-    ? Math.round(closedDeals.reduce((s, d) => s + (now.getTime() - new Date(d.date).getTime()) / 86400000, 0) / closedDeals.length)
+  const churned = deals.filter((d) => d.stage === "이탈").length;
+  const churnRate = total > 0 ? Math.round((churned / total) * 1000) / 10 : 0;
+  const totalLtv = deals.reduce((s, d) => s + parseAmt(d.ltv || ""), 0);
+  const contractAmts = deals.map((d) => parseAmt(d.amount)).filter((n) => n > 0);
+  const avgContract = contractAmts.length > 0
+    ? Math.round(contractAmts.reduce((s, a) => s + a, 0) / contractAmts.length)
     : 0;
+  /* Renewals: renewalDate within next 90 days */
+  const ninetyDays = new Date(now); ninetyDays.setDate(now.getDate() + 90);
+  const renewalsList = deals
+    .filter((d) => d.renewalDate && d.stage !== "이탈")
+    .map((d) => {
+      const rd = new Date(d.renewalDate!);
+      const days = Math.ceil((rd.getTime() - now.getTime()) / 86400000);
+      return { ...d, daysUntil: days };
+    })
+    .filter((d) => d.daysUntil >= 0 && d.daysUntil <= 90)
+    .sort((a, b) => a.daysUntil - b.daysUntil);
+  const renewalsCount = renewalsList.length;
+  /* Health buckets */
+  const healthActive  = deals.filter((d) => (d.healthScore ?? 0) >= 80).length;
+  const healthWarning = deals.filter((d) => { const h = d.healthScore ?? 0; return h >= 50 && h < 80; }).length;
+  const healthRisk    = deals.filter((d) => (d.healthScore ?? 0) < 50).length;
+  const avgHealth = total > 0 ? Math.round(deals.reduce((s, d) => s + (d.healthScore ?? 0), 0) / total) : 0;
+  const activeCount = deals.filter((d) => d.stage === "활성").length;
 
   if (widgetId.startsWith("kpi-")) {
     type KpiEntry = { title: string; value: string; sub: string; trend: string; trendColor: string; icon: typeof BarChart3; iconBg: string };
     const kpiMap: Record<string, KpiEntry> = {
-      "kpi-deals":         { title: "총 고객 수",       value: `${total}건`,        sub: "전체 등록 고객",        trend: `활성 ${activeCount}건`,    trendColor: T.primary,    icon: BarChart3,    iconBg: "#EFF5F1" },
-      "kpi-winrate":       { title: "수주율 (건수)",   value: total > 0 ? `${Math.round((wonCount / total) * 100)}%` : "0%", sub: `수주 ${wonCount}건`,     trend: `전체 ${total}건`,          trendColor: T.success,    icon: Target,       iconBg: "#ECFDF5" },
-      "kpi-amount":        { title: "총 견적 금액",    value: fmtAmt(totalAmt),   sub: "VAT 미포함",         trend: `수주 ${fmtAmt(wonAmt)}`,   trendColor: T.primary,    icon: DollarSign,   iconBg: "#EFF5F1" },
-      "kpi-winrate-amount":{ title: "수주율 (금액)",   value: totalAmt > 0 ? `${Math.round((wonAmt / totalAmt) * 100)}%` : "0%", sub: `수주액 ${fmtAmt(wonAmt)}`, trend: `총 ${fmtAmt(totalAmt)}`, trendColor: T.primary, icon: TrendingUp, iconBg: "#EFF5F1" },
-      "kpi-active":        { title: "활성 고객",        value: `${activeCount}건`,  sub: "진행중 고객",          trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#4A7B5A", icon: Activity, iconBg: "#EDF3EE" },
-      "kpi-avg-cycle":     { title: "평균 고객 수명", value: `${avgCycle}일`,     sub: "종료 계약 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#6B7280", icon: Clock,      iconBg: "#F3F4F6" },
-      "kpi-at-risk":       { title: "위험 고객",        value: `${atRisk}건`,       sub: "30일+ 미진행",       trend: activeCount > 0 ? `활성의 ${Math.round((atRisk / activeCount) * 100)}%` : "0%", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
-      "kpi-new-month":     { title: "이달 신규",      value: `${newThisMonth}건`, sub: thisMonth,            trend: `전체의 ${total > 0 ? Math.round((newThisMonth / total) * 100) : 0}%`, trendColor: "#5B9170", icon: Plus, iconBg: "#EDF3EE" },
+      "kpi-customers":    { title: "전체 고객",       value: `${total}명`,             sub: "워크스페이스 전체",         trend: `활성 ${activeCount}명`,                                             trendColor: T.primary,  icon: Users,         iconBg: "#EFF5F1" },
+      "kpi-new-month":    { title: "이달 신규",       value: `${newThisMonth}명`,      sub: thisMonth,                     trend: total > 0 ? `전체의 ${Math.round((newThisMonth / total) * 100)}%` : "0%", trendColor: "#5B9170", icon: Plus,          iconBg: "#EDF3EE" },
+      "kpi-churn":        { title: "이탈률",           value: `${churnRate}%`,           sub: `이탈 ${churned}명`,           trend: `전체 ${total}명`,                                                   trendColor: T.danger,   icon: AlertTriangle, iconBg: "#FEF2F2" },
+      "kpi-ltv":          { title: "누적 LTV",         value: fmtAmt(totalLtv),          sub: "전체 고객 계약 합계",       trend: total > 0 ? `고객당 ${fmtAmt(Math.round(totalLtv / total))}` : "-",    trendColor: T.primary,  icon: DollarSign,    iconBg: "#EFF5F1" },
+      "kpi-avg-contract": { title: "평균 계약 금액",  value: fmtAmt(avgContract),       sub: `계약 ${contractAmts.length}건 기준`, trend: totalLtv > 0 ? `누적 ${fmtAmt(totalLtv)}` : "-",                    trendColor: T.primary,  icon: Target,        iconBg: "#EFF5F1" },
+      "kpi-renewals":     { title: "갱신 예정",        value: `${renewalsCount}건`,      sub: "향후 90일",                   trend: renewalsList[0] ? `최근접 D-${renewalsList[0].daysUntil}` : "-",     trendColor: "#4A7B5A",  icon: Calendar,      iconBg: "#EDF3EE" },
     };
     const kpi = kpiMap[widgetId];
     if (!kpi) return null;
@@ -2801,92 +2765,127 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     );
   }
 
-  /* ── Funnel data ── */
-  const funnelData = Object.keys(stageColorMap).map((stage) => ({
-    stage,
-    count: deals.filter((d) => d.stage === stage).length,
-  }));
+  /* ── Health donut ── */
+  if (widgetId === "chart-health") {
+    const healthData = [
+      { name: "활발",  count: healthActive,  value: total > 0 ? Math.round((healthActive / total) * 100) : 0,  color: "#1A472A" },
+      { name: "주의", count: healthWarning, value: total > 0 ? Math.round((healthWarning / total) * 100) : 0, color: "#D4A53A" },
+      { name: "위험", count: healthRisk,    value: total > 0 ? Math.round((healthRisk / total) * 100) : 0,    color: "#DC2626" },
+    ];
+    return (
+      <>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[0.85rem] text-[#1A1A1A]">헬스 분포</p>
+          <span className="text-[0.65rem] text-[#999]">평균 {avgHealth}점</span>
+        </div>
+        <div className="h-[144px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={healthData} cx="50%" cy="50%" innerRadius={36} outerRadius={56} dataKey="value" paddingAngle={3}>{healthData.map((d) => <Cell key={d.name} fill={d.color} />)}</Pie><Tooltip formatter={(v: number) => `${v}%`} /></PieChart></ResponsiveContainer></div>
+        <div className="flex justify-center gap-4 mt-1">{healthData.map((d) => (<div key={d.name} className="flex items-center gap-1.5 text-[0.65rem]"><div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className="text-[#666]">{d.name}</span><span className="text-[#999]">{d.count}명</span></div>))}</div>
+      </>
+    );
+  }
 
-  if (widgetId === "funnel") return <><p className="text-[0.85rem] text-[#1A1A1A] mb-4">고객 라이프사이클 현황</p><FunnelBar data={funnelData} stageColorMap={stageColorMap} /></>;
+  /* ── Retention trend (last 6 months) ── */
+  if (widgetId === "chart-retention") {
+    const retentionData = Array.from({ length: 6 }, (_, i) => {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - (5 - i) + 1, 0);
+      const cohort = deals.filter((d) => new Date(d.date) <= monthStart);
+      const churnedByMonth = cohort.filter((d) => d.stage === "이탈" && new Date(d.date) <= monthEnd);
+      const survived = cohort.length - churnedByMonth.length;
+      const rate = cohort.length > 0 ? Math.round((survived / cohort.length) * 1000) / 10 : 0;
+      return { month: `${monthStart.getMonth() + 1}월`, rate };
+    });
+    return (
+      <>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">리텐션 추이</p>
+        <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={retentionData}><defs><linearGradient id="cRet" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.2} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}%`} /><Tooltip formatter={(v: number) => `${v}%`} /><Area type="monotone" dataKey="rate" stroke={T.primary} fill="url(#cRet)" strokeWidth={2} name="리텐션률" /></AreaChart></ResponsiveContainer></div>
+      </>
+    );
+  }
 
-  /* ── Donut data ── */
-  const statusCounts: Record<string, number> = { 진행중: 0, 성공: 0, 실패: 0 };
-  deals.forEach((d) => { if (d.status in statusCounts) statusCounts[d.status]++; });
-  const donutColors: Record<string, string> = { 진행중: "#7FA28E", 성공: "#1A472A", 실패: "#DC2626" };
-  const donutData = Object.entries(statusCounts).map(([name, count]) => ({
-    name, count, color: donutColors[name],
-    value: total > 0 ? Math.round((count / total) * 100) : 0,
-  }));
+  /* ── Lifecycle bar ── */
+  if (widgetId === "chart-lifecycle") {
+    const lifecycleData = Object.keys(stageColorMap).map((stage) => ({
+      stage,
+      count: deals.filter((d) => d.stage === stage).length,
+      color: stageColorMap[stage] || "#999",
+    }));
+    return (
+      <>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">라이프사이클 분포</p>
+        <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={lifecycleData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} /><XAxis type="number" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis type="category" dataKey="stage" tick={{ fontSize: 10, fill: "#555" }} axisLine={false} tickLine={false} width={68} /><Tooltip formatter={(v: number) => `${v}명`} /><Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={14}>{lifecycleData.map((d) => <Cell key={d.stage} fill={d.color} />)}</Bar></BarChart></ResponsiveContainer></div>
+      </>
+    );
+  }
 
-  if (widgetId === "donut") return (
-    <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-2">성공여부 분포</p>
-      <div className="h-[144px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={donutData} cx="50%" cy="50%" innerRadius={36} outerRadius={56} dataKey="value" paddingAngle={3}>{donutData.map((d) => <Cell key={d.name} fill={d.color} />)}</Pie><Tooltip formatter={(v: number) => `${v}%`} /></PieChart></ResponsiveContainer></div>
-      <div className="flex justify-center gap-4 mt-1">{donutData.map((d) => (<div key={d.name} className="flex items-center gap-1.5 text-[0.65rem]"><div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className="text-[#666]">{d.name}</span><span className="text-[#999]">{d.count}건</span></div>))}</div>
-    </>
-  );
+  /* ── Renewals table ── */
+  if (widgetId === "table-renewals") {
+    const rows = renewalsList.slice(0, 10);
+    return (
+      <>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">갱신 예정 목록</p>
+        {rows.length === 0 ? (
+          <p className="text-[0.7rem] text-[#999] py-6 text-center">90일 내 갱신 예정 고객이 없습니다</p>
+        ) : (
+          <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["고객", "갱신일", "D-Day", "금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
+          <tbody>{rows.map((d) => <tr key={d.id} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3 text-[0.7rem] text-[#1A1A1A]">{d.company}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{d.renewalDate}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: d.daysUntil <= 14 ? T.danger : T.primary }}>D-{d.daysUntil}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{d.ltv || d.amount}</td></tr>)}</tbody></table>
+        )}
+      </>
+    );
+  }
 
-  /* ── Trend data (last 6 months) ── */
-  const trendData = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const label = `${d.getMonth() + 1}월`;
-    const monthDeals = deals.filter((deal) => deal.date.startsWith(key));
-    return { month: label, deals: monthDeals.length, amount: monthDeals.reduce((s, deal) => s + parseAmt(deal.amount), 0) };
-  });
+  /* ── Upsell Top 5 ── */
+  if (widgetId === "table-upsell") {
+    const upsellList = deals
+      .filter((d) => (d.healthScore ?? 0) >= 70 && d.stage !== "이탈")
+      .map((d) => ({
+        ...d,
+        score: Math.round((d.healthScore ?? 0) * 0.7 + (parseAmt(d.ltv || "") > 0 ? 20 : 10)),
+        reason: parseAmt(d.ltv || "") < 5000 ? "헬스 양호 — 추가 계약 제안 적합" : "LTV 기여도 높음 — 상위 모듈 제안",
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+    return (
+      <>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">업셀 Top 5</p>
+        {upsellList.length === 0 ? (
+          <p className="text-[0.7rem] text-[#999] py-6 text-center">업셀 후보가 아직 없습니다</p>
+        ) : (
+          <div className="space-y-2">{upsellList.map((d) => (
+            <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span>
+                  <span className="text-[0.6rem] px-1.5 py-0.5 rounded-md" style={{ background: T.primary + "18", color: T.primary }}>헬스 {d.healthScore}</span>
+                </div>
+                <p className="text-[0.6rem] text-[#999] truncate">{d.reason}</p>
+              </div>
+              <span className="text-[0.7rem]" style={{ color: T.primary }}>{d.score}</span>
+            </div>
+          ))}</div>
+        )}
+      </>
+    );
+  }
 
-  if (widgetId === "trend") return (
-    <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">월별 고객 추이</p>
-      <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="cDeals" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><Tooltip /><Area type="monotone" dataKey="deals" stroke={T.primary} fill="url(#cDeals)" strokeWidth={2} name="고객 수" /></AreaChart></ResponsiveContainer></div>
-    </>
-  );
-
-  /* ── Stage-amount data ── */
-  const stageAmountData = Object.keys(stageColorMap).map((stage) => ({
-    stage,
-    amount: deals.filter((d) => d.stage === stage).reduce((s, d) => s + parseAmt(d.amount), 0),
-  })).filter((s) => s.amount > 0);
-
-  if (widgetId === "stage-bar") return (
-    <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">스테이지별 금액</p>
-      <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={stageAmountData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} /><XAxis type="number" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}만`} /><YAxis type="category" dataKey="stage" tick={{ fontSize: 10, fill: "#555" }} axisLine={false} tickLine={false} width={68} /><Tooltip formatter={(v: number) => `${v}만원`} /><Bar dataKey="amount" radius={[0, 4, 4, 0]} fill={T.primary} barSize={14} /></BarChart></ResponsiveContainer></div>
-    </>
-  );
-
-  /* ── Performance data ── */
-  const perfMap: Record<string, { deals: number; won: number; amount: number }> = {};
-  deals.forEach((d) => {
-    if (!d.manager) return;
-    if (!perfMap[d.manager]) perfMap[d.manager] = { deals: 0, won: 0, amount: 0 };
-    perfMap[d.manager].deals++;
-    if (d.status === "성공") perfMap[d.manager].won++;
-    perfMap[d.manager].amount += parseAmt(d.amount);
-  });
-  const performanceData = Object.entries(perfMap).map(([name, v]) => ({
-    name, deals: v.deals, won: v.won,
-    rate: v.deals > 0 ? `${Math.round((v.won / v.deals) * 100)}%` : "0%",
-    amount: fmtAmt(v.amount),
-  }));
-
-  if (widgetId === "performance") return (
-    <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">담당자별 성과</p>
-      <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["담당자", "고객 수", "수주", "수주율", "총 금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
-      <tbody>{performanceData.map((p) => <tr key={p.name} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-[0.6rem] text-white" style={{ background: T.primary }}>{p.name[0]}</div><span className="text-[0.7rem] text-[#1A1A1A]">{p.name}</span></div></td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.deals}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.won}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: T.primary }}>{p.rate}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.amount}</td></tr>)}</tbody></table>
-    </>
-  );
-
-  /* ── Recent deals ── */
-  const recentDeals = [...deals].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
-
-  if (widgetId === "recent-deals") return (
-    <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 고객 목록</p>
-      <div className="space-y-2">{recentDeals.map((d) => <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors"><div className="flex items-center gap-3"><span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span><span className="text-[0.6rem] px-2 py-0.5 rounded-md" style={{ background: (stageColorMap[d.stage] || "#999") + "18", color: stageColorMap[d.stage] || "#999" }}>{d.stage}</span></div><span className="text-[0.7rem] text-[#999]">{d.amount}</span></div>)}</div>
-    </>
-  );
+  /* ── Recent customers ── */
+  if (widgetId === "table-recent-customers") {
+    const recentList = [...deals].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
+    return (
+      <>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 등록 고객</p>
+        <div className="space-y-2">{recentList.map((d) => (
+          <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span>
+              <span className="text-[0.6rem] px-2 py-0.5 rounded-md" style={{ background: (stageColorMap[d.stage] || "#999") + "18", color: stageColorMap[d.stage] || "#999" }}>{d.stage}</span>
+            </div>
+            <span className="text-[0.7rem] text-[#999]">{d.date}</span>
+          </div>
+        ))}</div>
+      </>
+    );
+  }
   if (widgetId === "memo") return (
     <>
       <p className="text-[0.85rem] text-[#1A1A1A] mb-3">메모</p>
