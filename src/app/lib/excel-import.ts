@@ -206,8 +206,8 @@ export function normalizeText(value: unknown): string {
 /* ─── Transform rows → Deal-like records ─── */
 
 export interface FieldMapping {
-  dealflowKey: string;       // e.g. "company", "amount"
-  dealflowLabel: string;     // e.g. "기업명"
+  targetKey: string;       // e.g. "company", "amount"
+  targetLabel: string;     // e.g. "기업명"
   excelColumn: string;       // selected source column (or "" if skipped)
   type: "text" | "number" | "amount" | "date" | "phone" | "email" | "select" | "person";
   required: boolean;
@@ -242,7 +242,7 @@ export function transformRows(
   let skipped = 0;
   const records: Record<string, unknown>[] = [];
 
-  const companyMap = mappings.find((m) => m.dealflowKey === "company");
+  const companyMap = mappings.find((m) => m.targetKey === "company");
 
   rows.forEach((row, idx) => {
     // Skip entirely empty rows
@@ -262,54 +262,54 @@ export function transformRows(
         case "amount": {
           const n = normalizeAmount(raw);
           if (n === null && raw !== "" && raw != null) {
-            warnings.push({ rowIndex: idx, field: m.dealflowLabel, reason: `금액 형식을 해석할 수 없습니다: "${raw}"` });
-            out[m.dealflowKey] = "";
+            warnings.push({ rowIndex: idx, field: m.targetLabel, reason: `금액 형식을 해석할 수 없습니다: "${raw}"` });
+            out[m.targetKey] = "";
           } else if (n !== null) {
-            out[m.dealflowKey] = formatAmountKrw(n);
-            out[`${m.dealflowKey}_raw`] = n;
+            out[m.targetKey] = formatAmountKrw(n);
+            out[`${m.targetKey}_raw`] = n;
           }
           break;
         }
         case "date": {
           const d = normalizeDate(raw);
           if (d === null && raw !== "" && raw != null) {
-            warnings.push({ rowIndex: idx, field: m.dealflowLabel, reason: `날짜 형식을 해석할 수 없습니다: "${raw}"` });
-            out[m.dealflowKey] = "";
+            warnings.push({ rowIndex: idx, field: m.targetLabel, reason: `날짜 형식을 해석할 수 없습니다: "${raw}"` });
+            out[m.targetKey] = "";
           } else {
-            out[m.dealflowKey] = d ?? "";
+            out[m.targetKey] = d ?? "";
           }
           break;
         }
         case "number": {
           const n = normalizeNumber(raw);
           if (n === null && raw !== "" && raw != null) {
-            warnings.push({ rowIndex: idx, field: m.dealflowLabel, reason: `숫자 형식이 아닙니다: "${raw}"` });
-            out[m.dealflowKey] = 0;
+            warnings.push({ rowIndex: idx, field: m.targetLabel, reason: `숫자 형식이 아닙니다: "${raw}"` });
+            out[m.targetKey] = 0;
           } else {
-            out[m.dealflowKey] = n ?? 0;
+            out[m.targetKey] = n ?? 0;
           }
           break;
         }
         case "phone":
-          out[m.dealflowKey] = normalizePhone(raw);
+          out[m.targetKey] = normalizePhone(raw);
           break;
         case "email":
-          out[m.dealflowKey] = normalizeEmail(raw);
+          out[m.targetKey] = normalizeEmail(raw);
           break;
         case "select":
-          if (m.dealflowKey === "stage") {
+          if (m.targetKey === "stage") {
             const s = normalizeText(raw);
             const mapped = options.stageAlias?.[s] ?? s;
-            out[m.dealflowKey] = mapped || options.defaultStage || "";
-          } else if (m.dealflowKey === "status") {
+            out[m.targetKey] = mapped || options.defaultStage || "";
+          } else if (m.targetKey === "status") {
             const s = normalizeText(raw);
-            out[m.dealflowKey] = coerceStatus(s) || options.defaultStatus || "진행중";
+            out[m.targetKey] = coerceStatus(s) || options.defaultStatus || "진행중";
           } else {
-            out[m.dealflowKey] = normalizeText(raw);
+            out[m.targetKey] = normalizeText(raw);
           }
           break;
         default:
-          out[m.dealflowKey] = normalizeText(raw);
+          out[m.targetKey] = normalizeText(raw);
       }
     }
 

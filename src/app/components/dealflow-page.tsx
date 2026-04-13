@@ -742,7 +742,7 @@ function computePatternScore(detected: DataPattern, fieldName: string): number {
 
 interface MappingResult {
   excelColumn: string;
-  dealflowField: string;
+  targetField: string;
   confidence: number;
   nameScore: number;
   patternScore: number;
@@ -784,7 +784,7 @@ function computeSmartMappings(
         : "낮은 신뢰도 — 수동 확인 필요";
     results.push({
       excelColumn: p.excel,
-      dealflowField: p.field,
+      targetField: p.field,
       confidence: p.confidence,
       nameScore: p.nameScore,
       patternScore: p.patternScore,
@@ -841,8 +841,8 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
     [parsedSheet, FALLBACK_EXCEL_COLUMNS]
   );
 
-  /* ── dealflowFields built from live customFields (not hardcoded) ── */
-  const dealflowFields = useMemo(
+  /* ── targetFields built from live customFields (not hardcoded) ── */
+  const targetFields = useMemo(
     () => customFields
       .filter((f) => f.type !== "file")    // can't import files from spreadsheet
       .map((f) => ({ name: f.label, required: f.required })),
@@ -895,8 +895,8 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
       else tType = "text";
 
       result.push({
-        dealflowKey: cf.key,
-        dealflowLabel: cf.label,
+        targetKey: cf.key,
+        targetLabel: cf.label,
         excelColumn,
         type: tType,
         required: cf.required,
@@ -1054,7 +1054,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
       const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/ai/column-mapping`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ excelColumns, dealflowFields }),
+        body: JSON.stringify({ excelColumns, targetFields }),
         signal: controller.signal,
       });
 
@@ -1064,9 +1064,9 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
       setAnalysisProgress(3);
 
       // Build displayable analysis results: existing mappings + new-field entries
-      const combinedResults: MappingResult[] = (data.mappings ?? []).map((m: {excelColumn:string;dealflowField:string;confidence:number;reason:string}) => ({
+      const combinedResults: MappingResult[] = (data.mappings ?? []).map((m: {excelColumn:string;targetField:string;confidence:number;reason:string}) => ({
         excelColumn: m.excelColumn,
-        dealflowField: m.dealflowField,
+        targetField: m.targetField,
         confidence: m.confidence,
         nameScore: 0,
         patternScore: 0,
@@ -1134,7 +1134,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
         // Surface in analysisResults so user sees what the AI did
         combinedResults.push({
           excelColumn: nf.excelColumn,
-          dealflowField: label,
+          targetField: label,
           confidence: nf.confidence,
           nameScore: 0,
           patternScore: 0,
@@ -1151,7 +1151,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
       const newMappings: Record<string, string> = {};
       for (const r of data.mappings ?? []) {
         if (r.confidence >= 0.4) {
-          newMappings[r.dealflowField] = r.excelColumn;
+          newMappings[r.targetField] = r.excelColumn;
         }
       }
       for (const [excelCol, label] of Object.entries(labelsByExcel)) {
@@ -1162,12 +1162,12 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
       if ((err as Error).name === "AbortError") return;
       // Fallback: 로컬 규칙 기반 매핑
       console.warn("AI 매핑 실패, 로컬 폴백 사용");
-      const results = computeSmartMappings(excelColumns, dealflowFields);
+      const results = computeSmartMappings(excelColumns, targetFields);
       setAnalysisProgress(3);
       setAnalysisResults(results);
       const newMappings: Record<string, string> = {};
       for (const r of results) {
-        if (r.confidence >= 0.4) newMappings[r.dealflowField] = r.excelColumn;
+        if (r.confidence >= 0.4) newMappings[r.targetField] = r.excelColumn;
       }
       setMappings(newMappings);
     } finally {
@@ -1368,20 +1368,20 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
             /* ── 매핑 결과 (그룹화 + 인라인 근거) ── */
             (() => {
               const getConfidence = (fieldName: string) =>
-                analysisResults.find(r => r.dealflowField === fieldName)?.confidence ?? 0;
+                analysisResults.find(r => r.targetField === fieldName)?.confidence ?? 0;
 
-              const autoMapped = dealflowFields.filter(f => getConfidence(f.name) >= 0.8);
-              const needsReview = dealflowFields.filter(f => {
+              const autoMapped = targetFields.filter(f => getConfidence(f.name) >= 0.8);
+              const needsReview = targetFields.filter(f => {
                 const c = getConfidence(f.name);
                 return c >= 0.4 && c < 0.8;
               });
-              const unmapped = dealflowFields.filter(f => getConfidence(f.name) < 0.4);
+              const unmapped = targetFields.filter(f => getConfidence(f.name) < 0.4);
 
               const requiredUnmapped = unmapped.filter(f => f.required && !mappings[f.name]).length;
-              const canProceed = dealflowFields.filter(f => f.required).every(f => !!mappings[f.name]);
+              const canProceed = targetFields.filter(f => f.required).every(f => !!mappings[f.name]);
 
               const renderFieldRow = (field: { name: string; required: boolean }) => {
-                const result = analysisResults.find(r => r.dealflowField === field.name);
+                const result = analysisResults.find(r => r.targetField === field.name);
                 const confidence = result?.confidence ?? 0;
                 const currentMapping = mappings[field.name] || "";
                 const preview = currentMapping ? excelColumns.find(c => c.name === currentMapping)?.preview : null;

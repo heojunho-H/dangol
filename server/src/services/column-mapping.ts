@@ -1,7 +1,7 @@
 import { getClient, parseJsonResponse } from "./claude.js";
 
-const SYSTEM_PROMPT = `당신은 한국 B2B 영업/CRM 도메인 전문가입니다.
-사용자가 올린 엑셀의 각 컬럼을, 우리 서비스의 기존 딜플로우 필드에 **매핑**하거나 **새 커스텀 필드로 생성**할지 판단합니다.
+const SYSTEM_PROMPT = `당신은 한국 B2B CRM 도메인 전문가입니다.
+사용자가 올린 엑셀의 각 컬럼을, 우리 서비스의 기존 필드에 **매핑**하거나 **새 커스텀 필드로 생성**할지 판단합니다.
 
 ## 핵심 원칙
 - 서비스 목표: 사용자가 어떤 엑셀을 올려도 그 엑셀 구조 그대로 수용합니다.
@@ -10,8 +10,8 @@ const SYSTEM_PROMPT = `당신은 한국 B2B 영업/CRM 도메인 전문가입니
 
 ## 두 가지 액션
 
-### action: "map" — 기존 딜플로우 필드에 매핑
-- 엑셀 컬럼명과 딜플로우 필드명이 동의어/유의어이고, 샘플 데이터 패턴이 일치할 때
+### action: "map" — 기존 필드에 매핑
+- 엑셀 컬럼명과 기존 필드명이 동의어/유의어이고, 샘플 데이터 패턴이 일치할 때
 - confidence 0.7 이상만 map 으로 처리
 - 예: "회사명" → "기업명", "대표전화" → "전화번호", "등록일" → "등록일"
 
@@ -40,7 +40,7 @@ const SYSTEM_PROMPT = `당신은 한국 B2B 영업/CRM 도메인 전문가입니
       "action": "map" | "create",
       "confidence": 0.0~1.0,
       "reason": "판단 근거 (한국어, 30자 이내)",
-      "dealflowField": "기업명",              // action="map"일 때만
+      "targetField": "기업명",              // action="map"일 때만
       "newField": {                           // action="create"일 때만
         "type": "text"|"number"|"amount"|"date"|"phone"|"email"|"select"|"person",
         "suggestedOptions": ["S","A","B"]    // type="select"일 때만
@@ -53,12 +53,12 @@ const SYSTEM_PROMPT = `당신은 한국 B2B 영업/CRM 도메인 전문가입니
 
 ### 예시 1 (명확한 매핑)
 엑셀: "회사명" (샘플: "(주)테크노바", "스마트솔루션즈")
-딜플로우 필드: "기업명"(필수), "전화번호"(선택), ...
-출력: {"excelColumn":"회사명","action":"map","confidence":0.98,"reason":"동의어 관계 확실","dealflowField":"기업명"}
+기존 필드: "기업명"(필수), "전화번호"(선택), ...
+출력: {"excelColumn":"회사명","action":"map","confidence":0.98,"reason":"동의어 관계 확실","targetField":"기업명"}
 
 ### 예시 2 (새 필드 - select 타입)
 엑셀: "등급" (샘플: "A","B","S","A","B","S","B")
-딜플로우 필드 중 매칭 없음
+기존 필드 중 매칭 없음
 출력: {"excelColumn":"등급","action":"create","confidence":0.95,"reason":"카테고리형 값 반복","newField":{"type":"select","suggestedOptions":["S","A","B"]}}
 
 ### 예시 3 (새 필드 - amount)
@@ -73,7 +73,7 @@ const SYSTEM_PROMPT = `당신은 한국 B2B 영업/CRM 도메인 전문가입니
 
 ### 예시 5 (애매한 경우 - create 선호)
 엑셀: "대표자" (샘플: "김정훈", "이미영")
-딜플로우 필드: "담당자"(고객측 접점)
+기존 필드 중 "담당자"(고객측 접점)
 출력: {"excelColumn":"대표자","action":"create","confidence":0.85,"reason":"대표이사≠담당자 - 의미 다름","newField":{"type":"person"}}
 
 ### 예시 6 (새 필드 - text URL)
@@ -86,7 +86,7 @@ const SYSTEM_PROMPT = `당신은 한국 B2B 영업/CRM 도메인 전문가입니
 
 interface ColumnAnalysisRequest {
   excelColumns: { name: string; preview: string; samples?: string[] }[];
-  dealflowFields: { name: string; required: boolean }[];
+  targetFields: { name: string; required: boolean }[];
 }
 
 interface ColumnAnalysisResult {
@@ -94,7 +94,7 @@ interface ColumnAnalysisResult {
   action: "map" | "create";
   confidence: number;
   reason: string;
-  dealflowField?: string;
+  targetField?: string;
   newField?: {
     type:
       | "text"
@@ -117,7 +117,7 @@ type NewFieldType = NonNullable<ColumnAnalysisResult["newField"]>["type"];
 
 interface MappingResult {
   excelColumn: string;
-  dealflowField: string;
+  targetField: string;
   confidence: number;
   reason: string;
 }
@@ -138,7 +138,7 @@ export interface ColumnMappingResponse {
 export async function mapColumns(
   req: ColumnAnalysisRequest
 ): Promise<ColumnMappingResponse> {
-  const userMessage = `다음 엑셀 컬럼들을 분석해서 기존 딜플로우 필드에 매핑하거나 새 커스텀 필드로 생성해주세요.
+  const userMessage = `다음 엑셀 컬럼들을 분석해서 기존 필드에 매핑하거나 새 커스텀 필드로 생성해주세요.
 
 ## 엑셀 컬럼 (이름 + 샘플 데이터)
 ${req.excelColumns
@@ -152,8 +152,8 @@ ${req.excelColumns
   })
   .join("\n")}
 
-## 기존 딜플로우 필드
-${req.dealflowFields
+## 기존 기존 필드
+${req.targetFields
   .map((f) => `- "${f.name}" (${f.required ? "필수" : "선택"})`)
   .join("\n")}
 
@@ -180,10 +180,10 @@ ${req.dealflowFields
   const newFields: NewFieldResult[] = [];
 
   for (const c of parsed.columns) {
-    if (c.action === "map" && c.dealflowField) {
+    if (c.action === "map" && c.targetField) {
       mappings.push({
         excelColumn: c.excelColumn,
-        dealflowField: c.dealflowField,
+        targetField: c.targetField,
         confidence: c.confidence,
         reason: c.reason,
       });
