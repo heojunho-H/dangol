@@ -1,14 +1,16 @@
 import { useState } from "react";
 import {
   Settings2,
-  Plus,
-  TrendingUp,
+  Heart,
+  Repeat,
   DollarSign,
-  Target,
-  Activity,
+  CalendarClock,
+  Sparkles,
   AlertTriangle,
   ToggleLeft,
   ToggleRight,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 import {
   BarChart,
@@ -22,44 +24,50 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const pipelineData = [
-  { stage: "리드", count: 24, value: 120 },
-  { stage: "검증", count: 15, value: 85 },
-  { stage: "제안", count: 8, value: 64 },
-  { stage: "성사", count: 4, value: 48 },
+const lifecycleData = [
+  { stage: "온보딩", count: 12, color: "#3B82F6" },
+  { stage: "활성", count: 48, color: "#10B981" },
+  { stage: "휴면", count: 18, color: "#F59E0B" },
+  { stage: "이탈", count: 6, color: "#9CA3AF" },
 ];
 
-const revenueData = [
-  { month: "1월", value: 42 },
-  { month: "2월", value: 58 },
-  { month: "3월", value: 45 },
-  { month: "4월", value: 72 },
-  { month: "5월", value: 68 },
-  { month: "6월", value: 85 },
+const retentionData = [
+  { month: "11월", rate: 92 },
+  { month: "12월", rate: 88 },
+  { month: "1월", rate: 91 },
+  { month: "2월", rate: 86 },
+  { month: "3월", rate: 89 },
+  { month: "4월", rate: 93 },
 ];
 
-const topDeals = [
-  { name: "MediCare 시스템", value: "₩120M", progress: 95, status: "성사" },
-  { name: "GlobalTrade 플랫폼", value: "₩78M", progress: 72, status: "제안" },
-  { name: "TechVision ERP", value: "₩45M", progress: 55, status: "검증" },
+const renewalsDue = [
+  { name: "MediCare", amount: "₩45M", days: 12 },
+  { name: "TechVision", amount: "₩32M", days: 28 },
+  { name: "GlobalTrade", amount: "₩18M", days: 47 },
+];
+
+const upsellPicks = [
+  { name: "DataFlow Systems", reason: "사용량 한도 근접 — 프로 플랜 제안", score: 92 },
+  { name: "MediCare Health", reason: "유사 고객군이 추가 모듈 도입", score: 84 },
+  { name: "TechVision Inc.", reason: "최근 응대 응답성 상승", score: 78 },
 ];
 
 const activities = [
-  { action: "김현수님이 MediCare 딜을 성사로 이동", time: "30분 전" },
-  { action: "박지영님이 GlobalTrade 제안서 전송", time: "1시간 전" },
-  { action: "이준호님이 새 리드 ABC Corp 추가", time: "2시간 전" },
-  { action: "최미란님이 TechVision 미팅 일정 등록", time: "3시간 전" },
+  { action: "MediCare 계약이 갱신되었습니다 (+₩45M)", time: "30분 전" },
+  { action: "TechVision 헬스 스코어가 주의 단계로 하락", time: "1시간 전" },
+  { action: "신규 고객 ABC Corp 온보딩 시작", time: "2시간 전" },
+  { action: "DataFlow에 업셀 제안 이메일 전송", time: "3시간 전" },
 ];
 
-const pipelineInfo = {
-  stage: "검증 단계",
-  deals: 15,
-  avgValue: "₩5,000만",
-  conversionRate: "34.2%",
+const healthInfo = {
+  active: 48,
+  warning: 22,
+  risk: 8,
+  avgHealth: 72,
 };
 
 export function CustomerDashboardPage() {
-  const [pipelineActive, setPipelineActive] = useState(true);
+  const [healthActive, setHealthActive] = useState(true);
 
   return (
     <div className="p-6 space-y-5">
@@ -78,10 +86,10 @@ export function CustomerDashboardPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: "총 파이프라인", value: "₩295.5M", change: "+12.5%", icon: DollarSign, changeColor: "#2CBF60" },
-          { label: "이번 달 매출", value: "₩85M", change: "+23.1%", icon: TrendingUp, changeColor: "#2CBF60" },
-          { label: "전환율", value: "34.2%", change: "+5.4%", icon: Target, changeColor: "#2CBF60" },
-          { label: "활성 딜", value: "24건", change: "+3", icon: Activity, changeColor: "#1A73E8" },
+          { label: "전체 고객", value: "84명", change: "+6", icon: Users, changeColor: "#1A73E8" },
+          { label: "재구매율", value: "38.1%", change: "+4.2%", icon: Repeat, changeColor: "#2CBF60" },
+          { label: "누적 LTV", value: "₩1.42억", change: "+12.5%", icon: DollarSign, changeColor: "#2CBF60" },
+          { label: "갱신 예정", value: "12건", change: "90일 이내", icon: CalendarClock, changeColor: "#FFA726" },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white border border-[#E0E3E8] rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
@@ -102,40 +110,35 @@ export function CustomerDashboardPage() {
         <div className="col-span-3 space-y-5">
           {/* Top Row Cards */}
           <div className="grid grid-cols-3 gap-4">
-            {/* Revenue Forecast */}
+            {/* Retention Trend */}
             <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
-              <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">매출 전망</h3>
+              <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">리텐션 추이</h3>
               <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={revenueData}>
+                <LineChart data={retentionData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E0E3E8" vertical={false} />
                   <XAxis dataKey="month" stroke="#999" fontSize={16} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#999" fontSize={16} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}M`} />
+                  <YAxis stroke="#999" fontSize={16} tickLine={false} axisLine={false} domain={[80, 100]} tickFormatter={(v) => `${v}%`} />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#fff", border: "1px solid #E0E3E8", borderRadius: "6px", fontSize: "9px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
                   />
-                  <Line type="monotone" dataKey="value" stroke="#1A73E8" strokeWidth={2} dot={{ r: 2.5, fill: "#1A73E8", strokeWidth: 0 }} />
+                  <Line type="monotone" dataKey="rate" stroke="#10B981" strokeWidth={2} dot={{ r: 2.5, fill: "#10B981", strokeWidth: 0 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
 
-            {/* Top Deals */}
+            {/* Renewals Due */}
             <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
-              <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">주요 딜</h3>
+              <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">갱신 예정 계약</h3>
               <div className="space-y-3">
-                {topDeals.map((deal) => (
-                  <div key={deal.name}>
+                {renewalsDue.map((r) => (
+                  <div key={r.name}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[#1A1A1A] text-[0.85rem]">{deal.name}</span>
-                      <span className="text-[#1A73E8] text-[0.85rem]">{deal.value}</span>
+                      <span className="text-[#1A1A1A] text-[0.85rem]">{r.name}</span>
+                      <span className="text-[#1A73E8] text-[0.85rem]">{r.amount}</span>
                     </div>
-                    <div className="h-1.5 bg-[#F0F1F3] rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${deal.progress}%`,
-                          backgroundColor: deal.progress > 80 ? "#2CBF60" : "#1A73E8",
-                        }}
-                      />
+                    <div className="flex items-center gap-2 text-[0.75rem] text-[#999]">
+                      <CalendarClock size={10} className="text-[#F59E0B]" />
+                      D-{r.days}
                     </div>
                   </div>
                 ))}
@@ -162,31 +165,30 @@ export function CustomerDashboardPage() {
             </div>
           </div>
 
-          {/* Pipeline Chart */}
+          {/* Lifecycle Distribution */}
           <div className="bg-white border border-[#E0E3E8] rounded-lg p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[#1A1A1A] text-[1.2rem]">고객 라이프사이클</h3>
+              <h3 className="text-[#1A1A1A] text-[1.2rem]">라이프사이클 스테이지별 고객 수</h3>
               <div className="flex items-center gap-4 text-[0.85rem]">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded bg-[#1A73E8]" />
-                  <span className="text-[#666]">딜 수</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded bg-[#2CBF60]" />
-                  <span className="text-[#666]">금액 (M)</span>
+                  <span className="w-2.5 h-2.5 rounded bg-[#10B981]" />
+                  <span className="text-[#666]">고객 수</span>
                 </span>
               </div>
             </div>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={pipelineData} barGap={8}>
+              <BarChart data={lifecycleData} barGap={8}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E0E3E8" vertical={false} />
                 <XAxis dataKey="stage" stroke="#999" fontSize={17} tickLine={false} axisLine={{ stroke: "#E0E3E8" }} />
                 <YAxis stroke="#999" fontSize={16} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{ backgroundColor: "#fff", border: "1px solid #E0E3E8", borderRadius: "6px", fontSize: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}
                 />
-                <Bar dataKey="count" fill="#1A73E8" radius={[4, 4, 0, 0]} barSize={22} name="딜 수" key="bar-count" />
-                <Bar dataKey="value" fill="#2CBF60" radius={[4, 4, 0, 0]} barSize={22} name="금액 (M)" key="bar-value" />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={32} name="고객 수">
+                  {lifecycleData.map((d) => (
+                    <Bar key={d.stage} dataKey="count" fill={d.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -195,56 +197,59 @@ export function CustomerDashboardPage() {
           <div className="bg-[#FFA726] rounded-lg px-5 py-3 flex items-center gap-3">
             <AlertTriangle size={14} className="text-white shrink-0" />
             <p className="text-white text-[0.9rem]">
-              <strong>알림:</strong> 5건의 휴면 리드에 대한 재참여가 필요합니다. 검토 후 조치가 필요합니다.
+              <strong>알림:</strong> 이탈 위험 신호가 감지된 고객 {healthInfo.risk}명이 있습니다. AI 제안을 확인하세요.
             </p>
           </div>
         </div>
 
         {/* Right Summary Panel */}
         <div className="col-span-1 space-y-4">
+          {/* Health Summary */}
           <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-[#1A1A1A] text-[1rem]">파이프라인 정보</h3>
+              <h3 className="text-[#1A1A1A] text-[1rem]">고객 헬스 분포</h3>
               <button
-                onClick={() => setPipelineActive(!pipelineActive)}
+                onClick={() => setHealthActive(!healthActive)}
                 className="text-[#1A73E8]"
               >
-                {pipelineActive ? (
+                {healthActive ? (
                   <ToggleRight size={19} />
                 ) : (
                   <ToggleLeft size={19} className="text-[#D1D5DB]" />
                 )}
               </button>
             </div>
-            <p className="text-[0.8rem] text-[#999] mb-3">파이프라인 활성</p>
+            <p className="text-[0.8rem] text-[#999] mb-3">헬스 스코어 요약</p>
 
             <div className="space-y-3">
               {[
-                { label: "단계", value: pipelineInfo.stage },
-                { label: "딜 수", value: pipelineInfo.deals },
-                { label: "평균 금액", value: pipelineInfo.avgValue },
-                { label: "전환율", value: pipelineInfo.conversionRate },
+                { label: "활발", value: `${healthInfo.active}명`, color: "#2CBF60", icon: Heart },
+                { label: "주의", value: `${healthInfo.warning}명`, color: "#F59E0B", icon: AlertTriangle },
+                { label: "이탈 위험", value: `${healthInfo.risk}명`, color: "#EF4444", icon: TrendingUp },
+                { label: "평균 스코어", value: `${healthInfo.avgHealth}`, color: "#1A1A1A", icon: Heart },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between py-2 border-b border-[#F0F1F3] last:border-0">
                   <span className="text-[#999] text-[0.85rem]">{item.label}</span>
-                  <span className="text-[#1A1A1A] text-[0.9rem]">{item.value}</span>
+                  <span className="text-[0.9rem]" style={{ color: item.color }}>{item.value}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Quick Stats */}
+          {/* Upsell Opportunities */}
           <div className="bg-white border border-[#E0E3E8] rounded-lg p-4">
-            <h3 className="text-[#1A1A1A] text-[1.1rem] mb-3">빠른 통계</h3>
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={13} className="text-[#1A73E8]" />
+              <h3 className="text-[#1A1A1A] text-[1.1rem]">업셀 기회</h3>
+            </div>
             <div className="space-y-2.5">
-              {[
-                { label: "이번 주 미팅", value: "12건", color: "#1A73E8" },
-                { label: "완료된 태스크", value: "28건", color: "#2CBF60" },
-                { label: "신규 리드", value: "7건", color: "#FFA726" },
-              ].map((s) => (
-                <div key={s.label} className="flex items-center justify-between">
-                  <span className="text-[#666] text-[0.85rem]">{s.label}</span>
-                  <span className="text-[0.9rem]" style={{ color: s.color }}>{s.value}</span>
+              {upsellPicks.map((u) => (
+                <div key={u.name} className="pb-2.5 border-b border-[#F0F1F3] last:border-0 last:pb-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[#1A1A1A] text-[0.85rem]">{u.name}</span>
+                    <span className="text-[0.75rem] text-[#1A73E8]">{u.score}</span>
+                  </div>
+                  <p className="text-[#666] text-[0.75rem] leading-tight">{u.reason}</p>
                 </div>
               ))}
             </div>

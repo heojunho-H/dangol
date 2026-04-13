@@ -149,16 +149,12 @@ interface PipelineStage {
   type: "active" | "won" | "lost";
 }
 
-// Brand-aligned stage colors: green progression (light → deep) conveys
-// pipeline advancement. 수주확정 uses the deepest brand green.
+// Customer lifecycle stages: onboarding → active → dormant → churned.
 const DEFAULT_STAGES: PipelineStage[] = [
-  { id: "s1", name: "신규",        color: "#9BB4A5", type: "active" },
-  { id: "s2", name: "유선상담",     color: "#7FA28E", type: "active" },
-  { id: "s3", name: "견적서 발송",  color: "#5B9170", type: "active" },
-  { id: "s4", name: "유선견적상담", color: "#4A7B5A", type: "active" },
-  { id: "s5", name: "가격조율",     color: "#3F6D4F", type: "active" },
-  { id: "s6", name: "일정조율",     color: "#2D5F3F", type: "active" },
-  { id: "s7", name: "수주확정",     color: "#1A472A", type: "won" },
+  { id: "s1", name: "온보딩", color: "#3B82F6", type: "active" },
+  { id: "s2", name: "활성",   color: "#10B981", type: "active" },
+  { id: "s3", name: "휴면",   color: "#F59E0B", type: "active" },
+  { id: "s4", name: "이탈",   color: "#9CA3AF", type: "lost" },
 ];
 
 // Muted palette — brand greens + restrained neutrals/warm tones for
@@ -357,7 +353,7 @@ interface SavedView {
 }
 
 const DEFAULT_VIEWS: SavedView[] = [
-  { id: "v1", name: "전체 딜",     viewType: "table",    filters: [], sorts: [], groupBy: "", searchQuery: "" },
+  { id: "v1", name: "전체 고객",     viewType: "table",    filters: [], sorts: [], groupBy: "", searchQuery: "" },
   { id: "v2", name: "파이프라인",  viewType: "kanban",   filters: [], sorts: [], groupBy: "", searchQuery: "" },
   { id: "v3", name: "일정",       viewType: "timeline", filters: [], sorts: [], groupBy: "", searchQuery: "" },
 ];
@@ -434,21 +430,21 @@ interface Deal {
 
 /* ─── SAMPLE DEALS (onboarding 완료 시 로드) ─── */
 const SAMPLE_DEALS: Deal[] = [
-  { id: 1,  company: "(주)테크솔루션",     stage: "수주확정",    contact: "김영호", position: "이사",  service: "ERP 구축",            quantity: 120, amount: "₩3,200만", manager: "박지은", status: "성공",  date: "2026-03-15" },
-  { id: 2,  company: "스마트팩토리(주)",   stage: "가격조율",    contact: "이수진", position: "부장",  service: "MES 도입",            quantity: 85,  amount: "₩2,800만", manager: "김태현", status: "진행중", date: "2026-03-18" },
-  { id: 3,  company: "(주)글로벌트레이드", stage: "견적서 발송", contact: "박민수", position: "과장",  service: "SCM 컨설팅",          quantity: 200, amount: "₩5,500만", manager: "이서연", status: "진행중", date: "2026-03-20" },
-  { id: 4,  company: "디지털커머스(주)",   stage: "신규",        contact: "최지아", position: "대리",  service: "CRM 솔루션",          quantity: 50,  amount: "₩1,200만", manager: "박지은", status: "진행중", date: "2026-03-22" },
-  { id: 5,  company: "(주)바이오헬스",     stage: "유선상담",    contact: "정대현", position: "팀장",  service: "데이터 분석",         quantity: 30,  amount: "₩980만",  manager: "김태현", status: "진행중", date: "2026-03-25" },
-  { id: 6,  company: "에너지플러스(주)",   stage: "일정조율",    contact: "한소희", position: "차장",  service: "IoT 플랫폼",          quantity: 150, amount: "₩4,100만", manager: "이서연", status: "진행중", date: "2026-03-28" },
-  { id: 7,  company: "(주)푸드테크",       stage: "유선견적상담",contact: "오재석", position: "과장",  service: "POS 시스템",          quantity: 90,  amount: "₩1,500만", manager: "박지은", status: "진행중", date: "2026-04-01" },
-  { id: 8,  company: "클라우드원(주)",     stage: "수주확정",    contact: "윤미래", position: "부장",  service: "클라우드 마이그레이션",quantity: 40,  amount: "₩6,200만", manager: "김태현", status: "성공",  date: "2026-04-03" },
-  { id: 9,  company: "(주)핀테크랩",       stage: "견적서 발송", contact: "서준혁", position: "이사",  service: "결제 시스템",         quantity: 60,  amount: "₩2,300만", manager: "이서연", status: "진행중", date: "2026-04-05" },
-  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",        contact: "강하은", position: "대리",  service: "차량 관제 시스템",    quantity: 200, amount: "₩8,500만", manager: "박지은", status: "진행중", date: "2026-04-07" },
-  { id: 11, company: "(주)헬스케어AI",     stage: "가격조율",    contact: "윤성민", position: "팀장",  service: "의료 AI 솔루션",      quantity: 1,   amount: "₩1.2억",   manager: "김태현", status: "진행중", date: "2026-03-10" },
-  { id: 12, company: "리테일허브(주)",     stage: "수주확정",    contact: "조은지", position: "과장",  service: "POS 통합 시스템",     quantity: 300, amount: "₩4,700만", manager: "이서연", status: "성공",  date: "2026-02-28" },
-  { id: 13, company: "(주)스마트물류",     stage: "유선상담",    contact: "임재현", position: "부장",  service: "WMS 도입",            quantity: 80,  amount: "₩3,400만", manager: "박지은", status: "실패",  date: "2026-02-14" },
-  { id: 14, company: "에듀테크파트너(주)", stage: "유선견적상담",contact: "노지수", position: "이사",  service: "LMS 구축",            quantity: 500, amount: "₩9,800만", manager: "김태현", status: "진행중", date: "2026-04-08" },
-  { id: 15, company: "(주)그린에너지",     stage: "일정조율",    contact: "배소연", position: "차장",  service: "에너지 모니터링",     quantity: 100, amount: "₩2,100만", manager: "이서연", status: "진행중", date: "2026-01-20" },
+  { id: 1,  company: "(주)테크솔루션",     stage: "활성",    contact: "김영호", position: "이사",  service: "ERP 구축",            quantity: 120, amount: "₩3,200만", manager: "박지은", status: "성공",  date: "2026-03-15" },
+  { id: 2,  company: "스마트팩토리(주)",   stage: "활성",    contact: "이수진", position: "부장",  service: "MES 도입",            quantity: 85,  amount: "₩2,800만", manager: "김태현", status: "진행중", date: "2026-03-18" },
+  { id: 3,  company: "(주)글로벌트레이드", stage: "온보딩", contact: "박민수", position: "과장",  service: "SCM 컨설팅",          quantity: 200, amount: "₩5,500만", manager: "이서연", status: "진행중", date: "2026-03-20" },
+  { id: 4,  company: "디지털커머스(주)",   stage: "온보딩",        contact: "최지아", position: "대리",  service: "CRM 솔루션",          quantity: 50,  amount: "₩1,200만", manager: "박지은", status: "진행중", date: "2026-03-22" },
+  { id: 5,  company: "(주)바이오헬스",     stage: "온보딩",    contact: "정대현", position: "팀장",  service: "데이터 분석",         quantity: 30,  amount: "₩980만",  manager: "김태현", status: "진행중", date: "2026-03-25" },
+  { id: 6,  company: "에너지플러스(주)",   stage: "활성",    contact: "한소희", position: "차장",  service: "IoT 플랫폼",          quantity: 150, amount: "₩4,100만", manager: "이서연", status: "진행중", date: "2026-03-28" },
+  { id: 7,  company: "(주)푸드테크",       stage: "온보딩",contact: "오재석", position: "과장",  service: "POS 시스템",          quantity: 90,  amount: "₩1,500만", manager: "박지은", status: "진행중", date: "2026-04-01" },
+  { id: 8,  company: "클라우드원(주)",     stage: "활성",    contact: "윤미래", position: "부장",  service: "클라우드 마이그레이션",quantity: 40,  amount: "₩6,200만", manager: "김태현", status: "성공",  date: "2026-04-03" },
+  { id: 9,  company: "(주)핀테크랩",       stage: "온보딩", contact: "서준혁", position: "이사",  service: "결제 시스템",         quantity: 60,  amount: "₩2,300만", manager: "이서연", status: "진행중", date: "2026-04-05" },
+  { id: 10, company: "모빌리티솔루션(주)", stage: "온보딩",        contact: "강하은", position: "대리",  service: "차량 관제 시스템",    quantity: 200, amount: "₩8,500만", manager: "박지은", status: "진행중", date: "2026-04-07" },
+  { id: 11, company: "(주)헬스케어AI",     stage: "활성",    contact: "윤성민", position: "팀장",  service: "의료 AI 솔루션",      quantity: 1,   amount: "₩1.2억",   manager: "김태현", status: "진행중", date: "2026-03-10" },
+  { id: 12, company: "리테일허브(주)",     stage: "활성",    contact: "조은지", position: "과장",  service: "POS 통합 시스템",     quantity: 300, amount: "₩4,700만", manager: "이서연", status: "성공",  date: "2026-02-28" },
+  { id: 13, company: "(주)스마트물류",     stage: "온보딩",    contact: "임재현", position: "부장",  service: "WMS 도입",            quantity: 80,  amount: "₩3,400만", manager: "박지은", status: "실패",  date: "2026-02-14" },
+  { id: 14, company: "에듀테크파트너(주)", stage: "온보딩",contact: "노지수", position: "이사",  service: "LMS 구축",            quantity: 500, amount: "₩9,800만", manager: "김태현", status: "진행중", date: "2026-04-08" },
+  { id: 15, company: "(주)그린에너지",     stage: "활성",    contact: "배소연", position: "차장",  service: "에너지 모니터링",     quantity: 100, amount: "₩2,100만", manager: "이서연", status: "진행중", date: "2026-01-20" },
 ];
 
 /* ─── WIDGET DEFINITIONS ─── */
@@ -470,20 +466,20 @@ const WIDGET_CATEGORIES = [
 ];
 
 const allWidgets: WidgetDef[] = [
-  { id: "kpi-deals", name: "총 딜 수", description: "현재 진행중인 전체 딜 수를 표시합니다", category: "kpi", icon: BarChart3, colSpan: 1 },
+  { id: "kpi-deals", name: "총 고객 수", description: "현재 진행중인 전체 고객 수를 표시합니다", category: "kpi", icon: BarChart3, colSpan: 1 },
   { id: "kpi-winrate", name: "수주율 (건수)", description: "건수 기준 수주 성공률을 표시합니다", category: "kpi", icon: Target, colSpan: 1 },
   { id: "kpi-amount", name: "총 견적 금액", description: "전체 견적 금액 합계를 표시합니다", category: "kpi", icon: DollarSign, colSpan: 1 },
   { id: "kpi-winrate-amount", name: "수주율 (금액)", description: "금액 기준 수주 성공률을 표시합니다", category: "kpi", icon: TrendingUp, colSpan: 1 },
-  { id: "kpi-active", name: "활성 딜", description: "현재 진행중인 딜 건수를 표시합니다", category: "kpi", icon: Activity, colSpan: 1 },
-  { id: "kpi-avg-cycle", name: "평균 영업 주기", description: "딜 생성부터 종료까지 평균 일수입니다", category: "kpi", icon: Clock, colSpan: 1 },
-  { id: "kpi-at-risk", name: "위험 딜", description: "장기 미진행 또는 지연된 딜 수입니다", category: "kpi", icon: AlertTriangle, colSpan: 1 },
-  { id: "kpi-new-month", name: "이달 신규", description: "이번 달 새로 생성된 딜 건수입니다", category: "kpi", icon: Plus, colSpan: 1 },
-  { id: "funnel", name: "파이프라인 퍼널", description: "각 스테이지별 딜 분포를 막대 차트로 표시합니다", category: "chart", icon: Filter, colSpan: 4 },
-  { id: "donut", name: "성공여부 분포", description: "딜의 성공/실패/진행중 비율을 도넛 차트로 표시합니다", category: "chart", icon: PieIcon, colSpan: 1 },
-  { id: "trend", name: "월별 추이", description: "최근 6개월간 딜 수와 금액 추이를 꺾은선 그래프로 표시합니다", category: "chart", icon: TrendingUp, colSpan: 2 },
+  { id: "kpi-active", name: "활성 고객", description: "현재 진행중인 고객 건수를 표시합니다", category: "kpi", icon: Activity, colSpan: 1 },
+  { id: "kpi-avg-cycle", name: "평균 영업 주기", description: "고객 등록부터 종료까지 평균 일수입니다", category: "kpi", icon: Clock, colSpan: 1 },
+  { id: "kpi-at-risk", name: "위험 고객", description: "장기 미진행 또는 지연된 고객 수입니다", category: "kpi", icon: AlertTriangle, colSpan: 1 },
+  { id: "kpi-new-month", name: "이달 신규", description: "이번 달 새로 생성된 고객 건수입니다", category: "kpi", icon: Plus, colSpan: 1 },
+  { id: "funnel", name: "파이프라인 퍼널", description: "각 스테이지별 고객 분포를 막대 차트로 표시합니다", category: "chart", icon: Filter, colSpan: 4 },
+  { id: "donut", name: "성공여부 분포", description: "고객의 성공/실패/진행중 비율을 도넛 차트로 표시합니다", category: "chart", icon: PieIcon, colSpan: 1 },
+  { id: "trend", name: "월별 추이", description: "최근 6개월간 고객 수와 금액 추이를 꺾은선 그래프로 표시합니다", category: "chart", icon: TrendingUp, colSpan: 2 },
   { id: "stage-bar", name: "스테이지별 금액", description: "각 스테이지별 누적 금액을 가로 막대로 표시합니다", category: "chart", icon: BarChart3, colSpan: 2 },
-  { id: "performance", name: "담당자별 성과", description: "영업 담당자별 딜 수, 수주율, 금액을 테이블로 표시합니다", category: "table", icon: Users, colSpan: 2 },
-  { id: "recent-deals", name: "최근 딜 목록", description: "최근 등록된 딜 5건을 간략히 표시합니다", category: "table", icon: Table2, colSpan: 2 },
+  { id: "performance", name: "담당자별 성과", description: "영업 담당자별 고객 수, 수주율, 금액을 테이블로 표시합니다", category: "table", icon: Users, colSpan: 2 },
+  { id: "recent-deals", name: "최근 고객 목록", description: "최근 등록된 고객 5건을 간략히 표시합니다", category: "table", icon: Table2, colSpan: 2 },
   { id: "memo", name: "메모", description: "자유롭게 텍스트 메모를 작성할 수 있습니다", category: "utility", icon: StickyNote, colSpan: 1 },
   { id: "shortcuts", name: "빠른 실행", description: "자주 사용하는 기능에 빠르게 접근합니다", category: "utility", icon: Zap, colSpan: 1 },
 ];
@@ -556,8 +552,8 @@ function detectScenario(a: DealAnalysis): { scenario: ScenarioType; reason: stri
   if (!a.hasAmountData)
     return { scenario: "단순 고객 목록", reason: "금액 데이터가 없어 기본 고객 관리 중심으로 구성합니다" };
   if (a.uniqueManagers > 5 || a.totalDeals > 20)
-    return { scenario: "중규모 팀", reason: `담당자 ${a.uniqueManagers}명, 딜 ${a.totalDeals}건 — 팀 성과 비교가 중요합니다` };
-  return { scenario: "소규모 팀", reason: `담당자 ${a.uniqueManagers}명, 딜 ${a.totalDeals}건 — 개별 딜 추적이 중요합니다` };
+    return { scenario: "중규모 팀", reason: `담당자 ${a.uniqueManagers}명, 고객 ${a.totalDeals}건 — 팀 성과 비교가 중요합니다` };
+  return { scenario: "소규모 팀", reason: `담당자 ${a.uniqueManagers}명, 고객 ${a.totalDeals}건 — 개별 고객 추적이 중요합니다` };
 }
 
 interface WidgetRecommendation {
@@ -571,7 +567,7 @@ function recommendWidgets(a: DealAnalysis, scenario: ScenarioType): WidgetRecomm
   const add = (id: string, reason: string, priority: number) => recs.push({ widgetId: id, reason, priority });
 
   // Always recommend
-  add("kpi-deals", "전체 딜 현황을 한눈에 파악", 100);
+  add("kpi-deals", "전체 고객 현황을 한눈에 파악", 100);
 
   if (a.hasAmountData) {
     add("kpi-amount", "총 견적 금액으로 파이프라인 가치 확인", 95);
@@ -598,11 +594,11 @@ function recommendWidgets(a: DealAnalysis, scenario: ScenarioType): WidgetRecomm
 
   // Scenario-specific
   if (scenario === "소규모 팀") {
-    add("recent-deals", "최근 딜 목록으로 빠른 현황 파악", 82);
+    add("recent-deals", "최근 고객 목록으로 빠른 현황 파악", 82);
     add("shortcuts", "자주 쓰는 기능에 빠르게 접근", 60);
   } else if (scenario === "중규모 팀") {
-    add("kpi-active", "현재 진행중인 활성 딜 수 모니터링", 78);
-    add("kpi-at-risk", "지연된 위험 딜 조기 발견", 76);
+    add("kpi-active", "현재 진행중인 활성 고객 수 모니터링", 78);
+    add("kpi-at-risk", "지연된 위험 고객 조기 발견", 76);
   } else {
     // 단순 고객 목록
     add("recent-deals", "최근 등록된 고객 목록 확인", 85);
@@ -634,8 +630,8 @@ interface CustomKpiDef {
 
 const FORMULA_PRESETS: { key: CustomKpiDef["formula"]; label: string; desc: string }[] = [
   { key: "won_amount_ratio", label: "수주금액 / 견적금액", desc: "수주 금액 대비 전체 견적 금액 비율" },
-  { key: "avg_deal_amount", label: "평균 딜 금액", desc: "전체 딜의 평균 견적 금액" },
-  { key: "conversion_rate", label: "전환율", desc: "성공 딜 수 / 전체 딜 수 × 100" },
+  { key: "avg_deal_amount", label: "평균 고객 계약 금액", desc: "전체 고객의 평균 견적 금액" },
+  { key: "conversion_rate", label: "전환율", desc: "성공 고객 수 / 전체 고객 수 × 100" },
   { key: "custom_ratio", label: "직접 정의", desc: "분자/분모를 직접 선택하여 비율 계산" },
 ];
 
@@ -643,8 +639,8 @@ const KPI_VARS: { key: string; label: string }[] = [
   { key: "wonAmt", label: "수주 금액" },
   { key: "totalAmt", label: "총 견적금액" },
   { key: "wonCount", label: "수주 건수" },
-  { key: "totalCount", label: "총 딜 수" },
-  { key: "activeCount", label: "활성 딜 수" },
+  { key: "totalCount", label: "총 고객 수" },
+  { key: "activeCount", label: "활성 고객 수" },
 ];
 
 interface GoalDef {
@@ -1214,7 +1210,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
               <FileSpreadsheet size={22} color={T.primary} />
             </div>
             <h2 className="text-[22px] text-[#1A1A1A] mb-2">영업 데이터를 가져오세요</h2>
-            <p className="text-[0.85rem] text-[#999] mb-8">기존 Excel 파일을 업로드하면 자동으로 딜 데이터가 생성됩니다.</p>
+            <p className="text-[0.85rem] text-[#999] mb-8">기존 Excel 파일을 업로드하면 자동으로 고객 데이터가 생성됩니다.</p>
 
             <div
               className="w-full rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-colors mb-4"
@@ -1650,7 +1646,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
               const clearAll = () => setSelectedWidgets(new Set());
 
               const stats = [
-                { label: "총 딜 수", value: `${dealAnalysis.totalDeals}건`, icon: BarChart3 },
+                { label: "총 고객 수", value: `${dealAnalysis.totalDeals}건`, icon: BarChart3 },
                 { label: "스테이지", value: `${dealAnalysis.uniqueStages}개`, icon: Filter },
                 { label: "담당자", value: `${dealAnalysis.uniqueManagers}명`, icon: Users },
                 { label: "총 금액", value: fmtAmt(dealAnalysis.totalAmount), icon: DollarSign },
@@ -1663,7 +1659,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
                   {/* 헤더 */}
                   <div className="mb-5">
                     <h2 className="text-[1.1rem] text-[#1A1A1A] mb-1">AI 대시보드 추천</h2>
-                    <p className="text-[0.8rem] text-[#999]">{dealsForAnalysisRef.current.length}건의 딜 데이터를 분석했습니다</p>
+                    <p className="text-[0.8rem] text-[#999]">{dealsForAnalysisRef.current.length}건의 고객 데이터를 분석했습니다</p>
                   </div>
 
                   {/* 시나리오 히어로 카드 */}
@@ -1849,9 +1845,9 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
 
 /* ─── WEB FORM SAMPLE DEALS ─── */
 const WEB_FORM_SAMPLE_DEALS: Deal[] = [
-  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", service: "CRM 솔루션 도입 문의", quantity: 1, amount: "₩0", manager: "박지은", status: "진행중", date: "2026-04-12" },
-  { id: 102, company: "스마트로직(주)", stage: "신규", contact: "이동훈", position: "대표이사", service: "ERP 연동 문의", quantity: 1, amount: "₩0", manager: "김태현", status: "진행중", date: "2026-04-12" },
-  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀", service: "데이터 분석 플랫폼 문의", quantity: 1, amount: "₩0", manager: "이서연", status: "진행중", date: "2026-04-11" },
+  { id: 101, company: "(주)넥스트커머스", stage: "온보딩", contact: "김서현", position: "마케팅 팀장", service: "CRM 솔루션 도입 문의", quantity: 1, amount: "₩0", manager: "박지은", status: "진행중", date: "2026-04-12" },
+  { id: 102, company: "스마트로직(주)", stage: "온보딩", contact: "이동훈", position: "대표이사", service: "ERP 연동 문의", quantity: 1, amount: "₩0", manager: "김태현", status: "진행중", date: "2026-04-12" },
+  { id: 103, company: "(주)블루오션테크", stage: "온보딩", contact: "정하나", position: "기획팀", service: "데이터 분석 플랫폼 문의", quantity: 1, amount: "₩0", manager: "이서연", status: "진행중", date: "2026-04-11" },
 ];
 
 /* ─── WEB FORM ONBOARDING FLOW ─── */
@@ -2069,7 +2065,7 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
               <div className="mt-4 p-4 rounded-xl" style={{ background: "#FFFBEB", border: "1px solid #FEF3C7" }}>
                 <p className="text-[0.75rem] text-[#92400E] leading-relaxed">
                   위 코드를 홈페이지의 문의하기 페이지에 붙여넣으세요.
-                  폼을 통해 접수된 문의는 자동으로 <strong>"신규"</strong> 스테이지의 딜로 생성됩니다.
+                  폼을 통해 접수된 문의는 자동으로 <strong>"신규"</strong> 스테이지의 고객으로 생성됩니다.
                 </p>
               </div>
             </div>
@@ -2096,7 +2092,7 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
           <h2 className="text-[22px] text-[#1A1A1A] mb-2">웹 폼 연동 완료!</h2>
           <p className="text-[0.9rem] text-[#666] mb-6">
             홈페이지 문의 폼이 연동되었습니다.<br />
-            접수된 문의는 자동으로 딜로 생성됩니다.
+            접수된 문의는 자동으로 고객으로 생성됩니다.
           </p>
           <div className="flex items-center justify-center gap-3 mb-8 flex-wrap">
             {[`리드 ${WEB_FORM_SAMPLE_DEALS.length}건 수신`, `스테이지: 신규`, `자동 배정 활성`].map((s) => (
@@ -2230,7 +2226,7 @@ interface AttachedFile {
 
 function generateActivityLogs(deal: Deal): ActivityLog[] {
   return [
-    { id: "a1", type: "created", title: "딜 생성됨", detail: `${deal.company} 딜이 생성되었습니다`, date: deal.date, user: deal.manager },
+    { id: "a1", type: "created", title: "고객 등록됨", detail: `${deal.company} 고객이 생성되었습니다`, date: deal.date, user: deal.manager },
     { id: "a2", type: "stage_change", title: `스테이지 변경: 신규 → ${deal.stage}`, detail: "파이프라인 스테이지가 변경되었습니다", date: deal.date, user: deal.manager },
     { id: "a3", type: "call", title: `${deal.contact}에게 전화`, detail: "초기 컨택 완료. 서비스 소개 진행", date: deal.date, user: deal.manager },
     { id: "a4", type: "email", title: "견적서 이메일 발송", detail: `${deal.contact}에게 견적서를 발송했습니다`, date: deal.date, user: deal.manager },
@@ -2767,7 +2763,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     const diff = (now.getTime() - new Date(d.date).getTime()) / 86400000;
     return diff >= 30;
   }).length;
-  /* avg cycle: 성공/실패 딜만 */
+  /* avg cycle: 성공/실패 계약만 */
   const closedDeals = deals.filter((d) => d.status !== "진행중");
   const avgCycle = closedDeals.length > 0
     ? Math.round(closedDeals.reduce((s, d) => s + (now.getTime() - new Date(d.date).getTime()) / 86400000, 0) / closedDeals.length)
@@ -2776,13 +2772,13 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
   if (widgetId.startsWith("kpi-")) {
     type KpiEntry = { title: string; value: string; sub: string; trend: string; trendColor: string; icon: typeof BarChart3; iconBg: string };
     const kpiMap: Record<string, KpiEntry> = {
-      "kpi-deals":         { title: "총 딜 수",       value: `${total}건`,        sub: "전체 등록 딜",        trend: `활성 ${activeCount}건`,    trendColor: T.primary,    icon: BarChart3,    iconBg: "#EFF5F1" },
+      "kpi-deals":         { title: "총 고객 수",       value: `${total}건`,        sub: "전체 등록 고객",        trend: `활성 ${activeCount}건`,    trendColor: T.primary,    icon: BarChart3,    iconBg: "#EFF5F1" },
       "kpi-winrate":       { title: "수주율 (건수)",   value: total > 0 ? `${Math.round((wonCount / total) * 100)}%` : "0%", sub: `수주 ${wonCount}건`,     trend: `전체 ${total}건`,          trendColor: T.success,    icon: Target,       iconBg: "#ECFDF5" },
       "kpi-amount":        { title: "총 견적 금액",    value: fmtAmt(totalAmt),   sub: "VAT 미포함",         trend: `수주 ${fmtAmt(wonAmt)}`,   trendColor: T.primary,    icon: DollarSign,   iconBg: "#EFF5F1" },
       "kpi-winrate-amount":{ title: "수주율 (금액)",   value: totalAmt > 0 ? `${Math.round((wonAmt / totalAmt) * 100)}%` : "0%", sub: `수주액 ${fmtAmt(wonAmt)}`, trend: `총 ${fmtAmt(totalAmt)}`, trendColor: T.primary, icon: TrendingUp, iconBg: "#EFF5F1" },
-      "kpi-active":        { title: "활성 딜",        value: `${activeCount}건`,  sub: "진행중 딜",          trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#4A7B5A", icon: Activity, iconBg: "#EDF3EE" },
-      "kpi-avg-cycle":     { title: "평균 영업 주기", value: `${avgCycle}일`,     sub: "종료 딜 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#6B7280", icon: Clock,      iconBg: "#F3F4F6" },
-      "kpi-at-risk":       { title: "위험 딜",        value: `${atRisk}건`,       sub: "30일+ 미진행",       trend: activeCount > 0 ? `활성의 ${Math.round((atRisk / activeCount) * 100)}%` : "0%", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
+      "kpi-active":        { title: "활성 고객",        value: `${activeCount}건`,  sub: "진행중 고객",          trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#4A7B5A", icon: Activity, iconBg: "#EDF3EE" },
+      "kpi-avg-cycle":     { title: "평균 영업 주기", value: `${avgCycle}일`,     sub: "종료 계약 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#6B7280", icon: Clock,      iconBg: "#F3F4F6" },
+      "kpi-at-risk":       { title: "위험 고객",        value: `${atRisk}건`,       sub: "30일+ 미진행",       trend: activeCount > 0 ? `활성의 ${Math.round((atRisk / activeCount) * 100)}%` : "0%", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
       "kpi-new-month":     { title: "이달 신규",      value: `${newThisMonth}건`, sub: thisMonth,            trend: `전체의 ${total > 0 ? Math.round((newThisMonth / total) * 100) : 0}%`, trendColor: "#5B9170", icon: Plus, iconBg: "#EDF3EE" },
     };
     const kpi = kpiMap[widgetId];
@@ -2839,8 +2835,8 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
 
   if (widgetId === "trend") return (
     <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">월별 딜 추이</p>
-      <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="cDeals" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><Tooltip /><Area type="monotone" dataKey="deals" stroke={T.primary} fill="url(#cDeals)" strokeWidth={2} name="딜 수" /></AreaChart></ResponsiveContainer></div>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">월별 고객 추이</p>
+      <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="cDeals" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><Tooltip /><Area type="monotone" dataKey="deals" stroke={T.primary} fill="url(#cDeals)" strokeWidth={2} name="고객 수" /></AreaChart></ResponsiveContainer></div>
     </>
   );
 
@@ -2875,7 +2871,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
   if (widgetId === "performance") return (
     <>
       <p className="text-[0.85rem] text-[#1A1A1A] mb-4">담당자별 성과</p>
-      <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["담당자", "딜 수", "수주", "수주율", "총 금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
+      <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["담당자", "고객 수", "수주", "수주율", "총 금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
       <tbody>{performanceData.map((p) => <tr key={p.name} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-[0.6rem] text-white" style={{ background: T.primary }}>{p.name[0]}</div><span className="text-[0.7rem] text-[#1A1A1A]">{p.name}</span></div></td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.deals}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.won}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: T.primary }}>{p.rate}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.amount}</td></tr>)}</tbody></table>
     </>
   );
@@ -2885,7 +2881,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
 
   if (widgetId === "recent-deals") return (
     <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 딜 목록</p>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 고객 목록</p>
       <div className="space-y-2">{recentDeals.map((d) => <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors"><div className="flex items-center gap-3"><span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span><span className="text-[0.6rem] px-2 py-0.5 rounded-md" style={{ background: (stageColorMap[d.stage] || "#999") + "18", color: stageColorMap[d.stage] || "#999" }}>{d.stage}</span></div><span className="text-[0.7rem] text-[#999]">{d.amount}</span></div>)}</div>
     </>
   );
@@ -2897,7 +2893,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
   );
   if (widgetId === "shortcuts") {
     const sc = [
-      { label: "딜 추가", icon: Plus, color: T.primary, onClick: onAddDeal },
+      { label: "고객 추가", icon: Plus, color: T.primary, onClick: onAddDeal },
       { label: "Excel 가져오기", icon: Upload, color: "#4A7B5A", onClick: onImportExcel },
       { label: "보고서 내보내기", icon: Download, color: "#6B7280", onClick: onExport },
       { label: "팀 성과 분석", icon: Users, color: "#5B9170", onClick: onAnalytics },
@@ -3045,7 +3041,7 @@ function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }} onClick={onClose}>
       <div className="bg-white rounded-2xl w-full max-w-[512px] max-h-[85vh] flex flex-col" style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.15)" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-7 py-5 border-b" style={{ borderColor: T.border }}>
-          <h2 className="text-[1.1rem] text-[#1A1A1A]">새 딜 추가</h2>
+          <h2 className="text-[1.1rem] text-[#1A1A1A]">새 고객 추가</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#F7F8FA]"><X size={14} color="#999" /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-7 py-5 space-y-4">
@@ -3114,7 +3110,7 @@ function AddViewModal({
               style={{ borderColor: T.border }}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="예: 이번 달 신규 딜"
+              placeholder="예: 이번 달 신규 고객"
               onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
             />
           </div>
@@ -3536,7 +3532,7 @@ function KanbanColumn({
             <div className="w-8 h-8 rounded-full flex items-center justify-center mb-2" style={{ background: color + "10" }}>
               <Plus size={12} color={color} />
             </div>
-            <span className="text-[0.65rem] text-[#CCC]">딜을 여기에 드래그하세요</span>
+            <span className="text-[0.65rem] text-[#CCC]">고객을 여기에 드래그하세요</span>
           </div>
         )}
         {deals.map((deal) => (
@@ -3551,7 +3547,7 @@ function KanbanColumn({
           className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-[0.7rem] text-[#999] hover:text-[#1A472A] hover:bg-white border border-dashed hover:border-solid transition-all"
           style={{ borderColor: T.border }}
         >
-          <Plus size={11} /> 딜 추가
+          <Plus size={11} /> 고객 추가
         </button>
       </div>
     </div>
@@ -4329,7 +4325,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
             )}
           </div>
           <button onClick={() => setShowAddDeal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: T.primary }}>
-            <Plus size={12} /> 딜 추가
+            <Plus size={12} /> 고객 추가
           </button>
         </div>
       </div>
@@ -4340,7 +4336,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
             {/* ZONE 1: 대시보드 위젯 그리드 */}
             <div>
               {customerDeals.length === 0 ? (
-                /* 딜 데이터 없음 → 위젯 추가 플레이스홀더만 노출 */
+                /* 고객 데이터 없음 → 위젯 추가 플레이스홀더만 노출 */
                 <div
                   onClick={() => setCustomizeMode(true)}
                   className="rounded-xl p-12 flex flex-col items-center justify-center cursor-pointer transition-all hover:border-[#1A472A] hover:bg-[#FAFBFC] min-h-[128px]"
@@ -4350,10 +4346,10 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     <Plus size={16} color={T.primary} />
                   </div>
                   <span className="text-[0.75rem] text-[#999]">위젯 추가</span>
-                  <span className="text-[0.65rem] text-[#CCC] mt-1">딜 데이터를 추가하면 대시보드를 구성할 수 있습니다</span>
+                  <span className="text-[0.65rem] text-[#CCC] mt-1">고객 데이터를 추가하면 대시보드를 구성할 수 있습니다</span>
                 </div>
               ) : (
-                /* 딜 데이터 있음 → 전체 대시보드 */
+                /* 고객 데이터 있음 → 전체 대시보드 */
                 <>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -4547,7 +4543,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
               {/* Section Header with View Tabs */}
               <div className="mb-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[1.1rem] text-[#1A1A1A]">딜 데이터</span>
+                  <span className="text-[1.1rem] text-[#1A1A1A]">고객 데이터</span>
                   {customerDeals.length > 0 && (
                     <span className="px-2.5 py-0.5 rounded-full text-[0.7rem]" style={{ background: "#EFF5F1", color: T.primary }}>
                       {filteredDeals.length === customerDeals.length ? `${customerDeals.length}건` : `${filteredDeals.length} / ${customerDeals.length}건`}
@@ -4660,7 +4656,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                         <TrendingUp size={16} color={T.primary} />
                       </div>
                     </div>
-                    <p className="text-[1.1rem] text-[#1A1A1A] mb-2">딜 데이터를 추가해보세요</p>
+                    <p className="text-[1.1rem] text-[#1A1A1A] mb-2">고객 데이터를 추가해보세요</p>
                     <p className="text-[0.8rem] text-[#999] mb-9 text-center leading-relaxed">
                       고객 정보와 영업 기회를 등록하면 파이프라인을 한 눈에 관리할 수 있습니다.
                     </p>
@@ -4675,7 +4671,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                         </div>
                         <div>
                           <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">직접 추가</p>
-                          <p className="text-[0.65rem] text-[#999]">딜 정보를 하나씩 입력</p>
+                          <p className="text-[0.65rem] text-[#999]">고객 정보를 하나씩 입력</p>
                         </div>
                       </button>
                       <button
