@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router";
 import { Layout } from "./components/layout";
 import { HomePage } from "./components/home-page";
 import { SalesPage } from "./components/sales-page";
+import { CustomerDashboardPage } from "./components/customer-dashboard-page";
 import { CustomerPage } from "./components/customer-page";
 import { DealflowPage } from "./components/dealflow-page";
 import { PipelineSettingsPage } from "./components/pipeline-settings-page";
@@ -17,7 +18,8 @@ export const router = createBrowserRouter([
       { path: "dealflow/:pageId/:viewType?", Component: DealflowPage },
       { path: "settings/pipeline", Component: PipelineSettingsPage },
       { path: "settings/fields", Component: FieldSettingsPage },
-      { path: "customers/:pageId", Component: CustomerPage },
+      { path: "customers", Component: CustomerDashboardPage },
+      { path: "customers/:pageId/:viewType?", Component: CustomerPage },
       { path: "*", Component: HomePage },
     ],
   },

@@ -48,6 +48,7 @@ const navSections: NavSection[] = [
     items: [
       { id: "home", icon: Home, label: "홈", to: "/" },
       { id: "sales-dashboard", icon: LayoutDashboard, label: "영업관리 대시보드", to: "/sales" },
+      { id: "customer-dashboard", icon: LayoutDashboard, label: "고객관리 대시보드", to: "/customers" },
     ],
   },
   {
