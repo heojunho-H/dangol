@@ -3652,9 +3652,20 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   }, [customFields]);
 
   const startBlankTable = useCallback(() => {
-    setVisibleColumns(new Set(["company", "contact", "stage", "amount", "date"]));
+    const t = Date.now();
+    const blankCols: CustomField[] = Array.from({ length: 5 }, (_, i) => ({
+      id: `cf_blank_${t}_${i}`,
+      key: `col_${t}_${i + 1}`,
+      label: "",
+      type: "text",
+      required: false,
+      locked: false,
+      visible: true,
+    }));
+    setCustomFields((prev) => [...prev, ...blankCols]);
+    setVisibleColumns(new Set(blankCols.map((c) => c.key)));
     setActiveView("table");
-    const id = Date.now() + Math.floor(Math.random() * 1000);
+    const id = t + Math.floor(Math.random() * 1000);
     const blank: Customer = {
       id,
       company: "",
@@ -3669,7 +3680,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       date: new Date().toISOString().slice(0, 10),
     };
     setCustomerDeals([blank]);
-    setEditingCell({ id, key: "company" });
+    setEditingCell(null);
   }, [pipelineStages]);
 
   const addBlankDeal = useCallback(() => {
@@ -4642,6 +4653,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                   setHeaderMenu({ key: h.key, x: e.clientX, y: e.clientY });
                                 }}
                                 onClick={(e) => {
+                                  if (!h.label) { renameColumn(h.key); return; }
                                   if (behavior === "none") return;
                                   if (behavior === "sort") {
                                     if (sortIdx >= 0) {
@@ -4661,7 +4673,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                 }}
                               >
                                 <div className={`flex items-center gap-1.5 ${isNumeric ? "justify-end" : ""}`}>
-                                  <span className={`text-[0.65rem] tracking-wide ${isActive ? "text-[#1A472A] font-medium" : "text-[#888]"}`}>{h.label}</span>
+                                  {h.label ? (
+                                    <span className={`text-[0.65rem] tracking-wide ${isActive ? "text-[#1A472A] font-medium" : "text-[#888]"}`}>{h.label}</span>
+                                  ) : (
+                                    <span className="text-[0.65rem] tracking-wide italic text-[#BBB] hover:text-[#1A472A] transition-colors">클릭해서 컬럼 이름 입력</span>
+                                  )}
                                   {behavior === "sort" && (
                                     <span className={`text-[0.55rem] ${sortDir ? "text-[#1A472A]" : "text-[#CCC] opacity-0 group-hover/th:opacity-100"} transition-opacity`}>
                                       {sortDir === "asc" ? "▲" : sortDir === "desc" ? "▼" : "⇅"}
