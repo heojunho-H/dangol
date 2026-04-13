@@ -4353,42 +4353,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     </span>
                   )}
                 </div>
-                <div className="flex items-center bg-white border rounded-lg overflow-hidden w-fit" style={{ borderColor: T.border }}>
-                  {savedViews.map((v) => {
-                    const isActive = v.viewType === activeView;
-                    const ViewIcon = v.viewType === "table" ? Table2 : v.viewType === "card" ? LayoutGrid : Network;
-                    return (
-                      <div
-                        key={v.id}
-                        className="flex items-center gap-1.5 px-3.5 py-2 text-[0.75rem] transition-colors border-r last:border-r-0 cursor-pointer group relative"
-                        style={{
-                          borderColor: T.border,
-                          background: isActive ? T.primary : "transparent",
-                          color: isActive ? "#fff" : "#666",
-                        }}
-                        onClick={() => setActiveView(v.viewType)}
-                      >
-                        <ViewIcon size={13} />
-                        {v.name}
-                        {savedViews.length > 1 && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); removeView(v.id); }}
-                            className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-black/10"
-                            title="뷰 삭제"
-                          >
-                            <X size={9} />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                  <button
-                    onClick={() => setShowAddView(true)}
-                    className="flex items-center gap-1 px-2.5 py-2 text-[0.7rem] text-[#999] hover:text-[#666] hover:bg-[#F7F8FA] transition-colors"
-                  >
-                    <Plus size={11} />
-                  </button>
-                </div>
               </div>
 
               {/* Shared Filter/Sort/Search Toolbar — visible across all views */}
@@ -4522,27 +4486,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
               ) : (
                 /* ─── Views ─── */
                 <>
-                {/* Card Grid View */}
-                {activeView === "card" && (
-                  <CardGridView
-                    deals={filteredDeals}
-                    stageColorMap={stageColors}
-                    onClickDeal={setSelectedDeal}
-                    onAddDeal={() => { setActiveView("table"); addBlankDeal(); }}
-                  />
-                )}
-
-                {/* Relation View */}
-                {activeView === "relation" && (
-                  <RelationView
-                    deals={filteredDeals}
-                    pipelineStages={pipelineStages}
-                    stageColorMap={stageColors}
-                    onClickDeal={setSelectedDeal}
-                  />
-                )}
-
-                {/* Table View */}
+                {/* Table View (유일한 뷰) */}
                 {activeView === "table" && (
                 <div className="bg-white rounded-xl border overflow-hidden" style={{ borderColor: T.border, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
                   {/* Bulk Action Bar — only when items selected */}
@@ -5227,14 +5171,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           visibleColumns={visibleColumns}
           stageNames={pipelineStages.map((s) => s.name)}
           customFields={customFields}
-        />
-      )}
-
-      {/* Add View Modal */}
-      {showAddView && (
-        <AddViewModal
-          onAdd={addView}
-          onClose={() => setShowAddView(false)}
         />
       )}
 
