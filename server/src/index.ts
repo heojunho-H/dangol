@@ -14,6 +14,7 @@ import { activityLogsRouter } from "./routes/activity-logs.js";
 import { filesRouter, fileDownloadRouter } from "./routes/files.js";
 import { customersRouter } from "./routes/customers.js";
 import { chatRouter } from "./routes/chat.js";
+import { formsRouter, publicFormsRouter } from "./routes/forms.js";
 
 config({ path: "../.env" });
 
@@ -60,6 +61,10 @@ app.use("/api/files", fileDownloadRouter);
 // Customers + Chat (protected)
 app.use("/api/customers", customersRouter);
 app.use("/api/chat", chatRouter);
+
+// Web forms — authed management + public submission endpoint
+app.use("/api/forms", formsRouter);
+app.use("/api/public/forms", publicFormsRouter);
 
 // Global error handler
 app.use(

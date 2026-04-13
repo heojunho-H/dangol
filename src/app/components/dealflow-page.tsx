@@ -1871,6 +1871,16 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
   const [fields, setFields] = useState<WebFormField[]>(DEFAULT_WEB_FORM_FIELDS);
   const [copied, setCopied] = useState(false);
   const [testSubmitted, setTestSubmitted] = useState(false);
+  const [formId, setFormId] = useState<string | null>(null);
+  const [submissionCount, setSubmissionCount] = useState(0);
+  const [isCreating, setIsCreating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const apiBase = import.meta.env.VITE_API_URL ?? "";
+  const authHeaders = (): Record<string, string> => {
+    const tok = typeof window !== "undefined" ? localStorage.getItem("dangol_access_token") : null;
+    return tok ? { Authorization: `Bearer ${tok}` } : {};
+  };
 
   const activeFields = fields.filter((f) => f.required || f.locked);
   const toggleField = (key: string) => {
@@ -1881,11 +1891,48 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
     );
   };
 
-  const embedCode = `<!-- dangol CRM 웹 폼 -->
+  const handleCreateForm = async () => {
+    if (!formName.trim() || isCreating) return;
+    setIsCreating(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetch(`${apiBase}/api/forms`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          name: formName,
+          fields: activeFields.map((f) => ({ key: f.key, label: f.label, required: f.required || f.locked })),
+        }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = await res.json();
+      setFormId(data.id);
+      setStep(2);
+    } catch (err) {
+      // 백엔드 연결 실패 시 데모 모드로 진행
+      console.warn("폼 생성 실패, 데모 모드로 진행", err);
+      setFormId(null);
+      setStep(2);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const submitUrl = formId
+    ? `${apiBase || ""}/api/public/forms/${formId}/submit`
+    : "https://api.dangol.io/api/public/forms/{FORM_ID}/submit";
+
+  const embedCode = formId
+    ? `<!-- dangol CRM 웹 폼 -->
+<form action="${submitUrl}" method="post">
+${activeFields.map((f) => `  <input name="${f.key}" placeholder="${f.label}"${f.locked ? " required" : ""} />`).join("\n")}
+  <button type="submit">문의하기</button>
+</form>`
+    : `<!-- dangol CRM 웹 폼 (데모) -->
 <script src="https://cdn.dangol.io/form.js"></script>
 <div id="dangol-form"
   data-form-id="f-${Date.now().toString(36)}"
-  data-fields="${fields.filter((f) => f.required || f.locked).map((f) => f.key).join(",")}"
+  data-fields="${activeFields.map((f) => f.key).join(",")}"
 ></div>`;
 
   const handleCopy = () => {
@@ -1894,8 +1941,71 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleTestSubmit = () => {
-    setTestSubmitted(true);
+  const handleTestSubmit = async () => {
+    if (testSubmitted) return;
+    if (!formId) {
+      setTestSubmitted(true);
+      setSubmissionCount((c) => c + 1);
+      return;
+    }
+    try {
+      const res = await fetch(`${apiBase}/api/public/forms/${formId}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          company: "(주)테스트고객",
+          contact: "홍길동",
+          email: "test@example.com",
+          phone: "010-1234-5678",
+          service: "CRM 도입 문의",
+          message: "테스트 제출입니다",
+        }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      setTestSubmitted(true);
+      setSubmissionCount((c) => c + 1);
+    } catch (err) {
+      console.warn("테스트 제출 실패", err);
+      setErrorMsg("테스트 제출 실패 — 백엔드 상태를 확인하세요");
+    }
+  };
+
+  const handleFinish = async () => {
+    if (!formId) {
+      onComplete(WEB_FORM_SAMPLE_DEALS);
+      return;
+    }
+    try {
+      const res = await fetch(`${apiBase}/api/forms/${formId}/submissions`, {
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const subs = (await res.json()) as Array<{
+        id: string;
+        dealId: string | null;
+        payload: Record<string, unknown>;
+        createdAt: string;
+      }>;
+      const deals: Deal[] = subs
+        .filter((s) => s.dealId)
+        .map((s, i) => ({
+          id: Date.now() + i,
+          company: String(s.payload?.company ?? "알 수 없음"),
+          stage: "신규",
+          contact: String(s.payload?.contact ?? ""),
+          position: "",
+          service: String(s.payload?.service ?? ""),
+          quantity: 1,
+          amount: "₩0",
+          manager: "",
+          status: "진행중",
+          date: String(s.createdAt).slice(0, 10),
+        }));
+      onComplete(deals.length > 0 ? deals : WEB_FORM_SAMPLE_DEALS);
+    } catch (err) {
+      console.warn("제출 목록 조회 실패, 샘플 데이터 사용", err);
+      onComplete(WEB_FORM_SAMPLE_DEALS);
+    }
   };
 
   return (
@@ -1964,13 +2074,14 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
           </div>
 
           <button
-            onClick={() => setStep(2)}
+            onClick={handleCreateForm}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[0.85rem] text-white transition-colors"
-            style={{ background: formName.trim() ? T.primary : "#CCC", cursor: formName.trim() ? "pointer" : "not-allowed" }}
-            disabled={!formName.trim()}
+            style={{ background: formName.trim() && !isCreating ? T.primary : "#CCC", cursor: formName.trim() && !isCreating ? "pointer" : "not-allowed" }}
+            disabled={!formName.trim() || isCreating}
           >
-            다음 <ArrowRight size={13} />
+            {isCreating ? "생성 중..." : <>다음 <ArrowRight size={13} /></>}
           </button>
+          {errorMsg && <p className="text-[0.7rem] text-red-500 mt-2 text-center">{errorMsg}</p>}
         </div>
       )}
 
@@ -2098,14 +2209,18 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
             접수된 문의는 자동으로 딜로 생성됩니다.
           </p>
           <div className="flex items-center justify-center gap-3 mb-8 flex-wrap">
-            {[`리드 ${WEB_FORM_SAMPLE_DEALS.length}건 수신`, `스테이지: 신규`, `자동 배정 활성`].map((s) => (
+            {[
+              `리드 ${submissionCount > 0 ? submissionCount : WEB_FORM_SAMPLE_DEALS.length}건 수신`,
+              `스테이지: 신규`,
+              formId ? `폼 ID: ${formId.slice(0, 8)}` : `데모 모드`,
+            ].map((s) => (
               <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[0.75rem]" style={{ background: "#ECFDF5", color: "#059669" }}>
                 ✓ {s}
               </span>
             ))}
           </div>
           <button
-            onClick={() => onComplete(WEB_FORM_SAMPLE_DEALS)}
+            onClick={handleFinish}
             className="px-8 py-3 rounded-lg text-[0.85rem] text-white transition-colors"
             style={{ background: T.primary }}
           >
@@ -5427,11 +5542,16 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           style={{ borderColor: T.border }}
                         />
                       ) : (
-                        <span
-                          onClick={() => !isLocked && setRenamingColumn(col.key)}
-                          className={`text-[0.75rem] flex-1 truncate ${active ? "text-[#333]" : "text-[#999]"} ${isLocked ? "" : "cursor-text hover:text-[#1A472A]"}`}
-                        >
-                          {col.label || <span className="italic text-[#BBB]">이름 없음</span>}
+                        <span className={`flex-1 flex items-center gap-1.5 min-w-0 ${isLocked ? "" : "cursor-text"}`}>
+                          <span
+                            onClick={() => !isLocked && setRenamingColumn(col.key)}
+                            className={`text-[0.75rem] truncate ${active ? "text-[#333]" : "text-[#999]"} ${isLocked ? "" : "hover:text-[#1A472A]"}`}
+                          >
+                            {col.label || <span className="italic text-[#BBB]">이름 없음</span>}
+                          </span>
+                          {isDangolFeature && (
+                            <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#EFF5F1] text-[#1A472A] shrink-0">Dangol 기능</span>
+                          )}
                         </span>
                       )}
                       {isCustom && !isLocked ? (
@@ -5450,9 +5570,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                         </select>
                       ) : (
                         <span className="text-[0.6rem] text-[#BBB] px-1.5 py-1 rounded bg-[#F8F9FA]">{FIELD_TYPE_LABELS[currentType]}</span>
-                      )}
-                      {isDangolFeature && (
-                        <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#EFF5F1] text-[#1A472A]">Dangol 기능</span>
                       )}
                       {col.required ? (
                         <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#FEF2F2] text-[#DC2626]">필수</span>

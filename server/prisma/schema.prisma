@@ -27,6 +27,8 @@ model Workspace {
   chatSessions   ChatSession[]
   lifecycleStages CustomerLifecycleStage[]
   contracts       Contract[]
+  webForms        WebForm[]
+  formSubmissions FormSubmission[]
 }
 
 // ─── Auth ───
@@ -93,6 +95,7 @@ model Deal {
 
   activityLogs  ActivityLog[]
   attachedFiles AttachedFile[]
+  formSubmission FormSubmission?
 
   @@index([workspaceId])
   @@index([workspaceId, stageId])
@@ -314,6 +317,39 @@ model ChatSession {
 
   messages ChatMessage[]
 
+  @@index([workspaceId])
+}
+
+// ─── Web Forms (홈페이지 문의 폼 연동) ───
+
+model WebForm {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  name        String
+  fields      String   @default("[]") // JSON: [{key,label,required}]
+  submitToken String   @unique @default(cuid())
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  submissions FormSubmission[]
+
+  @@index([workspaceId])
+}
+
+model FormSubmission {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  formId      String
+  form        WebForm  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  payload     String   // JSON
+  dealId      String?  @unique
+  deal        Deal?    @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([formId])
   @@index([workspaceId])
 }
 
