@@ -4490,8 +4490,8 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           <h1 className="text-[24px] text-[#1A1A1A]">영업 관리</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/settings/pipeline")} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="파이프라인 설정">
-            <Settings size={12} /> 파이프라인
+          <button onClick={() => navigate("/settings/pipeline")} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="영업 단계 설정 (신규·상담·제안·수주 등)">
+            <Settings size={12} /> 영업단계 설정
           </button>
           <button onClick={() => setShowColumnConfig(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="필드 관리">
             <Grid3X3 size={12} /> 필드
