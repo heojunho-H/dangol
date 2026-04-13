@@ -3904,7 +3904,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   const startBlankTable = useCallback(() => {
     const t = Date.now();
-    const blankCols: CustomField[] = Array.from({ length: 5 }, (_, i) => ({
+    const blankCols: CustomField[] = Array.from({ length: 4 }, (_, i) => ({
       id: `cf_blank_${t}_${i}`,
       key: `col_${t}_${i + 1}`,
       label: "",
@@ -3914,7 +3914,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       visible: true,
     }));
     setCustomFields((prev) => [...prev, ...blankCols]);
-    setVisibleColumns(new Set(blankCols.map((c) => c.key)));
+    setVisibleColumns(new Set(["company", ...blankCols.map((c) => c.key)]));
     setActiveView("table");
     const id = t + Math.floor(Math.random() * 1000);
     const blank: Deal = {
