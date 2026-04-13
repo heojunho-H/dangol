@@ -379,7 +379,7 @@ interface CustomField {
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   text: "텍스트",
   number: "숫자",
-  select: "��택(단일)",
+  select: "선택(단일)",
   "multi-select": "선택(다중)",
   date: "날짜",
   person: "사람",
