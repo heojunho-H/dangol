@@ -24,11 +24,7 @@ model Workspace {
   goals          GoalDef[]
   widgetConfigs  WidgetConfig[]
   customers      Customer[]
-  customerLifecycleStages CustomerLifecycleStage[]
-  customerCustomFields    CustomerCustomField[]
-  contracts      Contract[]
   chatSessions   ChatSession[]
-  settings       WorkspaceSettings?
 }
 
 // ─── Auth ───
@@ -87,21 +83,16 @@ model Deal {
 
   customFieldValues String @default("{}") // JSON string
 
-  customerId String?
-  customer   Customer? @relation("DealCustomer", fields: [customerId], references: [id])
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   activityLogs  ActivityLog[]
   attachedFiles AttachedFile[]
-  contracts     Contract[]
 
   @@index([workspaceId])
   @@index([workspaceId, stageId])
   @@index([workspaceId, status])
   @@index([workspaceId, date])
-  @@index([customerId])
 }
 
 // ─── Pipeline Stages ───
@@ -128,9 +119,8 @@ model SavedView {
   id          String   @id @default(cuid())
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  scope       String   @default("sales") // "sales" | "customer"
   name        String
-  viewType    String   // table, kanban, timeline, card
+  viewType    String   // table, kanban, timeline
   filters     String   @default("[]")
   sorts       String   @default("[]")
   groupBy     String   @default("")
@@ -138,7 +128,7 @@ model SavedView {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@index([workspaceId, scope])
+  @@index([workspaceId])
 }
 
 // ─── Custom Fields ───
@@ -196,14 +186,11 @@ model GoalDef {
 
 model WidgetConfig {
   id          String   @id @default(cuid())
-  workspaceId String
+  workspaceId String   @unique
   workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  scope       String   @default("sales") // "sales" | "customer"
   widgetOrder String   @default("[]")
   widgetSizes String   @default("{}")
   updatedAt   DateTime @updatedAt
-
-  @@unique([workspaceId, scope])
 }
 
 // ─── Activity Logs ───
@@ -255,93 +242,10 @@ model Customer {
   email       String   @default("")
   phone       String   @default("")
   location    String   @default("")
-
-  lifecycleStageId String?
-  lifecycleStage   CustomerLifecycleStage? @relation(fields: [lifecycleStageId], references: [id])
-
-  healthScore       Int?
-  customFieldValues String @default("{}")
-  tags              String @default("[]")
-
-  purchaseCount    Int      @default(0)
-  firstPurchaseAt  DateTime?
-  lastPurchaseAt   DateTime?
-  totalRevenue     Int      @default(0)
-
-  sourceDeals Deal[]     @relation("DealCustomer")
-  contracts   Contract[]
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([workspaceId])
-  @@index([workspaceId, company])
-  @@index([workspaceId, lifecycleStageId])
-}
-
-model CustomerLifecycleStage {
-  id          String   @id @default(cuid())
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  name        String
-  color       String   @default("#3B82F6")
-  type        String   @default("ACTIVE") // ACTIVE, CHURNED
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  customers Customer[]
-
-  @@index([workspaceId])
-}
-
-model Contract {
-  id           String   @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace @relation(fields: [workspaceId], references: [id])
-  customerId   String
-  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  sourceDealId String?
-  sourceDeal   Deal?    @relation(fields: [sourceDealId], references: [id])
-  service      String   @default("")
-  quantity     Int      @default(0)
-  amount       Int      @default(0)
-  startDate    DateTime @default(now())
-  endDate      DateTime?
-  renewalStatus String  @default("ACTIVE") // ACTIVE, RENEWED, CHURNED, PENDING
-  memo         String   @default("")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@index([workspaceId])
-  @@index([customerId])
-  @@index([sourceDealId])
-}
-
-model CustomerCustomField {
-  id          String   @id @default(cuid())
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id])
-  key         String
-  label       String
-  type        String
-  required    Boolean  @default(false)
-  locked      Boolean  @default(false)
-  options     String   @default("[]")
-  visible     Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([workspaceId])
-  @@unique([workspaceId, key])
-}
-
-model WorkspaceSettings {
-  workspaceId              String   @id
-  workspace                Workspace @relation(fields: [workspaceId], references: [id])
-  autoConvertWonToCustomer Boolean  @default(true)
-  updatedAt                DateTime @updatedAt
 }
 
 // ─── Chat ───

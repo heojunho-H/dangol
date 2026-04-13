@@ -5,8 +5,6 @@ import {
   Home,
   LayoutDashboard,
   Building2,
-  Users,
-  BarChart3,
   HelpCircle,
   Plus,
   Star,
@@ -18,13 +16,10 @@ import {
   Target,
   FileText,
   DollarSign,
-  UserCheck,
-  Mail,
   Bell,
   Clock,
   CalendarCheck,
   MoreHorizontal,
-  Repeat,
   Link2,
   Copy,
   PenLine,
@@ -53,7 +48,6 @@ const navSections: NavSection[] = [
     items: [
       { id: "home", icon: Home, label: "홈", to: "/" },
       { id: "sales-dashboard", icon: LayoutDashboard, label: "영업관리 대시보드", to: "/sales" },
-      { id: "customer-dashboard", icon: BarChart3, label: "고객관리 대시보드", to: "/customer-dashboard" },
     ],
   },
   {
@@ -64,12 +58,7 @@ const navSections: NavSection[] = [
   },
   {
     label: "고객관리",
-    items: [
-      { id: "customers-all", icon: Users, label: "전체 고객", to: "/customers/all" },
-      { id: "customers-returning", icon: Repeat, label: "재구매 고객", to: "/customers/returning" },
-      { id: "customers-churnrisk", icon: UserCheck, label: "이탈 위험", to: "/customers/churnrisk" },
-      { id: "email-campaign", icon: Mail, label: "이메일 캠페인", to: "/customers/all" },
-    ],
+    items: [],
   },
   {
     label: "스마트 리마인드",

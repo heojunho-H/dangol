@@ -6,17 +6,10 @@ export const viewsRouter = Router();
 viewsRouter.use(authMiddleware);
 
 // List all views
-function normalizeScope(raw: unknown): string | undefined {
-  if (raw === "customer") return "customer";
-  if (raw === "sales") return "sales";
-  return undefined;
-}
-
 viewsRouter.get("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const scope = normalizeScope(req.query.scope);
     const views = await prisma.savedView.findMany({
-      where: { workspaceId: req.workspaceId, ...(scope && { scope }) },
+      where: { workspaceId: req.workspaceId },
       orderBy: { createdAt: "asc" },
     });
     res.json(views);
@@ -29,7 +22,6 @@ viewsRouter.get("/", async (req: Request, res: Response, next: NextFunction) => 
 viewsRouter.post("/", async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, viewType, filters, sorts, groupBy, searchQuery } = req.body;
-    const scope = normalizeScope(req.body.scope) ?? "sales";
     if (!name || !viewType) {
       res.status(400).json({ error: "name과 viewType은 필수입니다" });
       return;
@@ -38,7 +30,6 @@ viewsRouter.post("/", async (req: Request, res: Response, next: NextFunction) =>
     const view = await prisma.savedView.create({
       data: {
         workspaceId: req.workspaceId,
-        scope,
         name,
         viewType,
         filters: filters ? JSON.stringify(filters) : "[]",

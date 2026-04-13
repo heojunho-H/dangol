@@ -27,31 +27,9 @@ const DEFAULT_FIELDS = [
 ];
 
 const DEFAULT_VIEWS = [
-  { name: "전체 딜", viewType: "table", scope: "sales" },
-  { name: "파이프라인", viewType: "kanban", scope: "sales" },
-  { name: "일정", viewType: "timeline", scope: "sales" },
-  { name: "전체 고객", viewType: "table", scope: "customer" },
-];
-
-const DEFAULT_LIFECYCLE_STAGES = [
-  { name: "온보딩", color: "#3B82F6", type: "ACTIVE", sortOrder: 0 },
-  { name: "활성", color: "#10B981", type: "ACTIVE", sortOrder: 1 },
-  { name: "휴면", color: "#F59E0B", type: "ACTIVE", sortOrder: 2 },
-  { name: "이탈", color: "#9CA3AF", type: "CHURNED", sortOrder: 3 },
-];
-
-const DEFAULT_CUSTOMER_FIELDS = [
-  { key: "name", label: "담당자명", type: "text", required: true, locked: true, sortOrder: 0 },
-  { key: "company", label: "회사명", type: "text", required: true, locked: true, sortOrder: 1 },
-  { key: "title", label: "직함", type: "text", required: false, locked: false, sortOrder: 2 },
-  { key: "email", label: "이메일", type: "email", required: false, locked: false, sortOrder: 3 },
-  { key: "phone", label: "전화번호", type: "phone", required: false, locked: false, sortOrder: 4 },
-  { key: "location", label: "위치", type: "text", required: false, locked: false, sortOrder: 5 },
-  { key: "lifecycleStage", label: "라이프사이클", type: "select", required: false, locked: true, sortOrder: 6 },
-  { key: "healthScore", label: "헬스 스코어", type: "number", required: false, locked: false, sortOrder: 7 },
-  { key: "purchaseCount", label: "구매 횟수", type: "number", required: false, locked: true, sortOrder: 8 },
-  { key: "lastPurchaseAt", label: "최근 구매일", type: "date", required: false, locked: true, sortOrder: 9 },
-  { key: "totalRevenue", label: "누적 매출", type: "number", required: false, locked: true, sortOrder: 10 },
+  { name: "전체 딜", viewType: "table" },
+  { name: "파이프라인", viewType: "kanban" },
+  { name: "일정", viewType: "timeline" },
 ];
 
 export async function seedWorkspace(workspaceId: string): Promise<void> {
@@ -67,46 +45,17 @@ export async function seedWorkspace(workspaceId: string): Promise<void> {
     data: DEFAULT_VIEWS.map((v) => ({ ...v, workspaceId })),
   });
 
-  await prisma.widgetConfig.createMany({
-    data: [
-      {
-        workspaceId,
-        scope: "sales",
-        widgetOrder: JSON.stringify([
-          "kpi-deals",
-          "kpi-winrate",
-          "kpi-amount",
-          "kpi-winrate-amount",
-          "funnel",
-          "donut",
-        ]),
-      },
-      {
-        workspaceId,
-        scope: "customer",
-        widgetOrder: JSON.stringify([
-          "kpi-total",
-          "kpi-returning",
-          "kpi-revenue",
-          "kpi-renewals",
-          "health",
-          "retention",
-          "lifecycle",
-          "renewals",
-        ]),
-      },
-    ],
-  });
-
-  await prisma.customerLifecycleStage.createMany({
-    data: DEFAULT_LIFECYCLE_STAGES.map((s) => ({ ...s, workspaceId })),
-  });
-
-  await prisma.customerCustomField.createMany({
-    data: DEFAULT_CUSTOMER_FIELDS.map((f) => ({ ...f, workspaceId, visible: true })),
-  });
-
-  await prisma.workspaceSettings.create({
-    data: { workspaceId, autoConvertWonToCustomer: true },
+  await prisma.widgetConfig.create({
+    data: {
+      workspaceId,
+      widgetOrder: JSON.stringify([
+        "kpi-deals",
+        "kpi-winrate",
+        "kpi-amount",
+        "kpi-winrate-amount",
+        "funnel",
+        "donut",
+      ]),
+    },
   });
 }

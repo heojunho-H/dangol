@@ -22,7 +22,6 @@ customersRouter.get(
       }
 
       if (query.status) where.status = query.status;
-      if (query.lifecycleStageId) where.lifecycleStageId = query.lifecycleStageId;
 
       const page = Math.max(1, Number(query.page) || 1);
       const limit = Math.min(100, Math.max(1, Number(query.limit) || 50));
@@ -34,9 +33,6 @@ customersRouter.get(
           orderBy: { createdAt: "desc" },
           skip,
           take: limit,
-          include: {
-            lifecycleStage: { select: { id: true, name: true, color: true, type: true } },
-          },
         }),
         prisma.customer.count({ where }),
       ]);
@@ -51,50 +47,7 @@ customersRouter.get(
   }
 );
 
-// Stats (dashboard aggregates)
-customersRouter.get(
-  "/stats",
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const wId = req.workspaceId;
-      const [total, byStage, totalRevenue, returningCount] = await Promise.all([
-        prisma.customer.count({ where: { workspaceId: wId } }),
-        prisma.customer.groupBy({
-          by: ["lifecycleStageId"],
-          where: { workspaceId: wId },
-          _count: { id: true },
-        }),
-        prisma.customer.aggregate({
-          where: { workspaceId: wId },
-          _sum: { totalRevenue: true },
-        }),
-        prisma.customer.count({
-          where: { workspaceId: wId, purchaseCount: { gt: 1 } },
-        }),
-      ]);
-      const stages = await prisma.customerLifecycleStage.findMany({
-        where: { workspaceId: wId },
-        orderBy: { sortOrder: "asc" },
-      });
-      const stageMap = new Map(stages.map((s) => [s.id, s]));
-      res.json({
-        totalCustomers: total,
-        totalRevenue: totalRevenue._sum.totalRevenue || 0,
-        returningCount,
-        returningRate: total > 0 ? Math.round((returningCount / total) * 1000) / 10 : 0,
-        byStage: byStage.map((s) => ({
-          stageId: s.lifecycleStageId,
-          stage: s.lifecycleStageId ? stageMap.get(s.lifecycleStageId) : null,
-          count: s._count.id,
-        })),
-      });
-    } catch (err) {
-      next(err);
-    }
-  }
-);
-
-// Get single customer (with contracts, source deals, activity timeline)
+// Get single customer
 customersRouter.get(
   "/:id",
   async (req: Request, res: Response, next: NextFunction) => {
@@ -102,16 +55,6 @@ customersRouter.get(
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       const customer = await prisma.customer.findFirst({
         where: { id, workspaceId: req.workspaceId },
-        include: {
-          lifecycleStage: { select: { id: true, name: true, color: true, type: true } },
-          contracts: { orderBy: { startDate: "desc" } },
-          sourceDeals: {
-            orderBy: { date: "desc" },
-            include: {
-              stage: { select: { id: true, name: true, color: true, type: true } },
-            },
-          },
-        },
       });
 
       if (!customer) {
@@ -119,18 +62,7 @@ customersRouter.get(
         return;
       }
 
-      // Aggregate activity logs from all linked deals
-      const dealIds = customer.sourceDeals.map((d) => d.id);
-      const activityLogs = dealIds.length
-        ? await prisma.activityLog.findMany({
-            where: { dealId: { in: dealIds } },
-            orderBy: { createdAt: "desc" },
-            take: 100,
-            include: { user: { select: { id: true, name: true } } },
-          })
-        : [];
-
-      res.json({ ...customer, activityLogs });
+      res.json(customer);
     } catch (err) {
       next(err);
     }
@@ -142,19 +74,7 @@ customersRouter.post(
   "/",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const {
-        name,
-        title,
-        company,
-        status,
-        email,
-        phone,
-        location,
-        lifecycleStageId,
-        healthScore,
-        tags,
-        customFieldValues,
-      } = req.body;
+      const { name, title, company, status, email, phone, location } = req.body;
       if (!name) {
         res.status(400).json({ error: "name은 필수입니다" });
         return;
@@ -170,10 +90,6 @@ customersRouter.post(
           email: email || "",
           phone: phone || "",
           location: location || "",
-          lifecycleStageId: lifecycleStageId || null,
-          healthScore: healthScore !== undefined ? Number(healthScore) : null,
-          tags: tags ? JSON.stringify(tags) : "[]",
-          customFieldValues: customFieldValues ? JSON.stringify(customFieldValues) : "{}",
         },
       });
 
@@ -209,18 +125,9 @@ customersRouter.patch(
         "phone",
         "location",
         "avatar",
-        "lifecycleStageId",
       ];
       for (const f of fields) {
         if (req.body[f] !== undefined) data[f] = req.body[f];
-      }
-      if (req.body.healthScore !== undefined) {
-        data.healthScore =
-          req.body.healthScore === null ? null : Number(req.body.healthScore);
-      }
-      if (req.body.tags !== undefined) data.tags = JSON.stringify(req.body.tags);
-      if (req.body.customFieldValues !== undefined) {
-        data.customFieldValues = JSON.stringify(req.body.customFieldValues);
       }
 
       const customer = await prisma.customer.update({ where: { id }, data });
