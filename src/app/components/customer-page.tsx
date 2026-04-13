@@ -349,11 +349,7 @@ interface SavedView {
   searchQuery: string;
 }
 
-const DEFAULT_VIEWS: SavedView[] = [
-  { id: "v1", name: "전체 고객",     viewType: "table",    filters: [], sorts: [], groupBy: "", searchQuery: "" },
-  { id: "v2", name: "카드 그리드", viewType: "card",     filters: [], sorts: [], groupBy: "", searchQuery: "" },
-  { id: "v3", name: "관계도",     viewType: "relation", filters: [], sorts: [], groupBy: "", searchQuery: "" },
-];
+const DEFAULT_VIEWS: SavedView[] = [];
 
 /* ─── CUSTOM FIELD TYPE ─── */
 type FieldType = "text" | "number" | "select" | "multi-select" | "date" | "person" | "phone" | "email" | "file";
@@ -3095,14 +3091,13 @@ function AddViewModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState("");
-  const [viewType, setViewType] = useState<ViewType>("table");
 
   const handleAdd = () => {
     if (!name.trim()) return;
     onAdd({
       id: `v-${Date.now()}`,
       name: name.trim(),
-      viewType,
+      viewType: "table",
       filters: [],
       sorts: [],
       groupBy: "",
@@ -3130,32 +3125,6 @@ function AddViewModal({
               placeholder="예: 이번 달 신규 고객"
               onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
             />
-          </div>
-          <div>
-            <label className="text-[0.75rem] text-[#666] mb-2 block">뷰 타입</label>
-            <div className="grid grid-cols-3 gap-2">
-              {([
-                { key: "table" as ViewType, label: "테이블", icon: Table2 },
-                { key: "card" as ViewType, label: "카드 그리드", icon: LayoutGrid },
-                { key: "relation" as ViewType, label: "관계도", icon: Network },
-              ]).map((v) => {
-                const active = viewType === v.key;
-                return (
-                  <button
-                    key={v.key}
-                    onClick={() => setViewType(v.key)}
-                    className="flex flex-col items-center gap-2 p-3.5 rounded-xl border-2 transition-all"
-                    style={{
-                      borderColor: active ? T.primary : T.border,
-                      background: active ? "#F0F7F2" : "#fff",
-                    }}
-                  >
-                    <v.icon size={18} color={active ? T.primary : "#999"} />
-                    <span className="text-[0.7rem]" style={{ color: active ? T.primary : "#666" }}>{v.label}</span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 px-7 py-4 border-t" style={{ borderColor: T.border }}>
