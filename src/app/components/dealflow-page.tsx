@@ -5392,6 +5392,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                   const field = customFields.find((f) => f.key === col.key);
                   const isLocked = field?.locked || col.required;
                   const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
+                  const isDangolFeature = col.key === "stage" || col.key === "status";
                   const currentType = field?.type ?? "text";
                   const dragging = colDragKey === col.key;
                   return (
@@ -5449,6 +5450,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                         </select>
                       ) : (
                         <span className="text-[0.6rem] text-[#BBB] px-1.5 py-1 rounded bg-[#F8F9FA]">{FIELD_TYPE_LABELS[currentType]}</span>
+                      )}
+                      {isDangolFeature && (
+                        <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#EFF5F1] text-[#1A472A]">Dangol 기능</span>
                       )}
                       {col.required ? (
                         <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#FEF2F2] text-[#DC2626]">필수</span>
