@@ -3903,7 +3903,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   }, [customFields]);
 
   const startBlankTable = useCallback(() => {
-    setVisibleColumns(new Set(["company"]));
+    setVisibleColumns(new Set(["company", "contact", "stage", "amount", "date"]));
     setActiveView("table");
     const id = Date.now() + Math.floor(Math.random() * 1000);
     const blank: Deal = {
@@ -5157,6 +5157,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                         const hasCustomCell = cellMap[col.key] !== undefined;
                                         const raw = (deal as Record<string, unknown>)[col.key];
                                         const canInlineEdit = !hasCustomCell || col.key === "company";
+                                        const isEmpty = raw === undefined || raw === null || raw === "";
                                         const rendered = isEditing && canInlineEdit ? (
                                           <input
                                             autoFocus
@@ -5184,9 +5185,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                             }}
                                             className="w-full bg-transparent outline-none text-[0.75rem] text-[#1A1A1A] border border-[#1A472A] rounded px-1.5 py-1"
                                           />
+                                        ) : canInlineEdit && isEmpty ? (
+                                          <span className="text-[0.7rem] text-[#BBB] italic hover:text-[#1A472A] transition-colors">클릭해서 입력</span>
                                         ) : hasCustomCell ? (
                                           cellMap[col.key]
-                                        ) : raw === undefined || raw === null || raw === "" ? (
+                                        ) : isEmpty ? (
                                           <span className="text-[0.7rem] text-[#BBB]">—</span>
                                         ) : (
                                           <span className="text-[0.7rem] text-[#555] truncate block">{typeof raw === "number" ? raw.toLocaleString() : String(raw)}</span>
@@ -5194,8 +5197,14 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                         return (
                                           <td
                                             key={col.key}
-                                            className="py-3.5 px-4"
+                                            className={`py-3.5 px-4 ${canInlineEdit ? "cursor-text" : ""}`}
                                             style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}
+                                            onClick={(e) => {
+                                              if (canInlineEdit && isEmpty && !isEditing) {
+                                                e.stopPropagation();
+                                                setEditingCell({ id: deal.id, key: col.key });
+                                              }
+                                            }}
                                             onDoubleClick={() => { if (canInlineEdit) setEditingCell({ id: deal.id, key: col.key }); }}
                                           >{rendered}</td>
                                         );
@@ -5237,7 +5246,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                       </tbody>
                     </table>
                   </div>
-                  {visibleColumns.size <= 1 && customerDeals.length <= 1 && (
+                  {customerDeals.length <= 1 && (
                     <div className="px-4 py-2.5 text-[0.65rem] text-[#999] border-t flex items-center gap-3 flex-wrap" style={{ borderColor: T.border, background: "#FAFDFB" }}>
                       <span>💡</span>
                       <span><b className="text-[#1A472A]">셀 더블클릭</b>으로 값 입력</span>
