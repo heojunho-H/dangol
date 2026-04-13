@@ -58,7 +58,9 @@ const navSections: NavSection[] = [
   },
   {
     label: "고객관리",
-    items: [],
+    items: [
+      { id: "customers-default", icon: FileText, label: "새 고객관리 페이지", to: "/customers/default" },
+    ],
   },
   {
     label: "스마트 리마인드",
