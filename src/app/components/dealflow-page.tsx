@@ -4134,6 +4134,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   /* ── Column order (user-defined via column config) ── */
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  // Dangol 기본 3필드(기업명·진행상태·성공여부)를 항상 맨 앞·맨 뒤로 고정.
+  // 사용자가 싫으면 필드 관리 다이얼로그에서 끌 수 있음.
+  const [pinDangolColumns, setPinDangolColumns] = useState(true);
   const [colDragKey, setColDragKey] = useState<string | null>(null);
 
   /* ── Merge ALL_COLUMNS with dynamic customFields (auto-created on import) ── */
@@ -4165,10 +4168,24 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     for (const c of mergedColumns) {
       if (!seen.has(c.key)) { out.push(c); seen.add(c.key); }
     }
-    const active = out.filter((c) => visibleColumns.has(c.key));
+    let active = out.filter((c) => visibleColumns.has(c.key));
     const inactive = out.filter((c) => !visibleColumns.has(c.key));
+    if (pinDangolColumns) {
+      const frontKeys = ["company", "stage"];
+      const backKeys = ["status"];
+      const front = frontKeys
+        .map((k) => active.find((c) => c.key === k))
+        .filter((c): c is ColumnDef => Boolean(c));
+      const back = backKeys
+        .map((k) => active.find((c) => c.key === k))
+        .filter((c): c is ColumnDef => Boolean(c));
+      const middle = active.filter(
+        (c) => !frontKeys.includes(c.key) && !backKeys.includes(c.key)
+      );
+      active = [...front, ...middle, ...back];
+    }
     return [...active, ...inactive];
-  }, [mergedColumns, columnOrder, visibleColumns]);
+  }, [mergedColumns, columnOrder, visibleColumns, pinDangolColumns]);
 
   const activeColumns = useMemo(
     () => orderedColumns.filter((c) => visibleColumns.has(c.key)),
@@ -5593,6 +5610,22 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                         </div>
                         <button onClick={() => setShowColumnConfig(false)} className="p-1 rounded hover:bg-[#F7F8FA]"><X size={13} color="#999" /></button>
                       </div>
+                      <label className="flex items-center justify-between px-5 py-2.5 border-b cursor-pointer hover:bg-[#FAFBFC]" style={{ borderColor: T.border }}>
+                        <div className="flex flex-col">
+                          <span className="text-[0.7rem] text-[#333]">Dangol 기본 필드 고정</span>
+                          <span className="text-[0.6rem] text-[#999] mt-0.5">기업명·진행상태를 맨 앞, 성공여부를 맨 뒤로 유지</span>
+                        </div>
+                        <div
+                          onClick={(e) => { e.preventDefault(); setPinDangolColumns((p) => !p); }}
+                          className="relative w-8 h-[18px] rounded-full transition-colors shrink-0"
+                          style={{ background: pinDangolColumns ? T.primary : "#D1D5DB" }}
+                        >
+                          <div
+                            className="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all"
+                            style={{ left: pinDangolColumns ? "16px" : "2px", boxShadow: "0 1px 2px rgba(0,0,0,0.2)" }}
+                          />
+                        </div>
+                      </label>
                       <div className="p-3 max-h-[420px] overflow-y-auto">
                         {activeColumns.length > 0 && (
                           <>
