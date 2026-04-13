@@ -3883,6 +3883,92 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [customerDeals, setCustomerDeals] = useState<Deal[]>([]);
+  const [editingCell, setEditingCell] = useState<{ id: number; key: string } | null>(null);
+  const [showAddColumn, setShowAddColumn] = useState(false);
+  const [newColName, setNewColName] = useState("");
+  const [newColType, setNewColType] = useState<FieldType>("text");
+  const [headerMenu, setHeaderMenu] = useState<{ key: string; x: number; y: number } | null>(null);
+
+  const updateDealField = useCallback((id: number, key: string, value: unknown) => {
+    setCustomerDeals((prev) => prev.map((d) => (d.id === id ? { ...d, [key]: value } : d)));
+    const field = customFields.find((f) => f.key === key);
+    if (field && (field.type === "select" || field.type === "multi-select")) {
+      const str = typeof value === "string" ? value.trim() : "";
+      if (str && !(field.options || []).includes(str)) {
+        if (window.confirm(`"${str}"를 "${field.label}" 컬럼의 옵션으로 추가할까요?`)) {
+          setCustomFields((prev) => prev.map((f) => (f.key === key ? { ...f, options: [...(f.options || []), str] } : f)));
+        }
+      }
+    }
+  }, [customFields]);
+
+  const addBlankDeal = useCallback(() => {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    const blank: Deal = {
+      id,
+      company: "",
+      stage: pipelineStages[0]?.name || "",
+      contact: "",
+      position: "",
+      service: "",
+      quantity: 0,
+      amount: "",
+      manager: "",
+      status: "진행중",
+      date: new Date().toISOString().slice(0, 10),
+    };
+    setCustomerDeals((prev) => [...prev, blank]);
+    setEditingCell({ id, key: "company" });
+  }, [pipelineStages]);
+
+  const addInlineColumn = useCallback(() => {
+    const label = newColName.trim();
+    if (!label) return;
+    const baseKey = label.toLowerCase().replace(/[^a-z0-9가-힣]+/g, "_").replace(/^_|_$/g, "") || `col_${Date.now()}`;
+    let key = baseKey;
+    let i = 1;
+    setCustomFields((prev) => {
+      const existing = new Set(prev.map((f) => f.key));
+      while (existing.has(key)) { key = `${baseKey}_${i++}`; }
+      return [...prev, {
+        id: `cf_${Date.now()}`,
+        key,
+        label,
+        type: newColType,
+        required: false,
+        locked: false,
+        visible: true,
+      }];
+    });
+    setVisibleColumns((prev) => { const n = new Set(prev); n.add(key); return n; });
+    setNewColName("");
+    setNewColType("text");
+    setShowAddColumn(false);
+  }, [newColName, newColType]);
+
+  const renameColumn = useCallback((key: string) => {
+    const current = customFields.find((f) => f.key === key);
+    const currentLabel = current?.label || key;
+    const next = window.prompt("새 컬럼 이름", currentLabel);
+    if (!next || next.trim() === "" || next === currentLabel) return;
+    setCustomFields((prev) => prev.map((f) => (f.key === key ? { ...f, label: next.trim() } : f)));
+  }, [customFields]);
+
+  const deleteColumn = useCallback((key: string) => {
+    const field = customFields.find((f) => f.key === key);
+    if (!field || field.locked || field.required) {
+      window.alert("이 컬럼은 삭제할 수 없습니다");
+      return;
+    }
+    if (!window.confirm(`"${field.label}" 컬럼을 삭제하시겠습니까? 모든 행의 해당 값이 사라집니다.`)) return;
+    setCustomFields((prev) => prev.filter((f) => f.key !== key));
+    setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
+    setCustomerDeals((prev) => prev.map((d) => { const { [key]: _, ...rest } = d as Record<string, unknown>; return rest as Deal; }));
+  }, [customFields]);
+
+  const hideColumn = useCallback((key: string) => {
+    setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
+  }, []);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
   );
@@ -4327,8 +4413,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
               </>
             )}
           </div>
-          <button onClick={() => setShowAddDeal(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: T.primary }}>
+          <button onClick={() => { setActiveView("table"); addBlankDeal(); }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[0.75rem] text-white transition-colors" style={{ background: T.primary }}>
             <Plus size={12} /> 딜 추가
+          </button>
+          <button onClick={() => setShowAddDeal(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[0.75rem] border transition-colors hover:bg-[#FAFBFC]" style={{ borderColor: T.border, color: "#555" }}>
+            상세 입력
           </button>
         </div>
       </div>
@@ -4514,7 +4603,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                   widgetId={w.id}
                                   deals={dateFilteredDeals}
                                   stageColorMap={stageColors}
-                                  onAddDeal={() => setShowAddDeal(true)}
+                                  onAddDeal={() => { setActiveView("table"); addBlankDeal(); }}
                                   onImportExcel={() => setShowOnboarding(true)}
                                   onExport={() => exportDealsCsv(dateFilteredDeals)}
                                   onAnalytics={() => navigate("/sales")}
@@ -4665,7 +4754,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     </p>
                     <div className="flex items-stretch gap-4 w-full max-w-[512px]">
                       <button
-                        onClick={() => setShowAddDeal(true)}
+                        onClick={() => { setActiveView("table"); addBlankDeal(); }}
                         className="flex-1 flex flex-col items-center gap-3 p-6 rounded-xl border-2 transition-all hover:border-[#1A472A] hover:bg-[#FAFDFB]"
                         style={{ borderColor: T.primary, background: "#FAFDFB" }}
                       >
@@ -4674,7 +4763,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                         </div>
                         <div>
                           <p className="text-[0.8rem] text-[#1A1A1A] mb-0.5">직접 추가</p>
-                          <p className="text-[0.65rem] text-[#999]">딜 정보를 하나씩 입력</p>
+                          <p className="text-[0.65rem] text-[#999]">테이블에서 바로 입력</p>
                         </div>
                       </button>
                       <button
@@ -4730,7 +4819,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     stageColorMap={stageColors}
                     onMoveDeal={moveDealStage}
                     onClickDeal={setSelectedDeal}
-                    onAddDeal={() => setShowAddDeal(true)}
+                    onAddDeal={() => { setActiveView("table"); addBlankDeal(); }}
                   />
                 )}
 
@@ -4828,6 +4917,10 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                 key={h.key}
                                 className={`${isNumeric ? "text-right" : "text-left"} py-3 px-4 whitespace-nowrap border-b ${behavior !== "none" ? "cursor-pointer" : ""} select-none relative group/th`}
                                 style={{ borderColor: T.border, background: isActive ? "#F0F7F2" : undefined, ...(columnWidths[h.key] ? { width: columnWidths[h.key], minWidth: columnWidths[h.key] } : {}) }}
+                                onContextMenu={(e) => {
+                                  e.preventDefault();
+                                  setHeaderMenu({ key: h.key, x: e.clientX, y: e.clientY });
+                                }}
                                 onClick={(e) => {
                                   if (behavior === "none") return;
                                   if (behavior === "sort") {
@@ -4887,12 +4980,49 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                               </th>
                             );
                           })}
+                          <th className="py-3 px-2 w-10 border-b relative" style={{ borderColor: T.border }}>
+                            <button
+                              onClick={() => setShowAddColumn((v) => !v)}
+                              className="w-6 h-6 rounded flex items-center justify-center text-[#999] hover:text-[#1A472A] hover:bg-[#F0F7F2] transition-colors"
+                              title="컬럼 추가"
+                            >
+                              <Plus size={13} />
+                            </button>
+                            {showAddColumn && (
+                              <div className="absolute right-0 top-full mt-1 z-20 w-60 bg-white border rounded-lg shadow-lg p-3" style={{ borderColor: T.border }}>
+                                <input
+                                  autoFocus
+                                  value={newColName}
+                                  onChange={(e) => setNewColName(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === "Enter") addInlineColumn(); if (e.key === "Escape") setShowAddColumn(false); }}
+                                  placeholder="컬럼 이름"
+                                  className="w-full text-[0.75rem] border rounded px-2 py-1.5 mb-2 outline-none focus:border-[#1A472A]"
+                                  style={{ borderColor: T.border }}
+                                />
+                                <div className="grid grid-cols-2 gap-1 mb-2">
+                                  {(Object.keys(FIELD_TYPE_LABELS) as FieldType[]).filter((t) => t !== "file" && t !== "multi-select").map((t) => (
+                                    <button
+                                      key={t}
+                                      onClick={() => setNewColType(t)}
+                                      className={`text-left px-2 py-1 rounded text-[0.7rem] transition-colors ${newColType === t ? "bg-[#F0F7F2] text-[#1A472A]" : "text-[#666] hover:bg-[#FAFBFC]"}`}
+                                    >
+                                      <span className="mr-1">{FIELD_TYPE_ICONS[t]}</span>{FIELD_TYPE_LABELS[t]}
+                                    </button>
+                                  ))}
+                                </div>
+                                <div className="flex gap-1.5">
+                                  <button onClick={() => setShowAddColumn(false)} className="flex-1 text-[0.7rem] py-1.5 rounded border hover:bg-[#FAFBFC]" style={{ borderColor: T.border, color: "#666" }}>취소</button>
+                                  <button onClick={addInlineColumn} disabled={!newColName.trim()} className="flex-1 text-[0.7rem] py-1.5 rounded text-white disabled:opacity-40" style={{ background: T.primary }}>추가</button>
+                                </div>
+                              </div>
+                            )}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredDeals.length === 0 ? (
                           <tr>
-                            <td colSpan={visibleColumns.size + 1} className="py-16 text-center">
+                            <td colSpan={visibleColumns.size + 2} className="py-16 text-center">
                               <div className="flex flex-col items-center">
                                 <Search size={19} color="#DDD" className="mb-3" />
                                 <p className="text-[0.8rem] text-[#999] mb-1">검색 결과가 없습니다</p>
@@ -4913,7 +5043,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                     style={{ background: "#F8F9FB" }}
                                     onClick={() => toggleGroup(group.key)}
                                   >
-                                    <td colSpan={visibleColumns.size + 1} className="py-2.5 px-4 border-b" style={{ borderColor: T.border }}>
+                                    <td colSpan={visibleColumns.size + 2} className="py-2.5 px-4 border-b" style={{ borderColor: T.border }}>
                                       <div className="flex items-center gap-3">
                                         {isCollapsed ? <ChevronRightIcon size={13} color="#999" /> : <ChevronDown size={13} color="#999" />}
                                         <span className="text-[0.8rem] text-[#1A1A1A] font-medium">{group.label}</span>
@@ -5002,27 +5132,61 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                         <input type="checkbox" checked={isSelected} onChange={() => toggleOne(deal.id)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                                       </td>
                                       {activeColumns.map((col) => {
-                                        const rendered =
-                                          cellMap[col.key] ??
-                                          (() => {
-                                            const raw = (deal as Record<string, unknown>)[col.key];
-                                            if (raw === undefined || raw === null || raw === "") {
-                                              return <span className="text-[0.7rem] text-[#BBB]">—</span>;
-                                            }
-                                            const text = typeof raw === "number" ? raw.toLocaleString() : String(raw);
-                                            return <span className="text-[0.7rem] text-[#555] truncate block">{text}</span>;
-                                          })();
+                                        const isEditing = editingCell?.id === deal.id && editingCell?.key === col.key;
+                                        const hasCustomCell = cellMap[col.key] !== undefined;
+                                        const raw = (deal as Record<string, unknown>)[col.key];
+                                        const canInlineEdit = !hasCustomCell || col.key === "company";
+                                        const rendered = isEditing && canInlineEdit ? (
+                                          <input
+                                            autoFocus
+                                            defaultValue={raw === undefined || raw === null ? "" : String(raw)}
+                                            onBlur={(e) => {
+                                              const v = e.currentTarget.value;
+                                              updateDealField(deal.id, col.key, typeof raw === "number" ? (Number(v) || 0) : v);
+                                              setEditingCell(null);
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key === "Enter" || e.key === "Tab") {
+                                                e.preventDefault();
+                                                const v = e.currentTarget.value;
+                                                updateDealField(deal.id, col.key, typeof raw === "number" ? (Number(v) || 0) : v);
+                                                const idx = activeColumns.findIndex((c) => c.key === col.key);
+                                                const next = activeColumns[idx + 1];
+                                                if (e.key === "Tab" && next) {
+                                                  setEditingCell({ id: deal.id, key: next.key });
+                                                } else {
+                                                  setEditingCell(null);
+                                                }
+                                              } else if (e.key === "Escape") {
+                                                setEditingCell(null);
+                                              }
+                                            }}
+                                            className="w-full bg-transparent outline-none text-[0.75rem] text-[#1A1A1A] border border-[#1A472A] rounded px-1.5 py-1"
+                                          />
+                                        ) : hasCustomCell ? (
+                                          cellMap[col.key]
+                                        ) : raw === undefined || raw === null || raw === "" ? (
+                                          <span className="text-[0.7rem] text-[#BBB]">—</span>
+                                        ) : (
+                                          <span className="text-[0.7rem] text-[#555] truncate block">{typeof raw === "number" ? raw.toLocaleString() : String(raw)}</span>
+                                        );
                                         return (
-                                          <td key={col.key} className="py-3.5 px-4" style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}>{rendered}</td>
+                                          <td
+                                            key={col.key}
+                                            className="py-3.5 px-4"
+                                            style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}
+                                            onDoubleClick={() => { if (canInlineEdit) setEditingCell({ id: deal.id, key: col.key }); }}
+                                          >{rendered}</td>
                                         );
                                       })}
+                                      <td className="py-3.5 px-2 w-10" />
                                     </tr>
                                   );
                                 })}
                                 {/* Group Subtotal Row */}
                                 {showGroupHeader && !isCollapsed && (
                                   <tr style={{ background: "#FAFBFC" }}>
-                                    <td colSpan={visibleColumns.size + 1} className="py-2 px-4 border-b" style={{ borderColor: T.border }}>
+                                    <td colSpan={visibleColumns.size + 2} className="py-2 px-4 border-b" style={{ borderColor: T.border }}>
                                       <div className="flex items-center gap-4 pl-[30px]">
                                         <span className="text-[0.65rem] text-[#999]">소계: {group.deals.length}건</span>
                                         <span className="text-[0.65rem] text-[#999] tabular-nums">{fmtAmt(group.totalAmount)}</span>
@@ -5034,6 +5198,20 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                               </React.Fragment>
                             );
                           })
+                        )}
+                        {filteredDeals.length > 0 && (
+                          <tr>
+                            <td colSpan={visibleColumns.size + 2} className="p-0">
+                              <button
+                                onClick={addBlankDeal}
+                                className="w-full flex items-center gap-2 px-4 py-2.5 text-[0.7rem] text-[#999] hover:bg-[#FAFBFC] hover:text-[#1A472A] transition-colors border-b"
+                                style={{ borderColor: T.border }}
+                              >
+                                <Plus size={13} />
+                                <span>행 추가</span>
+                              </button>
+                            </td>
+                          </tr>
                         )}
                       </tbody>
                     </table>
@@ -5218,6 +5396,27 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           onToggleWidget={toggleWidget}
         />
       )}
+
+      {/* Header Context Menu */}
+      {headerMenu && (() => {
+        const field = customFields.find((f) => f.key === headerMenu.key);
+        const isLocked = field?.locked || field?.required;
+        return (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setHeaderMenu(null)} onContextMenu={(e) => { e.preventDefault(); setHeaderMenu(null); }} />
+            <div className="fixed z-50 bg-white rounded-lg border shadow-lg py-1 min-w-[160px]" style={{ top: headerMenu.y, left: headerMenu.x, borderColor: T.border }}>
+              <button onClick={() => { renameColumn(headerMenu.key); setHeaderMenu(null); }} className="w-full text-left px-3 py-1.5 text-[0.75rem] text-[#1A1A1A] hover:bg-[#FAFBFC]">이름 변경</button>
+              <button onClick={() => { hideColumn(headerMenu.key); setHeaderMenu(null); }} className="w-full text-left px-3 py-1.5 text-[0.75rem] text-[#1A1A1A] hover:bg-[#FAFBFC]">숨기기</button>
+              {!isLocked && (
+                <>
+                  <div className="h-px bg-[#EEE] my-1" />
+                  <button onClick={() => { deleteColumn(headerMenu.key); setHeaderMenu(null); }} className="w-full text-left px-3 py-1.5 text-[0.75rem] text-[#C92A2A] hover:bg-[#FEF2F2]">삭제</button>
+                </>
+              )}
+            </div>
+          </>
+        );
+      })()}
 
       {/* Column Filter Popover */}
       {filterPopover && (() => {
