@@ -3915,7 +3915,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       visible: true,
     }));
     setCustomFields((prev) => [...prev, ...blankCols]);
-    setVisibleColumns(new Set(["company", ...blankCols.map((c) => c.key)]));
+    const blankKeys = blankCols.map((c) => c.key);
+    setVisibleColumns(new Set(["company", "stage", ...blankKeys, "status"]));
+    setColumnOrder(["company", "stage", ...blankKeys, "status"]);
     setActiveView("table");
     const id = t + Math.floor(Math.random() * 1000);
     const blank: Deal = {
