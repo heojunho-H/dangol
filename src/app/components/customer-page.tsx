@@ -468,20 +468,20 @@ const WIDGET_CATEGORIES = [
 ];
 
 const allWidgets: WidgetDef[] = [
-  { id: "kpi-customers",    name: "전체 고객",        description: "워크스페이스 전체 고객 수",                      category: "kpi",   icon: Users,         colSpan: 1 },
-  { id: "kpi-new-month",    name: "이달 신규",        description: "이번 달 신규 등록 고객 수",                      category: "kpi",   icon: Plus,          colSpan: 1 },
-  { id: "kpi-churn",        name: "이탈률",            description: "전체 대비 이탈 고객 비율",                        category: "kpi",   icon: AlertTriangle, colSpan: 1 },
-  { id: "kpi-ltv",          name: "누적 LTV",          description: "전체 고객 누적 계약 금액 (LTV)",                category: "kpi",   icon: DollarSign,    colSpan: 1 },
-  { id: "kpi-avg-contract", name: "평균 계약 금액",    description: "계약 1건당 평균 금액",                            category: "kpi",   icon: Target,        colSpan: 1 },
-  { id: "kpi-renewals",     name: "갱신 예정",         description: "향후 90일 내 갱신 예정 고객 수",                category: "kpi",   icon: Calendar,      colSpan: 1 },
-  { id: "chart-health",     name: "헬스 분포",         description: "활발/주의/위험 헬스 스코어 분포를 도넛으로 표시", category: "chart", icon: PieIcon,       colSpan: 1 },
-  { id: "chart-retention",  name: "리텐션 추이",       description: "최근 6개월 리텐션률 추이",                        category: "chart", icon: TrendingUp,    colSpan: 2 },
-  { id: "chart-lifecycle",  name: "라이프사이클 분포", description: "온보딩/활성/휴면/이탈 단계별 고객 분포",        category: "chart", icon: BarChart3,     colSpan: 2 },
-  { id: "table-renewals",   name: "갱신 예정 목록",    description: "가까운 순서로 갱신 예정 고객 최대 10건",        category: "table", icon: Calendar,      colSpan: 2 },
-  { id: "table-upsell",     name: "업셀 Top 5",        description: "헬스 양호 + 계약 여력 있는 업셀 후보 5건",      category: "table", icon: Sparkles,      colSpan: 2 },
-  { id: "table-recent-customers", name: "최근 등록 고객", description: "최근 등록된 고객 5건",                      category: "table", icon: Clock,         colSpan: 2 },
-  { id: "memo",             name: "메모",              description: "자유롭게 텍스트 메모를 작성할 수 있습니다",      category: "utility", icon: StickyNote,  colSpan: 1 },
-  { id: "shortcuts",        name: "빠른 실행",         description: "자주 사용하는 기능에 빠르게 접근합니다",          category: "utility", icon: Zap,         colSpan: 1 },
+  { id: "kpi-customers",    name: "전체 고객 수",         description: "현재 등록된 전체 고객 수",                           category: "kpi",   icon: Users,         colSpan: 1 },
+  { id: "kpi-new-month",    name: "이번 달 새 고객",      description: "이번 달에 새로 등록된 고객 수",                      category: "kpi",   icon: Plus,          colSpan: 1 },
+  { id: "kpi-churn",        name: "떠난 고객 비율",       description: "전체 대비 거래가 끊긴 고객의 비율",                  category: "kpi",   icon: AlertTriangle, colSpan: 1 },
+  { id: "kpi-ltv",          name: "고객 누적 매출",       description: "모든 고객이 지금까지 만든 매출의 합계",             category: "kpi",   icon: DollarSign,    colSpan: 1 },
+  { id: "kpi-avg-contract", name: "평균 계약 금액",       description: "계약 한 건당 평균 금액",                             category: "kpi",   icon: Target,        colSpan: 1 },
+  { id: "kpi-renewals",     name: "곧 재계약 예정",       description: "앞으로 90일 안에 재계약이 예정된 고객 수",          category: "kpi",   icon: Calendar,      colSpan: 1 },
+  { id: "chart-health",     name: "고객 상태 분포",       description: "고객을 활발/주의/위험으로 나눠 도넛으로 보여줍니다", category: "chart", icon: PieIcon,       colSpan: 1 },
+  { id: "chart-retention",  name: "고객 유지율 추이",     description: "최근 6개월 동안 고객이 얼마나 남아 있는지 추이",    category: "chart", icon: TrendingUp,    colSpan: 2 },
+  { id: "chart-lifecycle",  name: "고객 단계별 분포",     description: "온보딩/활발/휴면/떠남 단계별 고객 수를 막대로 표시", category: "chart", icon: BarChart3,     colSpan: 2 },
+  { id: "table-renewals",   name: "곧 재계약 고객 목록",  description: "재계약이 가까운 순서로 최대 10명까지 표시",          category: "table", icon: Calendar,      colSpan: 2 },
+  { id: "table-upsell",     name: "추가 제안 추천 Top 5", description: "만족도 높고 추가 계약 가능성이 높은 고객 5명",      category: "table", icon: Sparkles,      colSpan: 2 },
+  { id: "table-recent-customers", name: "최근 등록된 고객", description: "가장 최근에 등록된 고객 5명",                   category: "table", icon: Clock,         colSpan: 2 },
+  { id: "memo",             name: "메모",                 description: "자유롭게 텍스트 메모를 작성할 수 있습니다",          category: "utility", icon: StickyNote,  colSpan: 1 },
+  { id: "shortcuts",        name: "빠른 실행",            description: "자주 쓰는 기능에 바로 접근합니다",                    category: "utility", icon: Zap,         colSpan: 1 },
 ];
 
 /* ─── AMOUNT PARSER (₩3,200만 → 3200, ₩1.8억 → 18000) ─── */
@@ -2756,12 +2756,12 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
   if (widgetId.startsWith("kpi-")) {
     type KpiEntry = { title: string; value: string; sub: string; trend: string; trendColor: string; icon: typeof BarChart3; iconBg: string };
     const kpiMap: Record<string, KpiEntry> = {
-      "kpi-customers":    { title: "전체 고객",       value: `${total}명`,             sub: "워크스페이스 전체",         trend: `활성 ${activeCount}명`,                                             trendColor: T.primary,  icon: Users,         iconBg: "#EFF5F1" },
-      "kpi-new-month":    { title: "이달 신규",       value: `${newThisMonth}명`,      sub: thisMonth,                     trend: total > 0 ? `전체의 ${Math.round((newThisMonth / total) * 100)}%` : "0%", trendColor: "#5B9170", icon: Plus,          iconBg: "#EDF3EE" },
-      "kpi-churn":        { title: "이탈률",           value: `${churnRate}%`,           sub: `이탈 ${churned}명`,           trend: `전체 ${total}명`,                                                   trendColor: T.danger,   icon: AlertTriangle, iconBg: "#FEF2F2" },
-      "kpi-ltv":          { title: "누적 LTV",         value: fmtAmt(totalLtv),          sub: "전체 고객 계약 합계",       trend: total > 0 ? `고객당 ${fmtAmt(Math.round(totalLtv / total))}` : "-",    trendColor: T.primary,  icon: DollarSign,    iconBg: "#EFF5F1" },
-      "kpi-avg-contract": { title: "평균 계약 금액",  value: fmtAmt(avgContract),       sub: `계약 ${contractAmts.length}건 기준`, trend: totalLtv > 0 ? `누적 ${fmtAmt(totalLtv)}` : "-",                    trendColor: T.primary,  icon: Target,        iconBg: "#EFF5F1" },
-      "kpi-renewals":     { title: "갱신 예정",        value: `${renewalsCount}건`,      sub: "향후 90일",                   trend: renewalsList[0] ? `최근접 D-${renewalsList[0].daysUntil}` : "-",     trendColor: "#4A7B5A",  icon: Calendar,      iconBg: "#EDF3EE" },
+      "kpi-customers":    { title: "전체 고객 수",      value: `${total}명`,             sub: "현재 등록된 전체",            trend: `활발 ${activeCount}명`,                                             trendColor: T.primary,  icon: Users,         iconBg: "#EFF5F1" },
+      "kpi-new-month":    { title: "이번 달 새 고객",   value: `${newThisMonth}명`,      sub: thisMonth,                     trend: total > 0 ? `전체의 ${Math.round((newThisMonth / total) * 100)}%` : "0%", trendColor: "#5B9170", icon: Plus,          iconBg: "#EDF3EE" },
+      "kpi-churn":        { title: "떠난 고객 비율",    value: `${churnRate}%`,           sub: `떠난 고객 ${churned}명`,      trend: `전체 ${total}명`,                                                   trendColor: T.danger,   icon: AlertTriangle, iconBg: "#FEF2F2" },
+      "kpi-ltv":          { title: "고객 누적 매출",    value: fmtAmt(totalLtv),          sub: "전체 고객 계약 합계",       trend: total > 0 ? `고객당 ${fmtAmt(Math.round(totalLtv / total))}` : "-",    trendColor: T.primary,  icon: DollarSign,    iconBg: "#EFF5F1" },
+      "kpi-avg-contract": { title: "평균 계약 금액",    value: fmtAmt(avgContract),       sub: `계약 ${contractAmts.length}건 기준`, trend: totalLtv > 0 ? `누적 ${fmtAmt(totalLtv)}` : "-",                    trendColor: T.primary,  icon: Target,        iconBg: "#EFF5F1" },
+      "kpi-renewals":     { title: "곧 재계약 예정",    value: `${renewalsCount}명`,      sub: "앞으로 90일 이내",            trend: renewalsList[0] ? `가장 임박 D-${renewalsList[0].daysUntil}` : "-",    trendColor: "#4A7B5A",  icon: Calendar,      iconBg: "#EDF3EE" },
     };
     const kpi = kpiMap[widgetId];
     if (!kpi) return null;
@@ -2791,8 +2791,8 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     return (
       <>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[0.85rem] text-[#1A1A1A]">헬스 분포</p>
-          <span className="text-[0.65rem] text-[#999]">평균 {avgHealth}점</span>
+          <p className="text-[0.85rem] text-[#1A1A1A]">고객 상태 분포</p>
+          <span className="text-[0.65rem] text-[#999]">평균 점수 {avgHealth}점</span>
         </div>
         <div className="h-[144px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={healthData} cx="50%" cy="50%" innerRadius={36} outerRadius={56} dataKey="value" paddingAngle={3}>{healthData.map((d) => <Cell key={d.name} fill={d.color} />)}</Pie><Tooltip formatter={(v: number) => `${v}%`} /></PieChart></ResponsiveContainer></div>
         <div className="flex justify-center gap-4 mt-1">{healthData.map((d) => (<div key={d.name} className="flex items-center gap-1.5 text-[0.65rem]"><div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className="text-[#666]">{d.name}</span><span className="text-[#999]">{d.count}명</span></div>))}</div>
@@ -2813,8 +2813,8 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     });
     return (
       <>
-        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">리텐션 추이</p>
-        <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={retentionData}><defs><linearGradient id="cRet" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.2} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}%`} /><Tooltip formatter={(v: number) => `${v}%`} /><Area type="monotone" dataKey="rate" stroke={T.primary} fill="url(#cRet)" strokeWidth={2} name="리텐션률" /></AreaChart></ResponsiveContainer></div>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">고객 유지율 추이</p>
+        <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={retentionData}><defs><linearGradient id="cRet" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.2} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}%`} /><Tooltip formatter={(v: number) => `${v}%`} /><Area type="monotone" dataKey="rate" stroke={T.primary} fill="url(#cRet)" strokeWidth={2} name="유지율" /></AreaChart></ResponsiveContainer></div>
       </>
     );
   }
@@ -2828,7 +2828,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     }));
     return (
       <>
-        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">라이프사이클 분포</p>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">고객 단계별 분포</p>
         <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={lifecycleData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} /><XAxis type="number" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis type="category" dataKey="stage" tick={{ fontSize: 10, fill: "#555" }} axisLine={false} tickLine={false} width={68} /><Tooltip formatter={(v: number) => `${v}명`} /><Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={14}>{lifecycleData.map((d) => <Cell key={d.stage} fill={d.color} />)}</Bar></BarChart></ResponsiveContainer></div>
       </>
     );
@@ -2839,11 +2839,11 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     const rows = renewalsList.slice(0, 10);
     return (
       <>
-        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">갱신 예정 목록</p>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">곧 재계약 고객 목록</p>
         {rows.length === 0 ? (
-          <p className="text-[0.7rem] text-[#999] py-6 text-center">90일 내 갱신 예정 고객이 없습니다</p>
+          <p className="text-[0.7rem] text-[#999] py-6 text-center">앞으로 90일 안에 재계약 예정인 고객이 없습니다</p>
         ) : (
-          <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["고객", "갱신일", "D-Day", "금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
+          <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["고객", "재계약일", "남은 일수", "금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
           <tbody>{rows.map((d) => <tr key={d.id} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3 text-[0.7rem] text-[#1A1A1A]">{d.company}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{d.renewalDate}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: d.daysUntil <= 14 ? T.danger : T.primary }}>D-{d.daysUntil}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{d.ltv || d.amount}</td></tr>)}</tbody></table>
         )}
       </>
@@ -2857,22 +2857,22 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
       .map((d) => ({
         ...d,
         score: Math.round((d.healthScore ?? 0) * 0.7 + (parseAmt(d.ltv || "") > 0 ? 20 : 10)),
-        reason: parseAmt(d.ltv || "") < 5000 ? "헬스 양호 — 추가 계약 제안 적합" : "LTV 기여도 높음 — 상위 모듈 제안",
+        reason: parseAmt(d.ltv || "") < 5000 ? "만족도 양호 — 추가 계약 제안에 적합" : "매출 기여도 높음 — 상위 상품 제안 가능",
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
     return (
       <>
-        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">업셀 Top 5</p>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">추가 제안 추천 Top 5</p>
         {upsellList.length === 0 ? (
-          <p className="text-[0.7rem] text-[#999] py-6 text-center">업셀 후보가 아직 없습니다</p>
+          <p className="text-[0.7rem] text-[#999] py-6 text-center">추천할 만한 고객이 아직 없습니다</p>
         ) : (
           <div className="space-y-2">{upsellList.map((d) => (
             <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span>
-                  <span className="text-[0.6rem] px-1.5 py-0.5 rounded-md" style={{ background: T.primary + "18", color: T.primary }}>헬스 {d.healthScore}</span>
+                  <span className="text-[0.6rem] px-1.5 py-0.5 rounded-md" style={{ background: T.primary + "18", color: T.primary }}>만족도 {d.healthScore}</span>
                 </div>
                 <p className="text-[0.6rem] text-[#999] truncate">{d.reason}</p>
               </div>
@@ -2889,7 +2889,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     const recentList = [...deals].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5);
     return (
       <>
-        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 등록 고객</p>
+        <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 등록된 고객</p>
         <div className="space-y-2">{recentList.map((d) => (
           <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors">
             <div className="flex items-center gap-3">

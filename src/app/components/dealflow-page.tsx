@@ -470,22 +470,22 @@ const WIDGET_CATEGORIES = [
 ];
 
 const allWidgets: WidgetDef[] = [
-  { id: "kpi-deals", name: "총 딜 수", description: "현재 진행중인 전체 딜 수를 표시합니다", category: "kpi", icon: BarChart3, colSpan: 1 },
-  { id: "kpi-winrate", name: "수주율 (건수)", description: "건수 기준 수주 성공률을 표시합니다", category: "kpi", icon: Target, colSpan: 1 },
-  { id: "kpi-amount", name: "총 견적 금액", description: "전체 견적 금액 합계를 표시합니다", category: "kpi", icon: DollarSign, colSpan: 1 },
-  { id: "kpi-winrate-amount", name: "수주율 (금액)", description: "금액 기준 수주 성공률을 표시합니다", category: "kpi", icon: TrendingUp, colSpan: 1 },
-  { id: "kpi-active", name: "활성 딜", description: "현재 진행중인 딜 건수를 표시합니다", category: "kpi", icon: Activity, colSpan: 1 },
-  { id: "kpi-avg-cycle", name: "평균 영업 주기", description: "딜 생성부터 종료까지 평균 일수입니다", category: "kpi", icon: Clock, colSpan: 1 },
-  { id: "kpi-at-risk", name: "위험 딜", description: "장기 미진행 또는 지연된 딜 수입니다", category: "kpi", icon: AlertTriangle, colSpan: 1 },
-  { id: "kpi-new-month", name: "이달 신규", description: "이번 달 새로 생성된 딜 건수입니다", category: "kpi", icon: Plus, colSpan: 1 },
-  { id: "funnel", name: "파이프라인 퍼널", description: "각 스테이지별 딜 분포를 막대 차트로 표시합니다", category: "chart", icon: Filter, colSpan: 4 },
-  { id: "donut", name: "성공여부 분포", description: "딜의 성공/실패/진행중 비율을 도넛 차트로 표시합니다", category: "chart", icon: PieIcon, colSpan: 1 },
-  { id: "trend", name: "월별 추이", description: "최근 6개월간 딜 수와 금액 추이를 꺾은선 그래프로 표시합니다", category: "chart", icon: TrendingUp, colSpan: 2 },
-  { id: "stage-bar", name: "스테이지별 금액", description: "각 스테이지별 누적 금액을 가로 막대로 표시합니다", category: "chart", icon: BarChart3, colSpan: 2 },
-  { id: "performance", name: "담당자별 성과", description: "영업 담당자별 딜 수, 수주율, 금액을 테이블로 표시합니다", category: "table", icon: Users, colSpan: 2 },
-  { id: "recent-deals", name: "최근 딜 목록", description: "최근 등록된 딜 5건을 간략히 표시합니다", category: "table", icon: Table2, colSpan: 2 },
-  { id: "memo", name: "메모", description: "자유롭게 텍스트 메모를 작성할 수 있습니다", category: "utility", icon: StickyNote, colSpan: 1 },
-  { id: "shortcuts", name: "빠른 실행", description: "자주 사용하는 기능에 빠르게 접근합니다", category: "utility", icon: Zap, colSpan: 1 },
+  { id: "kpi-deals",         name: "전체 영업 건수",       description: "현재 등록된 전체 영업 건수",                             category: "kpi",   icon: BarChart3,    colSpan: 1 },
+  { id: "kpi-winrate",       name: "성공률 (건수 기준)",    description: "전체 영업 중 성공으로 마무리된 비율",                     category: "kpi",   icon: Target,       colSpan: 1 },
+  { id: "kpi-amount",        name: "전체 견적 금액",       description: "모든 영업 건의 견적 금액 합계",                           category: "kpi",   icon: DollarSign,   colSpan: 1 },
+  { id: "kpi-winrate-amount",name: "성공률 (금액 기준)",    description: "견적 금액 대비 성공한 금액의 비율",                       category: "kpi",   icon: TrendingUp,   colSpan: 1 },
+  { id: "kpi-active",        name: "진행 중인 영업",        description: "지금 진행 중인 영업 건수",                                 category: "kpi",   icon: Activity,     colSpan: 1 },
+  { id: "kpi-avg-cycle",     name: "평균 영업 소요일",      description: "영업 시작부터 마무리까지 걸린 평균 일수",                 category: "kpi",   icon: Clock,        colSpan: 1 },
+  { id: "kpi-at-risk",       name: "지연된 영업",           description: "오래 진행 중이거나 지연된 영업 건수",                     category: "kpi",   icon: AlertTriangle,colSpan: 1 },
+  { id: "kpi-new-month",     name: "이번 달 새 영업",       description: "이번 달에 새로 시작된 영업 건수",                         category: "kpi",   icon: Plus,         colSpan: 1 },
+  { id: "funnel",            name: "단계별 영업 분포",      description: "각 단계에 몇 건의 영업이 있는지 막대로 표시",            category: "chart", icon: Filter,       colSpan: 4 },
+  { id: "donut",             name: "성공/실패 비율",        description: "진행 중 / 성공 / 실패 비율을 도넛으로 표시",              category: "chart", icon: PieIcon,      colSpan: 1 },
+  { id: "trend",             name: "월별 영업 추이",        description: "최근 6개월 영업 건수와 금액의 변화 추이",                category: "chart", icon: TrendingUp,   colSpan: 2 },
+  { id: "stage-bar",         name: "단계별 누적 금액",      description: "각 단계의 누적 금액을 가로 막대로 표시",                 category: "chart", icon: BarChart3,    colSpan: 2 },
+  { id: "performance",       name: "담당자별 실적",         description: "담당자별 영업 건수, 성공률, 금액을 표로 표시",           category: "table", icon: Users,        colSpan: 2 },
+  { id: "recent-deals",      name: "최근 등록된 영업",      description: "가장 최근에 등록된 영업 5건",                             category: "table", icon: Table2,       colSpan: 2 },
+  { id: "memo",              name: "메모",                  description: "자유롭게 텍스트 메모를 작성할 수 있습니다",               category: "utility", icon: StickyNote, colSpan: 1 },
+  { id: "shortcuts",         name: "빠른 실행",             description: "자주 쓰는 기능에 바로 접근합니다",                         category: "utility", icon: Zap,        colSpan: 1 },
 ];
 
 /* ─── AMOUNT PARSER (₩3,200만 → 3200, ₩1.8억 → 18000) ─── */
@@ -571,25 +571,25 @@ function recommendWidgets(a: DealAnalysis, scenario: ScenarioType): WidgetRecomm
   const add = (id: string, reason: string, priority: number) => recs.push({ widgetId: id, reason, priority });
 
   // Always recommend
-  add("kpi-deals", "전체 딜 현황을 한눈에 파악", 100);
+  add("kpi-deals", "전체 영업 현황을 한눈에 파악", 100);
 
   if (a.hasAmountData) {
-    add("kpi-amount", "총 견적 금액으로 파이프라인 가치 확인", 95);
-    add("kpi-winrate-amount", "금액 기준 수주율로 매출 효율 측정", 85);
-    add("stage-bar", `${a.uniqueStages}개 스테이지별 금액 분포 시각화`, 70);
+    add("kpi-amount", "전체 견적 금액으로 영업 규모 확인", 95);
+    add("kpi-winrate-amount", "금액 기준 성공률로 매출 효율 측정", 85);
+    add("stage-bar", `${a.uniqueStages}개 단계별 누적 금액 시각화`, 70);
   }
 
   if (a.uniqueStages >= 3) {
-    add("funnel", `${a.uniqueStages}개 스테이지 퍼널로 병목 구간 발견`, 90);
+    add("funnel", `${a.uniqueStages}개 단계 분포로 막힌 구간 발견`, 90);
   }
 
   if (a.winRate > 0) {
-    add("kpi-winrate", `현재 수주율 ${Math.round(a.winRate * 100)}% 추적`, 88);
-    add("donut", "성공/실패/진행중 비율을 직관적으로 파악", 75);
+    add("kpi-winrate", `현재 성공률 ${Math.round(a.winRate * 100)}% 추적`, 88);
+    add("donut", "진행 중/성공/실패 비율을 직관적으로 파악", 75);
   }
 
   if (a.hasManagerData && a.uniqueManagers >= 2) {
-    add("performance", `${a.uniqueManagers}명 담당자별 성과 비교`, 80);
+    add("performance", `${a.uniqueManagers}명 담당자별 실적 비교`, 80);
   }
 
   if (a.dateRange.spanDays > 60) {
@@ -598,15 +598,14 @@ function recommendWidgets(a: DealAnalysis, scenario: ScenarioType): WidgetRecomm
 
   // Scenario-specific
   if (scenario === "소규모 팀") {
-    add("recent-deals", "최근 딜 목록으로 빠른 현황 파악", 82);
+    add("recent-deals", "최근 영업 목록으로 빠른 현황 파악", 82);
     add("shortcuts", "자주 쓰는 기능에 빠르게 접근", 60);
   } else if (scenario === "중규모 팀") {
-    add("kpi-active", "현재 진행중인 활성 딜 수 모니터링", 78);
-    add("kpi-at-risk", "지연된 위험 딜 조기 발견", 76);
+    add("kpi-active", "진행 중인 영업 수 모니터링", 78);
+    add("kpi-at-risk", "지연된 영업 조기 발견", 76);
   } else {
-    // 단순 고객 목록
-    add("recent-deals", "최근 등록된 고객 목록 확인", 85);
-    add("donut", "고객 상태 분포 파악", 70);
+    add("recent-deals", "최근 등록된 영업 목록 확인", 85);
+    add("donut", "영업 상태 분포 파악", 70);
   }
 
   // Sort by priority, return top 8
@@ -2776,14 +2775,14 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
   if (widgetId.startsWith("kpi-")) {
     type KpiEntry = { title: string; value: string; sub: string; trend: string; trendColor: string; icon: typeof BarChart3; iconBg: string };
     const kpiMap: Record<string, KpiEntry> = {
-      "kpi-deals":         { title: "총 딜 수",       value: `${total}건`,        sub: "전체 등록 딜",        trend: `활성 ${activeCount}건`,    trendColor: T.primary,    icon: BarChart3,    iconBg: "#EFF5F1" },
-      "kpi-winrate":       { title: "수주율 (건수)",   value: total > 0 ? `${Math.round((wonCount / total) * 100)}%` : "0%", sub: `수주 ${wonCount}건`,     trend: `전체 ${total}건`,          trendColor: T.success,    icon: Target,       iconBg: "#ECFDF5" },
-      "kpi-amount":        { title: "총 견적 금액",    value: fmtAmt(totalAmt),   sub: "VAT 미포함",         trend: `수주 ${fmtAmt(wonAmt)}`,   trendColor: T.primary,    icon: DollarSign,   iconBg: "#EFF5F1" },
-      "kpi-winrate-amount":{ title: "수주율 (금액)",   value: totalAmt > 0 ? `${Math.round((wonAmt / totalAmt) * 100)}%` : "0%", sub: `수주액 ${fmtAmt(wonAmt)}`, trend: `총 ${fmtAmt(totalAmt)}`, trendColor: T.primary, icon: TrendingUp, iconBg: "#EFF5F1" },
-      "kpi-active":        { title: "활성 딜",        value: `${activeCount}건`,  sub: "진행중 딜",          trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#4A7B5A", icon: Activity, iconBg: "#EDF3EE" },
-      "kpi-avg-cycle":     { title: "평균 영업 주기", value: `${avgCycle}일`,     sub: "종료 딜 기준",       trend: `종료 ${closedDeals.length}건`, trendColor: "#6B7280", icon: Clock,      iconBg: "#F3F4F6" },
-      "kpi-at-risk":       { title: "위험 딜",        value: `${atRisk}건`,       sub: "30일+ 미진행",       trend: activeCount > 0 ? `활성의 ${Math.round((atRisk / activeCount) * 100)}%` : "0%", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
-      "kpi-new-month":     { title: "이달 신규",      value: `${newThisMonth}건`, sub: thisMonth,            trend: `전체의 ${total > 0 ? Math.round((newThisMonth / total) * 100) : 0}%`, trendColor: "#5B9170", icon: Plus, iconBg: "#EDF3EE" },
+      "kpi-deals":         { title: "전체 영업 건수",      value: `${total}건`,        sub: "현재 등록된 전체",       trend: `진행 중 ${activeCount}건`,    trendColor: T.primary,    icon: BarChart3,    iconBg: "#EFF5F1" },
+      "kpi-winrate":       { title: "성공률 (건수 기준)",  value: total > 0 ? `${Math.round((wonCount / total) * 100)}%` : "0%", sub: `성공 ${wonCount}건`,     trend: `전체 ${total}건`,          trendColor: T.success,    icon: Target,       iconBg: "#ECFDF5" },
+      "kpi-amount":        { title: "전체 견적 금액",      value: fmtAmt(totalAmt),   sub: "부가세 제외",            trend: `성공 ${fmtAmt(wonAmt)}`,   trendColor: T.primary,    icon: DollarSign,   iconBg: "#EFF5F1" },
+      "kpi-winrate-amount":{ title: "성공률 (금액 기준)",  value: totalAmt > 0 ? `${Math.round((wonAmt / totalAmt) * 100)}%` : "0%", sub: `성공 금액 ${fmtAmt(wonAmt)}`, trend: `전체 ${fmtAmt(totalAmt)}`, trendColor: T.primary, icon: TrendingUp, iconBg: "#EFF5F1" },
+      "kpi-active":        { title: "진행 중인 영업",      value: `${activeCount}건`,  sub: "현재 진행 중",           trend: `전체의 ${total > 0 ? Math.round((activeCount / total) * 100) : 0}%`, trendColor: "#4A7B5A", icon: Activity, iconBg: "#EDF3EE" },
+      "kpi-avg-cycle":     { title: "평균 영업 소요일",    value: `${avgCycle}일`,     sub: "마무리된 영업 기준",     trend: `마무리 ${closedDeals.length}건`, trendColor: "#6B7280", icon: Clock,      iconBg: "#F3F4F6" },
+      "kpi-at-risk":       { title: "지연된 영업",         value: `${atRisk}건`,       sub: "30일 이상 진행 중",      trend: activeCount > 0 ? `진행 중의 ${Math.round((atRisk / activeCount) * 100)}%` : "0%", trendColor: T.danger, icon: AlertTriangle, iconBg: "#FEF2F2" },
+      "kpi-new-month":     { title: "이번 달 새 영업",     value: `${newThisMonth}건`, sub: thisMonth,                trend: `전체의 ${total > 0 ? Math.round((newThisMonth / total) * 100) : 0}%`, trendColor: "#5B9170", icon: Plus, iconBg: "#EDF3EE" },
     };
     const kpi = kpiMap[widgetId];
     if (!kpi) return null;
@@ -2809,7 +2808,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
     count: deals.filter((d) => d.stage === stage).length,
   }));
 
-  if (widgetId === "funnel") return <><p className="text-[0.85rem] text-[#1A1A1A] mb-4">영업 파이프라인 현황</p><FunnelBar data={funnelData} stageColorMap={stageColorMap} /></>;
+  if (widgetId === "funnel") return <><p className="text-[0.85rem] text-[#1A1A1A] mb-4">단계별 영업 분포</p><FunnelBar data={funnelData} stageColorMap={stageColorMap} /></>;
 
   /* ── Donut data ── */
   const statusCounts: Record<string, number> = { 진행중: 0, 성공: 0, 실패: 0 };
@@ -2822,7 +2821,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
 
   if (widgetId === "donut") return (
     <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-2">성공여부 분포</p>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-2">성공/실패 비율</p>
       <div className="h-[144px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={donutData} cx="50%" cy="50%" innerRadius={36} outerRadius={56} dataKey="value" paddingAngle={3}>{donutData.map((d) => <Cell key={d.name} fill={d.color} />)}</Pie><Tooltip formatter={(v: number) => `${v}%`} /></PieChart></ResponsiveContainer></div>
       <div className="flex justify-center gap-4 mt-1">{donutData.map((d) => (<div key={d.name} className="flex items-center gap-1.5 text-[0.65rem]"><div className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} /><span className="text-[#666]">{d.name}</span><span className="text-[#999]">{d.count}건</span></div>))}</div>
     </>
@@ -2839,8 +2838,8 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
 
   if (widgetId === "trend") return (
     <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">월별 딜 추이</p>
-      <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="cDeals" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><Tooltip /><Area type="monotone" dataKey="deals" stroke={T.primary} fill="url(#cDeals)" strokeWidth={2} name="딜 수" /></AreaChart></ResponsiveContainer></div>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">월별 영업 추이</p>
+      <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trendData}><defs><linearGradient id="cDeals" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={T.primary} stopOpacity={0.15} /><stop offset="95%" stopColor={T.primary} stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" /><XAxis dataKey="month" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} /><Tooltip /><Area type="monotone" dataKey="deals" stroke={T.primary} fill="url(#cDeals)" strokeWidth={2} name="영업 건수" /></AreaChart></ResponsiveContainer></div>
     </>
   );
 
@@ -2852,7 +2851,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
 
   if (widgetId === "stage-bar") return (
     <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">스테이지별 금액</p>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">단계별 누적 금액</p>
       <div className="h-[160px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={stageAmountData} layout="vertical"><CartesianGrid strokeDasharray="3 3" stroke="#F0F0F0" horizontal={false} /><XAxis type="number" tick={{ fontSize: 10, fill: "#999" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v}만`} /><YAxis type="category" dataKey="stage" tick={{ fontSize: 10, fill: "#555" }} axisLine={false} tickLine={false} width={68} /><Tooltip formatter={(v: number) => `${v}만원`} /><Bar dataKey="amount" radius={[0, 4, 4, 0]} fill={T.primary} barSize={14} /></BarChart></ResponsiveContainer></div>
     </>
   );
@@ -2874,8 +2873,8 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
 
   if (widgetId === "performance") return (
     <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">담당자별 성과</p>
-      <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["담당자", "딜 수", "수주", "수주율", "총 금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">담당자별 실적</p>
+      <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["담당자", "영업 건수", "성공", "성공률", "총 금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
       <tbody>{performanceData.map((p) => <tr key={p.name} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3"><div className="flex items-center gap-2"><div className="w-7 h-7 rounded-full flex items-center justify-center text-[0.6rem] text-white" style={{ background: T.primary }}>{p.name[0]}</div><span className="text-[0.7rem] text-[#1A1A1A]">{p.name}</span></div></td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.deals}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.won}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: T.primary }}>{p.rate}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{p.amount}</td></tr>)}</tbody></table>
     </>
   );
@@ -2885,7 +2884,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
 
   if (widgetId === "recent-deals") return (
     <>
-      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 딜 목록</p>
+      <p className="text-[0.85rem] text-[#1A1A1A] mb-4">최근 등록된 영업</p>
       <div className="space-y-2">{recentDeals.map((d) => <div key={d.id} className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-[#FAFBFC] transition-colors"><div className="flex items-center gap-3"><span className="text-[0.7rem] text-[#1A1A1A]">{d.company}</span><span className="text-[0.6rem] px-2 py-0.5 rounded-md" style={{ background: (stageColorMap[d.stage] || "#999") + "18", color: stageColorMap[d.stage] || "#999" }}>{d.stage}</span></div><span className="text-[0.7rem] text-[#999]">{d.amount}</span></div>)}</div>
     </>
   );
