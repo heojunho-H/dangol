@@ -24,6 +24,7 @@ import {
   Clock,
   CalendarCheck,
   MoreHorizontal,
+  Repeat,
   Link2,
   Copy,
   PenLine,
@@ -51,7 +52,8 @@ const navSections: NavSection[] = [
     label: null,
     items: [
       { id: "home", icon: Home, label: "홈", to: "/" },
-      { id: "dashboard", icon: LayoutDashboard, label: "대시보드", to: "/sales" },
+      { id: "sales-dashboard", icon: LayoutDashboard, label: "영업관리 대시보드", to: "/sales" },
+      { id: "customer-dashboard", icon: BarChart3, label: "고객관리 대시보드", to: "/customer-dashboard" },
     ],
   },
   {
@@ -63,10 +65,10 @@ const navSections: NavSection[] = [
   {
     label: "고객관리",
     items: [
-      { id: "corp", icon: Building2, label: "기업", to: "/customers" },
-      { id: "contacts", icon: Users, label: "연락처", to: "/customers" },
-      { id: "grade", icon: UserCheck, label: "고객 등급", to: "/customers" },
-      { id: "email-campaign", icon: Mail, label: "이메일 캠페인", to: "/customers" },
+      { id: "customers-all", icon: Users, label: "전체 고객", to: "/customers/all" },
+      { id: "customers-returning", icon: Repeat, label: "재구매 고객", to: "/customers/returning" },
+      { id: "customers-churnrisk", icon: UserCheck, label: "이탈 위험", to: "/customers/churnrisk" },
+      { id: "email-campaign", icon: Mail, label: "이메일 캠페인", to: "/customers/all" },
     ],
   },
   {
@@ -256,11 +258,17 @@ export function Sidebar() {
                       const pageId = `new-${Date.now()}`;
                       const newLabel = `새 영업관리 페이지${salesPageCounter > 1 ? ` ${salesPageCounter}` : ""}`;
                       const isEngSales = section.label === "영업관리";
+                      const isCustomers = section.label === "고객관리";
+                      const targetTo = isEngSales
+                        ? `/dealflow/${pageId}`
+                        : isCustomers
+                        ? `/customers/${pageId}`
+                        : "/";
                       const newItem: NavItem = {
                         id: pageId,
                         icon: FileText,
-                        label: newLabel,
-                        to: isEngSales ? `/dealflow/${pageId}` : "/",
+                        label: isCustomers ? "새 고객관리 페이지" : newLabel,
+                        to: targetTo,
                       };
                       setNavData((prev) =>
                         prev.map((s) =>
@@ -269,13 +277,12 @@ export function Sidebar() {
                             : s
                         )
                       );
-                      // 접혀 있으면 펼치기
                       if (collapsed[section.label!]) {
                         setCollapsed((prev) => ({ ...prev, [section.label!]: false }));
                       }
-                      showToast(`"${newLabel}" 페이지가 추가되었습니다.`);
-                      if (isEngSales) {
-                        navigate(`/dealflow/${pageId}`);
+                      showToast(`"${newItem.label}" 페이지가 추가되었습니다.`);
+                      if (isEngSales || isCustomers) {
+                        navigate(targetTo);
                       }
                     }}
                     className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[#E8EEFF] transition-all"

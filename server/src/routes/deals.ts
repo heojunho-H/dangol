@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import prisma from "../lib/prisma.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { buildDealWhere, buildDealOrderBy } from "../services/deal-filters.js";
+import { convertDealToCustomer } from "../services/customer-conversion.js";
 
 export const dealsRouter = Router();
 dealsRouter.use(authMiddleware);
@@ -264,6 +265,10 @@ dealsRouter.patch("/:id", async (req: Request, res: Response, next: NextFunction
       },
     });
 
+    if (existing.status !== "WON" && deal.status === "WON") {
+      await convertDealToCustomer(deal.id);
+    }
+
     res.json(deal);
   } catch (err) {
     next(err);
@@ -331,6 +336,10 @@ dealsRouter.patch(
         },
       });
 
+      if (existing.status !== "WON" && deal.status === "WON") {
+        await convertDealToCustomer(deal.id);
+      }
+
       res.json(deal);
     } catch (err) {
       next(err);
@@ -381,6 +390,16 @@ dealsRouter.post(
         where: { id: { in: ids }, workspaceId: req.workspaceId },
         data: updateData,
       });
+
+      if (data.status === "WON" || data.stageId) {
+        const affected = await prisma.deal.findMany({
+          where: { id: { in: ids }, workspaceId: req.workspaceId, status: "WON", customerId: null },
+          select: { id: true },
+        });
+        for (const d of affected) {
+          await convertDealToCustomer(d.id);
+        }
+      }
 
       res.json({ updated: result.count });
     } catch (err) {

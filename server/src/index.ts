@@ -14,6 +14,10 @@ import { activityLogsRouter } from "./routes/activity-logs.js";
 import { filesRouter, fileDownloadRouter } from "./routes/files.js";
 import { customersRouter } from "./routes/customers.js";
 import { chatRouter } from "./routes/chat.js";
+import { contractsRouter } from "./routes/contracts.js";
+import { customerLifecycleStagesRouter } from "./routes/customer-lifecycle-stages.js";
+import { customerCustomFieldsRouter } from "./routes/customer-custom-fields.js";
+import { workspaceSettingsRouter } from "./routes/workspace-settings.js";
 
 config({ path: "../.env" });
 
@@ -59,6 +63,10 @@ app.use("/api/files", fileDownloadRouter);
 
 // Customers + Chat (protected)
 app.use("/api/customers", customersRouter);
+app.use("/api/contracts", contractsRouter);
+app.use("/api/customer-lifecycle-stages", customerLifecycleStagesRouter);
+app.use("/api/customer-custom-fields", customerCustomFieldsRouter);
+app.use("/api/workspace-settings", workspaceSettingsRouter);
 app.use("/api/chat", chatRouter);
 
 // Global error handler
