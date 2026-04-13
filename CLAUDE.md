@@ -144,3 +144,23 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - **빈 테이블 시작** 플로우: `startBlankTable()`이 기본 컬럼 숨기고 커스텀 컬럼만 보이게 하는 "scratch" 모드.
 - **영업관리**의 "필드" 버튼은 통합 필드 매니저 다이얼로그를 연다 (구 `/settings/fields` 페이지는 현재 연결 안 됨, 추후 정리 대상).
 - 고객관리에는 아직 같은 통합 적용 안 됨 — 사용자 요청 오면 동일 패턴으로 복제.
+
+## Skill routing
+
+When the user's request matches an available skill, ALWAYS invoke it using the Skill
+tool as your FIRST action. Do NOT answer directly, do NOT use other tools first.
+The skill has specialized workflows that produce better results than ad-hoc answers.
+
+Key routing rules:
+- Product ideas, "is this worth building", brainstorming → invoke office-hours
+- Bugs, errors, "why is this broken", 500 errors → invoke investigate
+- Ship, deploy, push, create PR → invoke ship
+- QA, test the site, find bugs → invoke qa
+- Code review, check my diff → invoke review
+- Update docs after shipping → invoke document-release
+- Weekly retro → invoke retro
+- Design system, brand → invoke design-consultation
+- Visual audit, design polish → invoke design-review
+- Architecture review → invoke plan-eng-review
+- Save progress, checkpoint, resume → invoke checkpoint
+- Code quality, health check → invoke health
