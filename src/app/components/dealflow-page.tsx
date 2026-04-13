@@ -3888,6 +3888,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [newColName, setNewColName] = useState("");
   const [newColType, setNewColType] = useState<FieldType>("text");
   const [headerMenu, setHeaderMenu] = useState<{ key: string; x: number; y: number } | null>(null);
+  const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
 
   const updateDealField = useCallback((id: number, key: string, value: unknown) => {
     setCustomerDeals((prev) => prev.map((d) => (d.id === id ? { ...d, [key]: value } : d)));
@@ -3979,12 +3980,21 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   }, [newColName, newColType]);
 
   const renameColumn = useCallback((key: string) => {
-    const current = customFields.find((f) => f.key === key);
-    const currentLabel = current?.label || key;
-    const next = window.prompt("새 컬럼 이름", currentLabel);
-    if (!next || next.trim() === "" || next === currentLabel) return;
-    setCustomFields((prev) => prev.map((f) => (f.key === key ? { ...f, label: next.trim() } : f)));
-  }, [customFields]);
+    setRenamingColumn(key);
+  }, []);
+
+  const commitColumnRename = useCallback((key: string, nextLabel: string) => {
+    const trimmed = nextLabel.trim();
+    setRenamingColumn(null);
+    if (!trimmed) return;
+    setCustomFields((prev) => {
+      const existing = prev.find((f) => f.key === key);
+      if (existing) {
+        return prev.map((f) => (f.key === key ? { ...f, label: trimmed } : f));
+      }
+      return [...prev, { id: `cf_${Date.now()}`, key, label: trimmed, type: "text", required: false, locked: false, visible: true }];
+    });
+  }, []);
 
   const deleteColumn = useCallback((key: string) => {
     const field = customFields.find((f) => f.key === key);
@@ -4974,7 +4984,20 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                 }}
                               >
                                 <div className={`flex items-center gap-1.5 ${isNumeric ? "justify-end" : ""}`}>
-                                  {h.label ? (
+                                  {renamingColumn === h.key ? (
+                                    <input
+                                      autoFocus
+                                      defaultValue={h.label}
+                                      placeholder="컬럼 이름"
+                                      onClick={(e) => e.stopPropagation()}
+                                      onBlur={(e) => commitColumnRename(h.key, e.currentTarget.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") { e.preventDefault(); commitColumnRename(h.key, e.currentTarget.value); }
+                                        else if (e.key === "Escape") { e.preventDefault(); setRenamingColumn(null); }
+                                      }}
+                                      className="text-[0.7rem] bg-white border border-[#1A472A] rounded px-1.5 py-0.5 outline-none w-full min-w-[100px]"
+                                    />
+                                  ) : h.label ? (
                                     <span className={`text-[0.65rem] tracking-wide ${isActive ? "text-[#1A472A] font-medium" : "text-[#888]"}`}>{h.label}</span>
                                   ) : (
                                     <span className="text-[0.65rem] tracking-wide italic text-[#BBB] hover:text-[#1A472A] transition-colors">클릭해서 컬럼 이름 입력</span>
