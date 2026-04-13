@@ -4045,7 +4045,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           <button onClick={() => navigate("/settings/pipeline")} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="파이프라인 설정">
             <Settings size={12} /> 파이프라인
           </button>
-          <button onClick={() => navigate("/settings/fields")} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="필드 관리">
+          <button onClick={() => setShowColumnConfig(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="필드 관리">
             <Grid3X3 size={12} /> 필드
           </button>
           <div className="w-px h-5" style={{ background: T.border }} />
@@ -4391,19 +4391,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     >
                       초기화
                     </button>
-                  )}
-                  {activeView === "table" && (
-                    <>
-                      <div className="flex-1" />
-                      <button
-                        onClick={() => setShowColumnConfig(!showColumnConfig)}
-                        className="p-[6px] rounded-lg border hover:bg-[#F7F8FA] transition-colors"
-                        style={{ borderColor: T.border, background: "#fff" }}
-                        title="컬럼 설정"
-                      >
-                        <Grid3X3 size={12} color="#888" />
-                      </button>
-                    </>
                   )}
                 </div>
               )}
