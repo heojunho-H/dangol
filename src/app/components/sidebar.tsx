@@ -45,13 +45,7 @@ const navSections: NavSection[] = [
     label: null,
     items: [
       { id: "home", icon: Home, label: "홈", to: "/" },
-    ],
-  },
-  {
-    label: "대시보드",
-    items: [
-      { id: "sales-dashboard", icon: LayoutDashboard, label: "영업관리 대시보드", to: "/sales" },
-      { id: "customer-dashboard", icon: LayoutDashboard, label: "고객관리 대시보드", to: "/customers" },
+      { id: "dashboard", icon: LayoutDashboard, label: "대시보드", to: "/dashboard" },
     ],
   },
   {
@@ -252,22 +246,15 @@ export function Sidebar() {
                       const newLabel = `새 영업관리 페이지${salesPageCounter > 1 ? ` ${salesPageCounter}` : ""}`;
                       const isEngSales = section.label === "영업관리";
                       const isCustomers = section.label === "고객관리";
-                      const isDashboards = section.label === "대시보드";
                       const targetTo = isEngSales
                         ? `/dealflow/${pageId}`
                         : isCustomers
                         ? `/customers/${pageId}`
                         : "/";
-                      const itemLabel = isCustomers
-                        ? "새 고객관리 페이지"
-                        : isDashboards
-                        ? "새 대시보드"
-                        : newLabel;
-                      const itemIcon = isDashboards ? LayoutDashboard : FileText;
                       const newItem: NavItem = {
                         id: pageId,
-                        icon: itemIcon,
-                        label: itemLabel,
+                        icon: FileText,
+                        label: isCustomers ? "새 고객관리 페이지" : newLabel,
                         to: targetTo,
                       };
                       setNavData((prev) =>
