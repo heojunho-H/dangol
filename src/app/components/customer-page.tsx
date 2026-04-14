@@ -3688,6 +3688,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   /* ── Column order (user-defined via column config) ── */
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
+  // Dangol 기본 필드(기업명·라이프사이클·고객 등급·성공여부)를 항상 맨 앞·맨 뒤로 고정.
+  // 사용자가 싫으면 필드 관리 다이얼로그에서 끌 수 있음.
+  const [pinDangolColumns, setPinDangolColumns] = useState(true);
   const [colDragKey, setColDragKey] = useState<string | null>(null);
 
   /* ── Merge ALL_COLUMNS with dynamic customFields (auto-created on import) ── */
@@ -3719,10 +3722,24 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     for (const c of mergedColumns) {
       if (!seen.has(c.key)) { out.push(c); seen.add(c.key); }
     }
-    const active = out.filter((c) => visibleColumns.has(c.key));
+    let active = out.filter((c) => visibleColumns.has(c.key));
     const inactive = out.filter((c) => !visibleColumns.has(c.key));
+    if (pinDangolColumns) {
+      const frontKeys = ["company", "stage", "customerGrade"];
+      const backKeys = ["status"];
+      const front = frontKeys
+        .map((k) => active.find((c) => c.key === k))
+        .filter((c): c is ColumnDef => Boolean(c));
+      const back = backKeys
+        .map((k) => active.find((c) => c.key === k))
+        .filter((c): c is ColumnDef => Boolean(c));
+      const middle = active.filter(
+        (c) => !frontKeys.includes(c.key) && !backKeys.includes(c.key)
+      );
+      active = [...front, ...middle, ...back];
+    }
     return [...active, ...inactive];
-  }, [mergedColumns, columnOrder, visibleColumns]);
+  }, [mergedColumns, columnOrder, visibleColumns, pinDangolColumns]);
 
   const activeColumns = useMemo(
     () => orderedColumns.filter((c) => visibleColumns.has(c.key)),
@@ -4998,74 +5015,142 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
               )}
 
               {/* Column Config Dialog */}
-              {showColumnConfig && (
-                <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.2)" }} onClick={() => setShowColumnConfig(false)}>
-                  <div className="bg-white rounded-xl border w-[260px]" style={{ borderColor: T.border, boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }} onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: T.border }}>
-                      <p className="text-[0.8rem] text-[#1A1A1A]">컬럼 설정</p>
-                      <button onClick={() => setShowColumnConfig(false)} className="p-1 rounded hover:bg-[#F7F8FA]"><X size={13} color="#999" /></button>
-                    </div>
-                    <div className="p-3 max-h-[360px] overflow-y-auto">
-                      {activeColumns.length > 0 && (
-                        <>
-                          <p className="text-[0.6rem] text-[#999] px-3 pb-1.5 uppercase tracking-wide">활성 · 드래그로 순서 변경</p>
-                          {activeColumns.map((col) => {
-                            const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
-                            const isDangolFeature = col.key === "stage" || col.key === "status" || col.key === "customerGrade";
-                            const dragging = colDragKey === col.key;
-                            return (
-                              <div
-                                key={col.key}
-                                draggable
-                                onDragStart={() => setColDragKey(col.key)}
-                                onDragOver={(e) => handleColDragOver(e, col.key)}
-                                onDragEnd={() => setColDragKey(null)}
-                                className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[#F8F9FA] transition-colors"
-                                style={{ opacity: dragging ? 0.5 : 1, cursor: "grab", borderColor: dragging ? T.primary : "transparent" }}
-                              >
-                                <GripVertical size={12} className="text-[#CCC] shrink-0" />
-                                <input type="checkbox" checked disabled={col.required} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
-                                <span className="text-[0.75rem] text-[#333] flex-1 truncate">{col.label}</span>
-                                {isDangolFeature && (
-                                  <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#EFF5F1] text-[#1A472A] shrink-0">Dangol 기능</span>
-                                )}
-                                {col.required ? (
-                                  <span className="text-[0.6rem] text-[#BBB]">필수</span>
-                                ) : isCustom ? (
-                                  <span className="text-[0.6rem] text-[#059669]">커스텀</span>
-                                ) : null}
-                              </div>
-                            );
-                          })}
-                        </>
+              {/* Field Manager Dialog (unified: column visibility + field types + rename + delete) */}
+              {showColumnConfig && (() => {
+                const renderRow = (col: ColumnDef, active: boolean) => {
+                  const field = customFields.find((f) => f.key === col.key);
+                  const isLocked = field?.locked || col.required;
+                  const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
+                  const isDangolFeature = col.key === "stage" || col.key === "status" || col.key === "customerGrade";
+                  const currentType = field?.type ?? "text";
+                  const dragging = colDragKey === col.key;
+                  return (
+                    <div
+                      key={col.key}
+                      draggable={active && !isLocked}
+                      onDragStart={() => active && !isLocked && setColDragKey(col.key)}
+                      onDragOver={(e) => active && handleColDragOver(e, col.key)}
+                      onDragEnd={() => setColDragKey(null)}
+                      className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[#F8F9FA] transition-colors"
+                      style={{ opacity: dragging ? 0.5 : 1, cursor: active && !isLocked ? "grab" : "default" }}
+                    >
+                      {active ? <GripVertical size={12} className={`shrink-0 ${isLocked ? "text-transparent" : "text-[#CCC]"}`} /> : <span className="w-3 shrink-0" />}
+                      <button
+                        onClick={() => !isLocked && toggleColumn(col.key)}
+                        className="p-1 rounded hover:bg-white shrink-0"
+                        title={active ? "숨기기" : "보이기"}
+                        disabled={isLocked}
+                      >
+                        {active ? <Eye size={12} color="#666" /> : <EyeOff size={12} color="#CCC" />}
+                      </button>
+                      {renamingColumn === col.key ? (
+                        <input
+                          autoFocus
+                          defaultValue={col.label}
+                          onBlur={(e) => commitColumnRename(col.key, e.currentTarget.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); commitColumnRename(col.key, e.currentTarget.value); }
+                            else if (e.key === "Escape") { e.preventDefault(); setRenamingColumn(null); }
+                          }}
+                          className="text-[0.75rem] flex-1 border rounded px-1.5 py-0.5 outline-none focus:border-[#1A472A]"
+                          style={{ borderColor: T.border }}
+                        />
+                      ) : (
+                        <span className={`flex-1 flex items-center gap-1.5 min-w-0 ${isLocked ? "" : "cursor-text"}`}>
+                          <span
+                            onClick={() => !isLocked && setRenamingColumn(col.key)}
+                            className={`text-[0.75rem] truncate ${active ? "text-[#333]" : "text-[#999]"} ${isLocked ? "" : "hover:text-[#1A472A]"}`}
+                          >
+                            {col.label || <span className="italic text-[#BBB]">이름 없음</span>}
+                          </span>
+                          {isDangolFeature && (
+                            <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#EFF5F1] text-[#1A472A] shrink-0">Dangol 기능</span>
+                          )}
+                        </span>
                       )}
-                      {inactiveColumns.length > 0 && (
-                        <>
-                          <p className="text-[0.6rem] text-[#999] px-3 pt-3 pb-1.5 uppercase tracking-wide">비활성</p>
-                          {inactiveColumns.map((col) => {
-                            const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
-                            const isDangolFeature = col.key === "stage" || col.key === "status" || col.key === "customerGrade";
-                            return (
-                              <label key={col.key} className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[#F8F9FA] cursor-pointer transition-colors">
-                                <span className="w-3 shrink-0" />
-                                <input type="checkbox" checked={false} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
-                                <span className="text-[0.75rem] text-[#999] flex-1 truncate">{col.label}</span>
-                                {isDangolFeature && (
-                                  <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#EFF5F1] text-[#1A472A] shrink-0">Dangol 기능</span>
-                                )}
-                                {isCustom && <span className="text-[0.6rem] text-[#059669]">커스텀</span>}
-                              </label>
-                            );
-                          })}
-                        </>
+                      {isCustom && !isLocked ? (
+                        <select
+                          value={currentType}
+                          onChange={(e) => {
+                            const t = e.target.value as FieldType;
+                            setCustomFields((prev) => prev.map((f) => (f.key === col.key ? { ...f, type: t } : f)));
+                          }}
+                          className="text-[0.65rem] px-1.5 py-1 rounded border bg-white text-[#666] cursor-pointer"
+                          style={{ borderColor: T.border }}
+                        >
+                          {(Object.keys(FIELD_TYPE_LABELS) as FieldType[]).filter((t) => t !== "file").map((t) => (
+                            <option key={t} value={t}>{FIELD_TYPE_LABELS[t]}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-[0.6rem] text-[#BBB] px-1.5 py-1 rounded bg-[#F8F9FA]">{FIELD_TYPE_LABELS[currentType]}</span>
+                      )}
+                      {col.required ? (
+                        <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#FEF2F2] text-[#DC2626]">필수</span>
+                      ) : isCustom ? (
+                        <button onClick={() => deleteColumn(col.key)} className="p-1 rounded hover:bg-[#FEF2F2] shrink-0" title="삭제">
+                          <Trash2 size={12} color="#EF4444" />
+                        </button>
+                      ) : (
+                        <Lock size={11} className="text-[#DDD] shrink-0" />
                       )}
                     </div>
-                    <div className="px-5 py-3 border-t flex justify-end" style={{ borderColor: T.border }}>
-                      <button onClick={() => setShowColumnConfig(false)} className="px-4 py-1.5 rounded-lg text-[0.7rem] text-white" style={{ background: T.primary }}>완료</button>
+                  );
+                };
+                return (
+                  <div className="fixed inset-0 z-40 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.2)" }} onClick={() => setShowColumnConfig(false)}>
+                    <div className="bg-white rounded-xl border w-[420px]" style={{ borderColor: T.border, boxShadow: "0 8px 30px rgba(0,0,0,0.12)" }} onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-between px-5 py-3.5 border-b" style={{ borderColor: T.border }}>
+                        <div>
+                          <p className="text-[0.85rem] text-[#1A1A1A] font-medium">필드</p>
+                          <p className="text-[0.65rem] text-[#999] mt-0.5">표시 여부·이름·타입·순서를 관리합니다</p>
+                        </div>
+                        <button onClick={() => setShowColumnConfig(false)} className="p-1 rounded hover:bg-[#F7F8FA]"><X size={13} color="#999" /></button>
+                      </div>
+                      <label className="flex items-center justify-between px-5 py-2.5 border-b cursor-pointer hover:bg-[#FAFBFC]" style={{ borderColor: T.border }}>
+                        <div className="flex flex-col">
+                          <span className="text-[0.7rem] text-[#333]">Dangol 기본 필드 고정</span>
+                          <span className="text-[0.6rem] text-[#999] mt-0.5">기업명·라이프사이클·고객 등급을 맨 앞, 성공여부를 맨 뒤로 유지</span>
+                        </div>
+                        <div
+                          onClick={(e) => { e.preventDefault(); setPinDangolColumns((p) => !p); }}
+                          className="relative w-8 h-[18px] rounded-full transition-colors shrink-0"
+                          style={{ background: pinDangolColumns ? T.primary : "#D1D5DB" }}
+                        >
+                          <div
+                            className="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-all"
+                            style={{ left: pinDangolColumns ? "16px" : "2px", boxShadow: "0 1px 2px rgba(0,0,0,0.2)" }}
+                          />
+                        </div>
+                      </label>
+                      <div className="p-3 max-h-[420px] overflow-y-auto">
+                        {activeColumns.length > 0 && (
+                          <>
+                            <p className="text-[0.6rem] text-[#999] px-3 pb-1.5 uppercase tracking-wide">표시 중 · 드래그로 순서 변경</p>
+                            {activeColumns.map((c) => renderRow(c, true))}
+                          </>
+                        )}
+                        {inactiveColumns.length > 0 && (
+                          <>
+                            <p className="text-[0.6rem] text-[#999] px-3 pt-3 pb-1.5 uppercase tracking-wide">숨김</p>
+                            {inactiveColumns.map((c) => renderRow(c, false))}
+                          </>
+                        )}
+                        <button
+                          onClick={() => { setShowAddColumn(true); setShowColumnConfig(false); }}
+                          className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 border-dashed text-[0.75rem] text-[#999] hover:text-[#1A472A] hover:border-[#1A472A] hover:bg-[#FAFDFB] transition-all"
+                          style={{ borderColor: T.border }}
+                        >
+                          <Plus size={13} /> 새 필드 추가
+                        </button>
+                      </div>
+                      <div className="px-5 py-3 border-t flex justify-end" style={{ borderColor: T.border }}>
+                        <button onClick={() => setShowColumnConfig(false)} className="px-4 py-1.5 rounded-lg text-[0.7rem] text-white" style={{ background: T.primary }}>완료</button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
             </div>
           </div>
 
