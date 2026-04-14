@@ -75,6 +75,13 @@ import {
   Globe,
   Code2,
   RefreshCw,
+  Maximize2,
+  Type,
+  Hash,
+  List,
+  Tag,
+  Paperclip,
+  Rows3,
 } from "lucide-react";
 
 /* ─── DESIGN TOKENS ─── */
@@ -383,6 +390,29 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
 const FIELD_TYPE_ICONS: Record<FieldType, string> = {
   text: "📝", number: "💰", select: "📋", "multi-select": "🏷️",
   date: "📅", person: "👤", phone: "📞", email: "✉️", file: "📎",
+};
+
+/* ─── FIELD TYPE ICON COMPONENT (lucide, used in column headers) ─── */
+const FIELD_TYPE_LUCIDE: Record<FieldType, typeof Type> = {
+  text: Type, number: Hash, select: List, "multi-select": Tag,
+  date: Calendar, person: User, phone: Phone, email: Mail, file: Paperclip,
+};
+function FieldTypeIcon({ type, size = 11, color = "#AAA" }: { type: FieldType; size?: number; color?: string }) {
+  const Ic = FIELD_TYPE_LUCIDE[type] || Type;
+  return <Ic size={size} color={color} />;
+}
+
+/* ─── ROW DENSITY ─── */
+type RowDensity = "compact" | "normal" | "comfortable";
+const ROW_PADDING_CLASS: Record<RowDensity, string> = {
+  compact: "py-1.5",
+  normal: "py-3.5",
+  comfortable: "py-6",
+};
+const ROW_DENSITY_LABEL: Record<RowDensity, string> = {
+  compact: "좁게",
+  normal: "보통",
+  comfortable: "넓게",
 };
 
 const DEFAULT_FIELDS: CustomField[] = [
@@ -3650,6 +3680,8 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [rowDensity, setRowDensity] = useState<RowDensity>("normal");
+  const [showDensityMenu, setShowDensityMenu] = useState(false);
   const [customerDeals, setCustomerDeals] = useState<Customer[]>([]);
   const [editingCell, setEditingCell] = useState<{ id: number; key: string } | null>(null);
   const [showAddColumn, setShowAddColumn] = useState(false);
@@ -4610,6 +4642,35 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                       초기화
                     </button>
                   )}
+                  <div className="ml-auto relative">
+                    <button
+                      onClick={() => setShowDensityMenu((v) => !v)}
+                      className="flex items-center gap-1.5 px-3 py-[6px] rounded-lg border text-[0.7rem] text-[#666] hover:bg-[#F7F8FA] transition-colors"
+                      style={{ borderColor: T.border, background: "white" }}
+                      title="행 높이"
+                    >
+                      <Rows3 size={12} /> {ROW_DENSITY_LABEL[rowDensity]}
+                      <ChevronDown size={10} />
+                    </button>
+                    {showDensityMenu && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowDensityMenu(false)} />
+                        <div className="absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg z-50 py-1 w-[120px]" style={{ borderColor: T.border }}>
+                          {(["compact", "normal", "comfortable"] as RowDensity[]).map((d) => (
+                            <button
+                              key={d}
+                              onClick={() => { setRowDensity(d); setShowDensityMenu(false); }}
+                              className="w-full text-left px-3 py-2 text-[0.72rem] hover:bg-[#F7F8FA] transition-colors flex items-center justify-between"
+                              style={{ color: rowDensity === d ? T.primary : "#444" }}
+                            >
+                              {ROW_DENSITY_LABEL[d]}
+                              {rowDensity === d && <span className="text-[0.6rem]">●</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -4799,7 +4860,13 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                       className="text-[0.7rem] bg-white border border-[#1A472A] rounded px-1.5 py-0.5 outline-none w-full min-w-[100px]"
                                     />
                                   ) : h.label ? (
-                                    <span className={`text-[0.65rem] tracking-wide ${isActive ? "text-[#1A472A] font-medium" : "text-[#888]"}`}>{h.label}</span>
+                                    <span className="flex items-center gap-1">
+                                      {(() => {
+                                        const fd = customFields.find((f) => f.key === h.key);
+                                        return fd ? <FieldTypeIcon type={fd.type} size={10} color={isActive ? T.primary : "#BBB"} /> : null;
+                                      })()}
+                                      <span className={`text-[0.65rem] tracking-wide ${isActive ? "text-[#1A472A] font-medium" : "text-[#888]"}`}>{h.label}</span>
+                                    </span>
                                   ) : (
                                     <span className="text-[0.65rem] tracking-wide italic text-[#BBB] hover:text-[#1A472A] transition-colors">클릭해서 컬럼 이름 입력</span>
                                   )}
@@ -4989,7 +5056,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                         setHoveredDeal(null);
                                       }}
                                     >
-                                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                                      <td className={`${ROW_PADDING_CLASS[rowDensity]} px-4`} onClick={(e) => e.stopPropagation()}>
                                         <input type="checkbox" checked={isSelected} onChange={() => toggleOne(deal.id)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A] cursor-pointer" />
                                       </td>
                                       {activeColumns.map((col) => {
@@ -5060,10 +5127,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                             <span className="text-[0.7rem] text-[#555] truncate block">{typeof raw === "number" ? raw.toLocaleString() : String(raw)}</span>
                                           )
                                         );
+                                        const isFirstDataCol = activeColumns[0]?.key === col.key;
                                         return (
                                           <td
                                             key={col.key}
-                                            className={`py-3.5 px-4 ${canInlineEdit ? "cursor-text" : ""}`}
+                                            className={`${ROW_PADDING_CLASS[rowDensity]} px-4 ${canInlineEdit ? "cursor-text" : ""} ${isFirstDataCol ? "group/firstcell relative" : ""}`}
                                             style={columnWidths[col.key] ? { width: columnWidths[col.key], minWidth: columnWidths[col.key] } : undefined}
                                             onClick={(e) => {
                                               if (canInlineEdit && isEmpty && !isEditing) {
@@ -5072,10 +5140,22 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                               }
                                             }}
                                             onDoubleClick={() => { if (canInlineEdit) setEditingCell({ id: deal.id, key: col.key }); }}
-                                          >{rendered}</td>
+                                          >
+                                            {rendered}
+                                            {isFirstDataCol && (
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setSelectedDeal(deal); }}
+                                                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded border bg-white text-[#888] hover:text-[#1A472A] hover:border-[#1A472A] opacity-0 group-hover/firstcell:opacity-100 transition-opacity"
+                                                style={{ borderColor: T.border, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+                                                title="상세 페이지 열기"
+                                              >
+                                                <Maximize2 size={10} />
+                                              </button>
+                                            )}
+                                          </td>
                                         );
                                       })}
-                                      <td className="py-3.5 px-2 w-10" />
+                                      <td className={`${ROW_PADDING_CLASS[rowDensity]} px-2 w-10`} />
                                     </tr>
                                   );
                                 })}
