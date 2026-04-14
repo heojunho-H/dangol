@@ -385,6 +385,7 @@ const FIELD_TYPE_ICONS: Record<FieldType, string> = {
 const DEFAULT_FIELDS: CustomField[] = [
   { id: "f1",  key: "company",      label: "고객사",           type: "text",   required: true,  locked: true,  visible: true },
   { id: "f2",  key: "stage",        label: "라이프사이클",     type: "select", required: false, locked: false, visible: true, options: ["온보딩", "활성", "휴면", "이탈"] },
+  { id: "f17", key: "customerGrade",label: "고객 등급",        type: "select", required: false, locked: false, visible: true, options: ["S등급", "A등급", "B등급", "그 외"] },
   { id: "f3",  key: "contact",      label: "담당자",           type: "text",   required: false, locked: false, visible: true },
   { id: "f4",  key: "position",     label: "직책",             type: "text",   required: false, locked: false, visible: false },
   { id: "f6",  key: "amount",       label: "계약 금액",        type: "number", required: false, locked: false, visible: true },
@@ -2958,6 +2959,7 @@ interface ColumnDef {
 const ALL_COLUMNS: ColumnDef[] = [
   { key: "company", label: "기업명", required: true, filter: true, sort: true, defaultVisible: true },
   { key: "stage", label: "진행상태", required: false, info: true, filter: true, sort: true, defaultVisible: true },
+  { key: "customerGrade", label: "고객 등급", required: false, filter: true, sort: true, defaultVisible: true },
   { key: "contact", label: "담당자", required: false, sort: true, defaultVisible: true },
   { key: "position", label: "직책", required: false, sort: true, defaultVisible: false },
   { key: "service", label: "희망서비스", required: false, filter: true, sort: true, defaultVisible: true },
@@ -5009,6 +5011,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           <p className="text-[0.6rem] text-[#999] px-3 pb-1.5 uppercase tracking-wide">활성 · 드래그로 순서 변경</p>
                           {activeColumns.map((col) => {
                             const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
+                            const isDangolFeature = col.key === "stage" || col.key === "status" || col.key === "customerGrade";
                             const dragging = colDragKey === col.key;
                             return (
                               <div
@@ -5023,6 +5026,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                 <GripVertical size={12} className="text-[#CCC] shrink-0" />
                                 <input type="checkbox" checked disabled={col.required} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
                                 <span className="text-[0.75rem] text-[#333] flex-1 truncate">{col.label}</span>
+                                {isDangolFeature && (
+                                  <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#EFF5F1] text-[#1A472A] shrink-0">Dangol 기능</span>
+                                )}
                                 {col.required ? (
                                   <span className="text-[0.6rem] text-[#BBB]">필수</span>
                                 ) : isCustom ? (
@@ -5038,11 +5044,15 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           <p className="text-[0.6rem] text-[#999] px-3 pt-3 pb-1.5 uppercase tracking-wide">비활성</p>
                           {inactiveColumns.map((col) => {
                             const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
+                            const isDangolFeature = col.key === "stage" || col.key === "status" || col.key === "customerGrade";
                             return (
                               <label key={col.key} className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[#F8F9FA] cursor-pointer transition-colors">
                                 <span className="w-3 shrink-0" />
                                 <input type="checkbox" checked={false} onChange={() => toggleColumn(col.key)} className="w-4 h-4 rounded border-[#D1D5DB] text-[#1A472A] focus:ring-[#1A472A]" />
                                 <span className="text-[0.75rem] text-[#999] flex-1 truncate">{col.label}</span>
+                                {isDangolFeature && (
+                                  <span className="text-[0.55rem] px-1.5 py-0.5 rounded-full bg-[#EFF5F1] text-[#1A472A] shrink-0">Dangol 기능</span>
+                                )}
                                 {isCustom && <span className="text-[0.6rem] text-[#059669]">커스텀</span>}
                               </label>
                             );
