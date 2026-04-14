@@ -194,7 +194,7 @@ interface SortRule {
   dir: "asc" | "desc";
 }
 
-type GroupByField = "" | "stage" | "manager" | "service";
+type GroupByField = "" | "stage" | "manager" | "customerGrade";
 
 const FILTER_OPS_BY_TYPE: Record<string, { op: FilterOp; label: string }[]> = {
   text:   [{ op: "contains", label: "포함" }, { op: "eq", label: "같음" }, { op: "neq", label: "같지 않음" }, { op: "not_contains", label: "포함하지 않음" }, { op: "is_empty", label: "비어있음" }, { op: "is_not_empty", label: "비어있지 않음" }],
@@ -205,30 +205,33 @@ const FILTER_OPS_BY_TYPE: Record<string, { op: FilterOp; label: string }[]> = {
 };
 
 const FIELD_FILTER_TYPE: Record<string, string> = {
-  company: "text", stage: "select", contact: "text", position: "text",
-  service: "text", amount: "number", quantity: "number", manager: "person",
-  date: "date", phone: "text", email: "text", memo: "text",
+  company: "text", stage: "select", customerGrade: "select",
+  contact: "text", position: "text",
+  amount: "number", healthScore: "number", ltv: "number",
+  manager: "person", date: "date", renewalDate: "date",
+  phone: "text", email: "text", memo: "text",
 };
 
 const FILTERABLE_FIELDS = [
-  { key: "stage", label: "고객상태" }, { key: "amount", label: "견적금액" },
-  { key: "manager", label: "담당자" },
+  { key: "stage", label: "고객상태" }, { key: "customerGrade", label: "고객등급" },
+  { key: "amount", label: "계약 금액" }, { key: "manager", label: "고객 책임자" },
   { key: "date", label: "등록일" }, { key: "company", label: "기업명" },
-  { key: "contact", label: "연락처" }, { key: "service", label: "희망서비스" },
-  { key: "quantity", label: "수량" },
+  { key: "contact", label: "담당자" },
 ];
 
 const SORTABLE_FIELDS = [
   { key: "company", label: "기업명" }, { key: "stage", label: "고객상태" },
-  { key: "amount", label: "견적금액" }, { key: "quantity", label: "수량" },
-  { key: "manager", label: "담당자" },
-  { key: "date", label: "등록일" },
+  { key: "customerGrade", label: "고객등급" },
+  { key: "amount", label: "계약 금액" }, { key: "ltv", label: "누적 LTV" },
+  { key: "healthScore", label: "헬스 스코어" },
+  { key: "manager", label: "고객 책임자" }, { key: "date", label: "등록일" },
+  { key: "renewalDate", label: "갱신 예정일" },
 ];
 
 const GROUPABLE_FIELDS: { key: GroupByField; label: string }[] = [
   { key: "", label: "없음" }, { key: "stage", label: "고객상태" },
-  { key: "manager", label: "담당자" },
-  { key: "service", label: "희망서비스" },
+  { key: "customerGrade", label: "고객등급" },
+  { key: "manager", label: "고객 책임자" },
 ];
 
 /* helper: get unique values for a field from deals */
@@ -304,11 +307,11 @@ function applySorts(deals: Customer[], sorts: SortRule[]): Customer[] {
     for (const s of sorts) {
       const av = String(a[s.field] ?? "");
       const bv = String(b[s.field] ?? "");
-      // numeric compare for amount/quantity
-      if (s.field === "amount") {
+      // numeric compare for amount/ltv/healthScore
+      if (s.field === "amount" || s.field === "ltv") {
         const diff = parseAmt(av) - parseAmt(bv);
         if (diff !== 0) return s.dir === "asc" ? diff : -diff;
-      } else if (s.field === "quantity") {
+      } else if (s.field === "healthScore") {
         const diff = (Number(av) || 0) - (Number(bv) || 0);
         if (diff !== 0) return s.dir === "asc" ? diff : -diff;
       } else {
@@ -416,14 +419,14 @@ const ROW_DENSITY_LABEL: Record<RowDensity, string> = {
 };
 
 const DEFAULT_FIELDS: CustomField[] = [
-  { id: "f1",  key: "company",      label: "고객사",           type: "text",   required: true,  locked: true,  visible: true },
+  { id: "f1",  key: "company",      label: "기업명",           type: "text",   required: true,  locked: true,  visible: true },
   { id: "f2",  key: "stage",        label: "고객상태",         type: "select", required: false, locked: false, visible: true, options: ["신규", "재구매", "충성고객"] },
   { id: "f17", key: "customerGrade",label: "고객등급",        type: "select", required: false, locked: false, visible: true, options: ["S등급", "A등급", "B등급", "그 외"] },
   { id: "f3",  key: "contact",      label: "담당자",           type: "text",   required: false, locked: false, visible: true },
   { id: "f4",  key: "position",     label: "직책",             type: "text",   required: false, locked: false, visible: false },
   { id: "f6",  key: "amount",       label: "계약 금액",        type: "number", required: false, locked: false, visible: true },
-  { id: "f14", key: "healthScore",  label: "헬스 스코어",      type: "number", required: false, locked: false, visible: true },
   { id: "f15", key: "ltv",          label: "누적 LTV",         type: "number", required: false, locked: false, visible: true },
+  { id: "f14", key: "healthScore",  label: "헬스 스코어",      type: "number", required: false, locked: false, visible: true },
   { id: "f16", key: "renewalDate",  label: "갱신 예정일",      type: "date",   required: false, locked: false, visible: true },
   { id: "f8",  key: "manager",      label: "고객 책임자",      type: "person", required: false, locked: false, visible: true },
   { id: "f10", key: "date",         label: "등록일",           type: "date",   required: false, locked: false, visible: true },
@@ -472,8 +475,6 @@ interface Customer {
   stage: string; // 고객상태: 신규 | 재구매 | 충성고객
   contact: string;
   position: string;
-  service: string;
-  quantity: number;
   amount: string;       // contract value (formatted)
   healthScore?: number; // 0-100
   ltv?: string;         // lifetime value (formatted)
@@ -487,21 +488,21 @@ interface Customer {
 
 /* ─── SAMPLE CUSTOMERS (onboarding 완료 시 로드) ─── */
 const SAMPLE_DEALS: Customer[] = [
-  { id: 1,  company: "(주)테크솔루션",     stage: "충성고객", contact: "김영호", position: "이사",  service: "",          quantity: 0, amount: "₩3,200만", healthScore: 88, ltv: "₩1.2억", renewalDate: "2026-09-15", manager: "박지은", status: "충성고객", date: "2025-03-15" },
-  { id: 2,  company: "스마트팩토리(주)",   stage: "재구매",   contact: "이수진", position: "부장",  service: "",          quantity: 0, amount: "₩2,800만", healthScore: 76, ltv: "₩8,400만", renewalDate: "2026-08-18", manager: "김태현", status: "재구매",   date: "2025-08-18" },
-  { id: 3,  company: "(주)글로벌트레이드", stage: "신규",     contact: "박민수", position: "과장",  service: "",          quantity: 0, amount: "₩5,500만", healthScore: 65, ltv: "₩5,500만", renewalDate: "2027-03-20", manager: "이서연", status: "신규",     date: "2026-03-20" },
-  { id: 4,  company: "디지털커머스(주)",   stage: "신규",     contact: "최지아", position: "대리",  service: "",          quantity: 0, amount: "₩1,200만", healthScore: 72, ltv: "₩1,200만", renewalDate: "2027-03-22", manager: "박지은", status: "신규",     date: "2026-03-22" },
-  { id: 5,  company: "(주)바이오헬스",     stage: "신규",     contact: "정대현", position: "팀장",  service: "",          quantity: 0, amount: "₩980만",   healthScore: 42, ltv: "₩2,940만", renewalDate: "2026-05-25", manager: "김태현", status: "신규",     date: "2024-09-25" },
-  { id: 6,  company: "에너지플러스(주)",   stage: "재구매",   contact: "한소희", position: "차장",  service: "",          quantity: 0, amount: "₩4,100만", healthScore: 91, ltv: "₩9,200만", renewalDate: "2026-09-28", manager: "이서연", status: "재구매",   date: "2025-09-28" },
-  { id: 7,  company: "(주)푸드테크",       stage: "신규",     contact: "오재석", position: "과장",  service: "",          quantity: 0, amount: "₩1,500만", healthScore: 68, ltv: "₩1,500만", renewalDate: "2027-04-01", manager: "박지은", status: "신규",     date: "2026-04-01" },
-  { id: 8,  company: "클라우드원(주)",     stage: "충성고객", contact: "윤미래", position: "부장",  service: "",          quantity: 0, amount: "₩6,200만", healthScore: 84, ltv: "₩1.4억", renewalDate: "2026-10-03", manager: "김태현", status: "충성고객", date: "2024-10-03" },
-  { id: 9,  company: "(주)핀테크랩",       stage: "재구매",   contact: "서준혁", position: "이사",  service: "",          quantity: 0, amount: "₩2,300만", healthScore: 79, ltv: "₩4,600만", renewalDate: "2026-07-05", manager: "이서연", status: "재구매",   date: "2025-07-05" },
-  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",     contact: "강하은", position: "대리",  service: "",          quantity: 0, amount: "₩8,500만", healthScore: 71, ltv: "₩8,500만", renewalDate: "2027-04-07", manager: "박지은", status: "신규",     date: "2026-04-07" },
-  { id: 11, company: "(주)헬스케어AI",     stage: "충성고객", contact: "윤성민", position: "팀장",  service: "",          quantity: 0, amount: "₩1.2억",  healthScore: 93, ltv: "₩2.8억", renewalDate: "2026-09-10", manager: "김태현", status: "충성고객", date: "2024-03-10" },
-  { id: 12, company: "리테일허브(주)",     stage: "충성고객", contact: "조은지", position: "과장",  service: "",          quantity: 0, amount: "₩4,700만", healthScore: 82, ltv: "₩1.1억", renewalDate: "2026-08-28", manager: "이서연", status: "충성고객", date: "2024-08-28" },
-  { id: 13, company: "(주)스마트물류",     stage: "신규",     contact: "임재현", position: "부장",  service: "",          quantity: 0, amount: "₩3,400만", healthScore: 28, ltv: "₩3,400만", renewalDate: "",           manager: "박지은", status: "신규",     date: "2024-02-14" },
-  { id: 14, company: "에듀테크파트너(주)", stage: "충성고객", contact: "노지수", position: "이사",  service: "",          quantity: 0, amount: "₩9,800만", healthScore: 87, ltv: "₩1.9억", renewalDate: "2026-10-08", manager: "김태현", status: "충성고객", date: "2025-04-08" },
-  { id: 15, company: "(주)그린에너지",     stage: "신규",     contact: "배소연", position: "차장",  service: "",          quantity: 0, amount: "₩2,100만", healthScore: 48, ltv: "₩2,100만", renewalDate: "2026-07-20", manager: "이서연", status: "신규",     date: "2025-01-20" },
+  { id: 1,  company: "(주)테크솔루션",     stage: "충성고객", contact: "김영호", position: "이사",  amount: "₩3,200만", healthScore: 88, ltv: "₩1.2억", renewalDate: "2026-09-15", manager: "박지은", status: "충성고객", date: "2025-03-15" },
+  { id: 2,  company: "스마트팩토리(주)",   stage: "재구매",   contact: "이수진", position: "부장",  amount: "₩2,800만", healthScore: 76, ltv: "₩8,400만", renewalDate: "2026-08-18", manager: "김태현", status: "재구매",   date: "2025-08-18" },
+  { id: 3,  company: "(주)글로벌트레이드", stage: "신규",     contact: "박민수", position: "과장",  amount: "₩5,500만", healthScore: 65, ltv: "₩5,500만", renewalDate: "2027-03-20", manager: "이서연", status: "신규",     date: "2026-03-20" },
+  { id: 4,  company: "디지털커머스(주)",   stage: "신규",     contact: "최지아", position: "대리",  amount: "₩1,200만", healthScore: 72, ltv: "₩1,200만", renewalDate: "2027-03-22", manager: "박지은", status: "신규",     date: "2026-03-22" },
+  { id: 5,  company: "(주)바이오헬스",     stage: "신규",     contact: "정대현", position: "팀장",  amount: "₩980만",   healthScore: 42, ltv: "₩2,940만", renewalDate: "2026-05-25", manager: "김태현", status: "신규",     date: "2024-09-25" },
+  { id: 6,  company: "에너지플러스(주)",   stage: "재구매",   contact: "한소희", position: "차장",  amount: "₩4,100만", healthScore: 91, ltv: "₩9,200만", renewalDate: "2026-09-28", manager: "이서연", status: "재구매",   date: "2025-09-28" },
+  { id: 7,  company: "(주)푸드테크",       stage: "신규",     contact: "오재석", position: "과장",  amount: "₩1,500만", healthScore: 68, ltv: "₩1,500만", renewalDate: "2027-04-01", manager: "박지은", status: "신규",     date: "2026-04-01" },
+  { id: 8,  company: "클라우드원(주)",     stage: "충성고객", contact: "윤미래", position: "부장",  amount: "₩6,200만", healthScore: 84, ltv: "₩1.4억", renewalDate: "2026-10-03", manager: "김태현", status: "충성고객", date: "2024-10-03" },
+  { id: 9,  company: "(주)핀테크랩",       stage: "재구매",   contact: "서준혁", position: "이사",  amount: "₩2,300만", healthScore: 79, ltv: "₩4,600만", renewalDate: "2026-07-05", manager: "이서연", status: "재구매",   date: "2025-07-05" },
+  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",     contact: "강하은", position: "대리",  amount: "₩8,500만", healthScore: 71, ltv: "₩8,500만", renewalDate: "2027-04-07", manager: "박지은", status: "신규",     date: "2026-04-07" },
+  { id: 11, company: "(주)헬스케어AI",     stage: "충성고객", contact: "윤성민", position: "팀장",  amount: "₩1.2억",  healthScore: 93, ltv: "₩2.8억", renewalDate: "2026-09-10", manager: "김태현", status: "충성고객", date: "2024-03-10" },
+  { id: 12, company: "리테일허브(주)",     stage: "충성고객", contact: "조은지", position: "과장",  amount: "₩4,700만", healthScore: 82, ltv: "₩1.1억", renewalDate: "2026-08-28", manager: "이서연", status: "충성고객", date: "2024-08-28" },
+  { id: 13, company: "(주)스마트물류",     stage: "신규",     contact: "임재현", position: "부장",  amount: "₩3,400만", healthScore: 28, ltv: "₩3,400만", renewalDate: "",           manager: "박지은", status: "신규",     date: "2024-02-14" },
+  { id: 14, company: "에듀테크파트너(주)", stage: "충성고객", contact: "노지수", position: "이사",  amount: "₩9,800만", healthScore: 87, ltv: "₩1.9억", renewalDate: "2026-10-08", manager: "김태현", status: "충성고객", date: "2025-04-08" },
+  { id: 15, company: "(주)그린에너지",     stage: "신규",     contact: "배소연", position: "차장",  amount: "₩2,100만", healthScore: 48, ltv: "₩2,100만", renewalDate: "2026-07-20", manager: "이서연", status: "신규",     date: "2025-01-20" },
 ];
 
 /* ─── WIDGET DEFINITIONS ─── */
@@ -571,7 +572,6 @@ interface DealAnalysis {
   totalAmount: number;
   winRate: number;
   dateRange: { earliest: string; latest: string; spanDays: number };
-  serviceCount: number;
   hasAmountData: boolean;
   hasManagerData: boolean;
 }
@@ -579,7 +579,6 @@ interface DealAnalysis {
 function analyzeDealData(deals: Customer[]): DealAnalysis {
   const stages = new Set(deals.map(d => d.stage));
   const managers = new Set(deals.map(d => d.manager).filter(Boolean));
-  const services = new Set(deals.map(d => d.service).filter(Boolean));
   const amounts = deals.map(d => parseAmt(d.amount));
   const totalAmount = amounts.reduce((s, a) => s + a, 0);
   const hasAmountData = amounts.some(a => a > 0);
@@ -599,7 +598,6 @@ function analyzeDealData(deals: Customer[]): DealAnalysis {
     totalAmount,
     winRate,
     dateRange: { earliest, latest, spanDays },
-    serviceCount: services.size,
     hasAmountData,
     hasManagerData: managers.size > 0,
   };
@@ -959,8 +957,6 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
         stage,
         contact: String(r.contact ?? ""),
         position: String(r.position ?? ""),
-        service: String(r.service ?? ""),
-        quantity: typeof r.quantity === "number" ? r.quantity : 0,
         amount: String(r.amount ?? ""),
         manager: String(r.manager ?? ""),
         status: String(r.status ?? "진행중"),
@@ -1867,9 +1863,9 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
 
 /* ─── WEB FORM SAMPLE DEALS ─── */
 const WEB_FORM_SAMPLE_DEALS: Customer[] = [
-  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "박지은", status: "신규", date: "2026-04-12" },
-  { id: 102, company: "스마트로직(주)",   stage: "신규", contact: "이동훈", position: "대표이사",   service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "김태현", status: "신규", date: "2026-04-12" },
-  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀",     service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "이서연", status: "신규", date: "2026-04-11" },
+  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "박지은", status: "신규", date: "2026-04-12" },
+  { id: 102, company: "스마트로직(주)",   stage: "신규", contact: "이동훈", position: "대표이사",   amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "김태현", status: "신규", date: "2026-04-12" },
+  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀",     amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "이서연", status: "신규", date: "2026-04-11" },
 ];
 
 /* ─── WEB FORM ONBOARDING FLOW ─── */
@@ -1880,7 +1876,6 @@ const DEFAULT_WEB_FORM_FIELDS: WebFormField[] = [
   { key: "contact", label: "담당자명", required: false, locked: false },
   { key: "phone", label: "전화번호", required: false, locked: false },
   { key: "email", label: "이메일", required: false, locked: false },
-  { key: "service", label: "희망서비스", required: false, locked: false },
   { key: "message", label: "문의내용", required: false, locked: false },
 ];
 
@@ -2421,7 +2416,7 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
   // AI insight mock data
   const aiInsights = {
     winProb: 72,
-    companyInfo: `${deal.company}은(는) ${deal.service} 분야의 잠재 고객으로, 최근 디지털 전환에 높은 관심을 보이고 있습니다.`,
+    companyInfo: `${deal.company}은(는) 최근 디지털 전환에 높은 관심을 보이고 있습니다.`,
     actions: [
       { text: "이번 주 내 후속 미팅 일정 확정 권장", priority: "high" as const },
       { text: "경쟁사 대비 가격 우위 포인트 정리 필요", priority: "medium" as const },
@@ -3087,10 +3082,11 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: "customerGrade", label: "고객등급", required: false, filter: true, sort: true, defaultVisible: true },
   { key: "contact", label: "담당자", required: false, sort: true, defaultVisible: true },
   { key: "position", label: "직책", required: false, sort: true, defaultVisible: false },
-  { key: "service", label: "희망서비스", required: false, filter: true, sort: true, defaultVisible: true },
-  { key: "amount", label: "견적금액(VAT미포함)", required: false, info: true, filter: true, sort: true, defaultVisible: true },
-  { key: "quantity", label: "총수량", required: false, info: true, sort: true, defaultVisible: true },
-  { key: "manager", label: "고객책임자", required: false, filter: true, defaultVisible: true },
+  { key: "amount", label: "계약 금액", required: false, info: true, filter: true, sort: true, defaultVisible: true },
+  { key: "ltv", label: "누적 LTV", required: false, info: true, filter: true, sort: true, defaultVisible: true },
+  { key: "healthScore", label: "헬스 스코어", required: false, filter: true, sort: true, defaultVisible: true },
+  { key: "renewalDate", label: "갱신 예정일", required: false, sort: true, defaultVisible: true },
+  { key: "manager", label: "고객 책임자", required: false, filter: true, defaultVisible: true },
   { key: "date", label: "등록일", required: false, sort: true, defaultVisible: true },
   { key: "phone", label: "전화번호", required: false, sort: false, defaultVisible: false },
   { key: "email", label: "이메일", required: false, sort: true, defaultVisible: false },
@@ -3123,15 +3119,13 @@ function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields
       stage: form.stage || stageNames[0] || "신규",
       contact: form.contact || "",
       position: form.position || "",
-      service: form.service || "",
-      quantity: parseInt(form.quantity) || 0,
       amount: form.amount || "₩0",
       manager: form.manager || "",
       status: form.status || "진행중",
       date: form.date || new Date().toISOString().slice(0, 10),
     };
     // Merge any custom-field values that aren't built-in
-    const builtInKeys = new Set(["id","company","stage","contact","position","service","quantity","amount","manager","status","date"]);
+    const builtInKeys = new Set(["id","company","stage","contact","position","amount","manager","status","date"]);
     for (const f of fieldDefs) {
       if (builtInKeys.has(f.key)) continue;
       const v = form[f.key];
@@ -3519,9 +3513,6 @@ function CardGridView({
                 {deal.stage}
               </span>
             </div>
-            {deal.service && (
-              <p className="text-[0.7rem] text-[#888] mb-2 leading-snug">{deal.service}</p>
-            )}
             <p className="text-[0.95rem] text-[#1A1A1A] mb-3 tabular-nums font-semibold">{deal.amount}</p>
             {deal.contact && (
               <div className="flex items-center gap-1.5 mb-2">
@@ -3787,8 +3778,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       stage: pipelineStages[0]?.name || "신규",
       contact: "",
       position: "",
-      service: "",
-      quantity: 0,
       amount: "",
       manager: "",
       status: "신규",
@@ -3806,8 +3795,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       stage: pipelineStages[0]?.name || "신규",
       contact: "",
       position: "",
-      service: "",
-      quantity: 0,
       amount: "",
       manager: "",
       status: "신규",
@@ -4165,11 +4152,13 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const COLUMN_BEHAVIOR: Record<string, "filter" | "sort" | "none"> = {
     company: "sort",
     stage: "filter",
+    customerGrade: "filter",
     contact: "sort",
     position: "sort",
-    service: "filter",
     amount: "sort",
-    quantity: "sort",
+    ltv: "sort",
+    healthScore: "sort",
+    renewalDate: "sort",
     manager: "filter",
     status: "filter",
     date: "sort",
@@ -4823,7 +4812,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           {activeColumns.map((h) => {
                             const sortIdx = sorts.findIndex((s) => s.field === h.key);
                             const sortDir = sortIdx >= 0 ? sorts[sortIdx].dir : null;
-                            const isNumeric = h.key === "amount" || h.key === "quantity";
+                            const isNumeric = h.key === "amount" || h.key === "ltv" || h.key === "healthScore";
                             const behavior = COLUMN_BEHAVIOR[h.key] || (h.filter ? "filter" : h.sort ? "sort" : "none");
                             const colFilter = getColFilter(h.key);
                             const filterCount = colFilter?.value ? colFilter.value.split(",").filter(Boolean).length : 0;
@@ -5025,9 +5014,10 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                       </div>
                                     ),
                                     position: <span className="text-[0.7rem] text-[#666]">{deal.position}</span>,
-                                    service: <span className="text-[0.7rem] text-[#555]">{deal.service}</span>,
                                     amount: <span className="block text-right text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.amount}</span>,
-                                    quantity: <span className="block text-right text-[0.7rem] text-[#555] tabular-nums">{deal.quantity.toLocaleString()}</span>,
+                                    ltv: <span className="block text-right text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.ltv ?? "—"}</span>,
+                                    healthScore: <span className="block text-right text-[0.7rem] text-[#555] tabular-nums">{deal.healthScore ?? "—"}</span>,
+                                    renewalDate: <span className="text-[0.7rem] text-[#555]">{deal.renewalDate || "—"}</span>,
                                     manager: (
                                       <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-full flex items-center justify-center text-[0.55rem] text-white" style={{ background: "#94A3B8" }}>
