@@ -4783,35 +4783,46 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                         const raw = (deal as Record<string, unknown>)[col.key];
                                         const canInlineEdit = !hasCustomCell || col.key === "company";
                                         const isEmpty = raw === undefined || raw === null || raw === "";
+                                        const editField = customFields.find((f) => f.key === col.key);
+                                        const editOptions = editField?.type === "select" ? (editField.options || []) : [];
+                                        const datalistId = `dl-${deal.id}-${col.key}`;
                                         const rendered = isEditing && canInlineEdit ? (
-                                          <input
-                                            autoFocus
-                                            defaultValue={raw === undefined || raw === null ? "" : String(raw)}
-                                            onBlur={(e) => {
-                                              const v = e.currentTarget.value;
-                                              updateDealField(deal.id, col.key, typeof raw === "number" ? (Number(v) || 0) : v);
-                                              setEditingCell(null);
-                                            }}
-                                            onKeyDown={(e) => {
-                                              if (e.key === "Enter" || e.key === "Tab") {
-                                                e.preventDefault();
+                                          <>
+                                            <input
+                                              autoFocus
+                                              list={editOptions.length > 0 ? datalistId : undefined}
+                                              defaultValue={raw === undefined || raw === null ? "" : String(raw)}
+                                              onBlur={(e) => {
                                                 const v = e.currentTarget.value;
                                                 updateDealField(deal.id, col.key, typeof raw === "number" ? (Number(v) || 0) : v);
-                                                const idx = activeColumns.findIndex((c) => c.key === col.key);
-                                                const next = activeColumns[idx + 1];
-                                                if (e.key === "Tab" && next) {
-                                                  setEditingCell({ id: deal.id, key: next.key });
-                                                } else if (e.key === "Enter") {
-                                                  setEditingCell(null);
-                                                } else {
+                                                setEditingCell(null);
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter" || e.key === "Tab") {
+                                                  e.preventDefault();
+                                                  const v = e.currentTarget.value;
+                                                  updateDealField(deal.id, col.key, typeof raw === "number" ? (Number(v) || 0) : v);
+                                                  const idx = activeColumns.findIndex((c) => c.key === col.key);
+                                                  const next = activeColumns[idx + 1];
+                                                  if (e.key === "Tab" && next) {
+                                                    setEditingCell({ id: deal.id, key: next.key });
+                                                  } else if (e.key === "Enter") {
+                                                    setEditingCell(null);
+                                                  } else {
+                                                    setEditingCell(null);
+                                                  }
+                                                } else if (e.key === "Escape") {
                                                   setEditingCell(null);
                                                 }
-                                              } else if (e.key === "Escape") {
-                                                setEditingCell(null);
-                                              }
-                                            }}
-                                            className="w-full bg-transparent outline-none text-[0.75rem] text-[#1A1A1A] border border-[#1A472A] rounded px-1.5 py-1"
-                                          />
+                                              }}
+                                              className="w-full bg-transparent outline-none text-[0.75rem] text-[#1A1A1A] border border-[#1A472A] rounded px-1.5 py-1"
+                                            />
+                                            {editOptions.length > 0 && (
+                                              <datalist id={datalistId}>
+                                                {editOptions.map((o) => <option key={o} value={o} />)}
+                                              </datalist>
+                                            )}
+                                          </>
                                         ) : canInlineEdit && isEmpty ? (
                                           <span className="text-[0.7rem] text-[#BBB] italic hover:text-[#1A472A] transition-colors">클릭해서 입력</span>
                                         ) : hasCustomCell ? (
