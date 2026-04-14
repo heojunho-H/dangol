@@ -82,6 +82,8 @@ import {
   Tag,
   Paperclip,
   Rows3,
+  ShoppingBag,
+  Receipt,
 } from "lucide-react";
 
 /* ─── DESIGN TOKENS ─── */
@@ -207,14 +209,14 @@ const FILTER_OPS_BY_TYPE: Record<string, { op: FilterOp; label: string }[]> = {
 const FIELD_FILTER_TYPE: Record<string, string> = {
   company: "text", stage: "select", customerGrade: "select",
   contact: "text", position: "text",
-  amount: "number", healthScore: "number", ltv: "number",
+  amount: "number", healthScore: "number",
   manager: "person", date: "date", renewalDate: "date",
   phone: "text", email: "text", memo: "text",
 };
 
 const FILTERABLE_FIELDS = [
   { key: "stage", label: "고객상태" }, { key: "customerGrade", label: "고객등급" },
-  { key: "amount", label: "계약 금액" }, { key: "manager", label: "고객 책임자" },
+  { key: "amount", label: "누적 금액" }, { key: "manager", label: "고객 책임자" },
   { key: "date", label: "등록일" }, { key: "company", label: "기업명" },
   { key: "contact", label: "담당자" },
 ];
@@ -222,7 +224,7 @@ const FILTERABLE_FIELDS = [
 const SORTABLE_FIELDS = [
   { key: "company", label: "기업명" }, { key: "stage", label: "고객상태" },
   { key: "customerGrade", label: "고객등급" },
-  { key: "amount", label: "계약 금액" }, { key: "ltv", label: "누적 LTV" },
+  { key: "amount", label: "누적 금액" },
   { key: "healthScore", label: "헬스 스코어" },
   { key: "manager", label: "고객 책임자" }, { key: "date", label: "등록일" },
   { key: "renewalDate", label: "갱신 예정일" },
@@ -307,8 +309,8 @@ function applySorts(deals: Customer[], sorts: SortRule[]): Customer[] {
     for (const s of sorts) {
       const av = String(a[s.field] ?? "");
       const bv = String(b[s.field] ?? "");
-      // numeric compare for amount/ltv/healthScore
-      if (s.field === "amount" || s.field === "ltv") {
+      // numeric compare for amount/healthScore
+      if (s.field === "amount") {
         const diff = parseAmt(av) - parseAmt(bv);
         if (diff !== 0) return s.dir === "asc" ? diff : -diff;
       } else if (s.field === "healthScore") {
@@ -424,8 +426,7 @@ const DEFAULT_FIELDS: CustomField[] = [
   { id: "f17", key: "customerGrade",label: "고객등급",        type: "select", required: false, locked: false, visible: true, options: ["S등급", "A등급", "B등급", "그 외"] },
   { id: "f3",  key: "contact",      label: "담당자",           type: "text",   required: false, locked: false, visible: true },
   { id: "f4",  key: "position",     label: "직책",             type: "text",   required: false, locked: false, visible: false },
-  { id: "f6",  key: "amount",       label: "계약 금액",        type: "number", required: false, locked: false, visible: true },
-  { id: "f15", key: "ltv",          label: "누적 LTV",         type: "number", required: false, locked: false, visible: true },
+  { id: "f6",  key: "amount",       label: "누적 금액",        type: "number", required: false, locked: false, visible: true },
   { id: "f14", key: "healthScore",  label: "헬스 스코어",      type: "number", required: false, locked: false, visible: true },
   { id: "f16", key: "renewalDate",  label: "갱신 예정일",      type: "date",   required: false, locked: false, visible: true },
   { id: "f8",  key: "manager",      label: "고객 책임자",      type: "person", required: false, locked: false, visible: true },
@@ -475,9 +476,8 @@ interface Customer {
   stage: string; // 고객상태: 신규 | 재구매 | 충성고객
   contact: string;
   position: string;
-  amount: string;       // contract value (formatted)
+  amount: string;       // cumulative purchase amount (formatted)
   healthScore?: number; // 0-100
-  ltv?: string;         // lifetime value (formatted)
   renewalDate?: string; // YYYY-MM-DD
   manager: string;
   status: string;       // mirror of lifecycle stage
@@ -488,21 +488,21 @@ interface Customer {
 
 /* ─── SAMPLE CUSTOMERS (onboarding 완료 시 로드) ─── */
 const SAMPLE_DEALS: Customer[] = [
-  { id: 1,  company: "(주)테크솔루션",     stage: "충성고객", contact: "김영호", position: "이사",  amount: "₩3,200만", healthScore: 88, ltv: "₩1.2억", renewalDate: "2026-09-15", manager: "박지은", status: "충성고객", date: "2025-03-15" },
-  { id: 2,  company: "스마트팩토리(주)",   stage: "재구매",   contact: "이수진", position: "부장",  amount: "₩2,800만", healthScore: 76, ltv: "₩8,400만", renewalDate: "2026-08-18", manager: "김태현", status: "재구매",   date: "2025-08-18" },
-  { id: 3,  company: "(주)글로벌트레이드", stage: "신규",     contact: "박민수", position: "과장",  amount: "₩5,500만", healthScore: 65, ltv: "₩5,500만", renewalDate: "2027-03-20", manager: "이서연", status: "신규",     date: "2026-03-20" },
-  { id: 4,  company: "디지털커머스(주)",   stage: "신규",     contact: "최지아", position: "대리",  amount: "₩1,200만", healthScore: 72, ltv: "₩1,200만", renewalDate: "2027-03-22", manager: "박지은", status: "신규",     date: "2026-03-22" },
-  { id: 5,  company: "(주)바이오헬스",     stage: "신규",     contact: "정대현", position: "팀장",  amount: "₩980만",   healthScore: 42, ltv: "₩2,940만", renewalDate: "2026-05-25", manager: "김태현", status: "신규",     date: "2024-09-25" },
-  { id: 6,  company: "에너지플러스(주)",   stage: "재구매",   contact: "한소희", position: "차장",  amount: "₩4,100만", healthScore: 91, ltv: "₩9,200만", renewalDate: "2026-09-28", manager: "이서연", status: "재구매",   date: "2025-09-28" },
-  { id: 7,  company: "(주)푸드테크",       stage: "신규",     contact: "오재석", position: "과장",  amount: "₩1,500만", healthScore: 68, ltv: "₩1,500만", renewalDate: "2027-04-01", manager: "박지은", status: "신규",     date: "2026-04-01" },
-  { id: 8,  company: "클라우드원(주)",     stage: "충성고객", contact: "윤미래", position: "부장",  amount: "₩6,200만", healthScore: 84, ltv: "₩1.4억", renewalDate: "2026-10-03", manager: "김태현", status: "충성고객", date: "2024-10-03" },
-  { id: 9,  company: "(주)핀테크랩",       stage: "재구매",   contact: "서준혁", position: "이사",  amount: "₩2,300만", healthScore: 79, ltv: "₩4,600만", renewalDate: "2026-07-05", manager: "이서연", status: "재구매",   date: "2025-07-05" },
-  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",     contact: "강하은", position: "대리",  amount: "₩8,500만", healthScore: 71, ltv: "₩8,500만", renewalDate: "2027-04-07", manager: "박지은", status: "신규",     date: "2026-04-07" },
-  { id: 11, company: "(주)헬스케어AI",     stage: "충성고객", contact: "윤성민", position: "팀장",  amount: "₩1.2억",  healthScore: 93, ltv: "₩2.8억", renewalDate: "2026-09-10", manager: "김태현", status: "충성고객", date: "2024-03-10" },
-  { id: 12, company: "리테일허브(주)",     stage: "충성고객", contact: "조은지", position: "과장",  amount: "₩4,700만", healthScore: 82, ltv: "₩1.1억", renewalDate: "2026-08-28", manager: "이서연", status: "충성고객", date: "2024-08-28" },
-  { id: 13, company: "(주)스마트물류",     stage: "신규",     contact: "임재현", position: "부장",  amount: "₩3,400만", healthScore: 28, ltv: "₩3,400만", renewalDate: "",           manager: "박지은", status: "신규",     date: "2024-02-14" },
-  { id: 14, company: "에듀테크파트너(주)", stage: "충성고객", contact: "노지수", position: "이사",  amount: "₩9,800만", healthScore: 87, ltv: "₩1.9억", renewalDate: "2026-10-08", manager: "김태현", status: "충성고객", date: "2025-04-08" },
-  { id: 15, company: "(주)그린에너지",     stage: "신규",     contact: "배소연", position: "차장",  amount: "₩2,100만", healthScore: 48, ltv: "₩2,100만", renewalDate: "2026-07-20", manager: "이서연", status: "신규",     date: "2025-01-20" },
+  { id: 1,  company: "(주)테크솔루션",     stage: "충성고객", contact: "김영호", position: "이사",  amount: "₩1.2억", healthScore: 88, renewalDate: "2026-09-15", manager: "박지은", status: "충성고객", date: "2025-03-15" },
+  { id: 2,  company: "스마트팩토리(주)",   stage: "재구매",   contact: "이수진", position: "부장",  amount: "₩8,400만", healthScore: 76, renewalDate: "2026-08-18", manager: "김태현", status: "재구매",   date: "2025-08-18" },
+  { id: 3,  company: "(주)글로벌트레이드", stage: "신규",     contact: "박민수", position: "과장",  amount: "₩5,500만", healthScore: 65, renewalDate: "2027-03-20", manager: "이서연", status: "신규",     date: "2026-03-20" },
+  { id: 4,  company: "디지털커머스(주)",   stage: "신규",     contact: "최지아", position: "대리",  amount: "₩1,200만", healthScore: 72, renewalDate: "2027-03-22", manager: "박지은", status: "신규",     date: "2026-03-22" },
+  { id: 5,  company: "(주)바이오헬스",     stage: "신규",     contact: "정대현", position: "팀장",  amount: "₩2,940만",   healthScore: 42, renewalDate: "2026-05-25", manager: "김태현", status: "신규",     date: "2024-09-25" },
+  { id: 6,  company: "에너지플러스(주)",   stage: "재구매",   contact: "한소희", position: "차장",  amount: "₩9,200만", healthScore: 91, renewalDate: "2026-09-28", manager: "이서연", status: "재구매",   date: "2025-09-28" },
+  { id: 7,  company: "(주)푸드테크",       stage: "신규",     contact: "오재석", position: "과장",  amount: "₩1,500만", healthScore: 68, renewalDate: "2027-04-01", manager: "박지은", status: "신규",     date: "2026-04-01" },
+  { id: 8,  company: "클라우드원(주)",     stage: "충성고객", contact: "윤미래", position: "부장",  amount: "₩1.4억", healthScore: 84, renewalDate: "2026-10-03", manager: "김태현", status: "충성고객", date: "2024-10-03" },
+  { id: 9,  company: "(주)핀테크랩",       stage: "재구매",   contact: "서준혁", position: "이사",  amount: "₩4,600만", healthScore: 79, renewalDate: "2026-07-05", manager: "이서연", status: "재구매",   date: "2025-07-05" },
+  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",     contact: "강하은", position: "대리",  amount: "₩8,500만", healthScore: 71, renewalDate: "2027-04-07", manager: "박지은", status: "신규",     date: "2026-04-07" },
+  { id: 11, company: "(주)헬스케어AI",     stage: "충성고객", contact: "윤성민", position: "팀장",  amount: "₩2.8억",  healthScore: 93, renewalDate: "2026-09-10", manager: "김태현", status: "충성고객", date: "2024-03-10" },
+  { id: 12, company: "리테일허브(주)",     stage: "충성고객", contact: "조은지", position: "과장",  amount: "₩1.1억", healthScore: 82, renewalDate: "2026-08-28", manager: "이서연", status: "충성고객", date: "2024-08-28" },
+  { id: 13, company: "(주)스마트물류",     stage: "신규",     contact: "임재현", position: "부장",  amount: "₩3,400만", healthScore: 28, renewalDate: "",           manager: "박지은", status: "신규",     date: "2024-02-14" },
+  { id: 14, company: "에듀테크파트너(주)", stage: "충성고객", contact: "노지수", position: "이사",  amount: "₩1.9억", healthScore: 87, renewalDate: "2026-10-08", manager: "김태현", status: "충성고객", date: "2025-04-08" },
+  { id: 15, company: "(주)그린에너지",     stage: "신규",     contact: "배소연", position: "차장",  amount: "₩2,100만", healthScore: 48, renewalDate: "2026-07-20", manager: "이서연", status: "신규",     date: "2025-01-20" },
 ];
 
 /* ─── WIDGET DEFINITIONS ─── */
@@ -528,7 +528,7 @@ const allWidgets: WidgetDef[] = [
   { id: "kpi-new-month",    name: "이번 달 새 고객",      description: "이번 달에 새로 등록된 고객 수",                      category: "kpi",   icon: Plus,          colSpan: 1 },
   { id: "kpi-churn",        name: "떠난 고객 비율",       description: "전체 대비 거래가 끊긴 고객의 비율",                  category: "kpi",   icon: AlertTriangle, colSpan: 1 },
   { id: "kpi-ltv",          name: "고객 누적 매출",       description: "모든 고객이 지금까지 만든 매출의 합계",             category: "kpi",   icon: DollarSign,    colSpan: 1 },
-  { id: "kpi-avg-contract", name: "평균 계약 금액",       description: "계약 한 건당 평균 금액",                             category: "kpi",   icon: Target,        colSpan: 1 },
+  { id: "kpi-avg-contract", name: "평균 누적 금액",       description: "고객 한 명당 평균 누적 금액",                             category: "kpi",   icon: Target,        colSpan: 1 },
   { id: "kpi-renewals",     name: "곧 재계약 예정",       description: "앞으로 90일 안에 재계약이 예정된 고객 수",          category: "kpi",   icon: Calendar,      colSpan: 1 },
   { id: "kpi-repurchase",       name: "재구매 고객 수",    description: "2회 이상 구매한 고객 수 (재구매 + 충성고객)",       category: "kpi",   icon: TrendingUp,    colSpan: 1 },
   { id: "kpi-repurchase-rate",  name: "재구매 전환율",     description: "전체 고객 중 재구매로 전환된 비율",                  category: "kpi",   icon: Target,        colSpan: 1 },
@@ -623,7 +623,7 @@ function recommendWidgets(a: DealAnalysis, _scenario: ScenarioType): WidgetRecom
   const recs: WidgetRecommendation[] = [
     { widgetId: "kpi-customers",   reason: "전체 고객 현황 파악", priority: 100 },
     { widgetId: "kpi-churn",       reason: "이탈률은 고객 성공의 핵심 지표", priority: 95 },
-    { widgetId: "kpi-ltv",         reason: "누적 LTV로 고객 자산 가치 확인", priority: 90 },
+    { widgetId: "kpi-ltv",         reason: "고객 누적 매출로 자산 가치 확인", priority: 90 },
     { widgetId: "kpi-renewals",    reason: "다가오는 갱신 기회를 놓치지 않도록", priority: 85 },
     { widgetId: "chart-health",    reason: "건강한 고객과 위험 고객 비율 파악", priority: 80 },
     { widgetId: "chart-lifecycle", reason: `${a.uniqueStages}개 라이프사이클 단계별 분포 시각화`, priority: 75 },
@@ -646,7 +646,7 @@ interface CustomKpiDef {
 
 const FORMULA_PRESETS: { key: CustomKpiDef["formula"]; label: string; desc: string }[] = [
   { key: "won_amount_ratio", label: "수주금액 / 견적금액", desc: "수주 금액 대비 전체 견적 금액 비율" },
-  { key: "avg_deal_amount", label: "평균 고객 계약 금액", desc: "전체 고객의 평균 견적 금액" },
+  { key: "avg_deal_amount", label: "평균 고객 누적 금액", desc: "전체 고객의 평균 누적 금액" },
   { key: "conversion_rate", label: "전환율", desc: "성공 고객 수 / 전체 고객 수 × 100" },
   { key: "custom_ratio", label: "직접 정의", desc: "분자/분모를 직접 선택하여 비율 계산" },
 ];
@@ -1863,9 +1863,9 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
 
 /* ─── WEB FORM SAMPLE DEALS ─── */
 const WEB_FORM_SAMPLE_DEALS: Customer[] = [
-  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "박지은", status: "신규", date: "2026-04-12" },
-  { id: 102, company: "스마트로직(주)",   stage: "신규", contact: "이동훈", position: "대표이사",   amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "김태현", status: "신규", date: "2026-04-12" },
-  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀",     amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "이서연", status: "신규", date: "2026-04-11" },
+  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", amount: "₩0", healthScore: 70, renewalDate: "", manager: "박지은", status: "신규", date: "2026-04-12" },
+  { id: 102, company: "스마트로직(주)",   stage: "신규", contact: "이동훈", position: "대표이사",   amount: "₩0", healthScore: 70, renewalDate: "", manager: "김태현", status: "신규", date: "2026-04-12" },
+  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀",     amount: "₩0", healthScore: 70, renewalDate: "", manager: "이서연", status: "신규", date: "2026-04-11" },
 ];
 
 /* ─── WEB FORM ONBOARDING FLOW ─── */
@@ -2277,7 +2277,56 @@ function SelectCellEditor({ value, options, fieldKey, onCommit, onCancel }: {
 }
 
 /* ─── DETAIL DRAWER ─── */
-type DrawerTab = "basic" | "activity" | "files";
+type DrawerTab = "basic" | "transactions" | "activity" | "files";
+
+interface Transaction {
+  id: string;
+  date: string;          // YYYY-MM-DD
+  item: string;          // 품목/서비스
+  amount: string;        // formatted ₩X만
+  quantity: number;
+  paymentMethod: string; // 카드/계좌이체/현금/기타
+  manager: string;
+  memo?: string;
+}
+
+const PAYMENT_METHODS = ["카드", "계좌이체", "현금", "기타"];
+
+function generateTransactions(deal: Customer): Transaction[] {
+  const count = deal.stage === "충성고객" ? 4 : deal.stage === "재구매" ? 2 : 1;
+  const totalMan = parseAmt(deal.amount || "");
+  const perTx = count > 0 ? Math.max(1, Math.round(totalMan / count)) : 0;
+  const baseDate = deal.date ? new Date(deal.date) : new Date();
+  const items = ["기본 패키지", "추가 모듈", "연간 라이선스", "추가 상품"];
+  const txs: Transaction[] = Array.from({ length: count }).map((_, i) => {
+    const d = new Date(baseDate);
+    d.setDate(d.getDate() + i * 120);
+    return {
+      id: `tx-${deal.id}-${i}`,
+      date: d.toISOString().slice(0, 10),
+      item: items[i] || `구매 ${i + 1}`,
+      amount: fmtAmt(perTx),
+      quantity: 1,
+      paymentMethod: PAYMENT_METHODS[i % PAYMENT_METHODS.length],
+      manager: deal.manager,
+      memo: "",
+    };
+  });
+  return txs.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function stageFromPurchaseCount(count: number): string {
+  if (count >= 3) return "충성고객";
+  if (count >= 2) return "재구매";
+  return "신규";
+}
+
+function daysBetween(a: string, b: string): number {
+  const da = new Date(a).getTime();
+  const db = new Date(b).getTime();
+  if (isNaN(da) || isNaN(db)) return 0;
+  return Math.round(Math.abs(db - da) / 86400000);
+}
 
 interface ActivityLog {
   id: string;
@@ -2344,7 +2393,7 @@ const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   "기타":       { bg: "#F3F4F6", color: "#6B7280" },
 };
 
-function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields }: { deal: Customer; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void; customFields: CustomField[] }) {
+function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields, onUpdateField }: { deal: Customer; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void; customFields: CustomField[]; onUpdateField: (id: number, key: string, value: unknown) => void }) {
   const [tab, setTab] = useState<DrawerTab>("basic");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -2378,9 +2427,80 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
 
   const tabs: { key: DrawerTab; label: string; icon: typeof Info }[] = [
     { key: "basic", label: "기본정보", icon: Info },
+    { key: "transactions", label: "거래 내역", icon: Receipt },
     { key: "activity", label: "활동", icon: Activity },
     { key: "files", label: "파일", icon: FileSpreadsheet },
   ];
+
+  const [transactions, setTransactions] = useState<Transaction[]>(() => generateTransactions(deal));
+  const [expandedTxId, setExpandedTxId] = useState<string | null>(null);
+  const [editingTx, setEditingTx] = useState<{ id: string; field: keyof Transaction } | null>(null);
+
+  // Sync deal.amount + stage whenever transactions change
+  const syncDealFromTransactions = useCallback((txs: Transaction[]) => {
+    const totalMan = txs.reduce((s, t) => s + parseAmt(t.amount || "") * (t.quantity || 1), 0);
+    onUpdateField(deal.id, "amount", fmtAmt(totalMan));
+    const nextStage = stageFromPurchaseCount(txs.length);
+    if (nextStage !== deal.stage && stageNames.includes(nextStage)) {
+      onChangeStage(deal.id, nextStage);
+    }
+  }, [deal.id, deal.stage, onChangeStage, onUpdateField, stageNames]);
+
+  const updateTransaction = (id: string, patch: Partial<Transaction>) => {
+    setTransactions((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, ...patch } : t)).sort((a, b) => b.date.localeCompare(a.date));
+      syncDealFromTransactions(next);
+      return next;
+    });
+  };
+
+  const addTransaction = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const newTx: Transaction = {
+      id: `tx-${Date.now()}`,
+      date: today,
+      item: "",
+      amount: "₩0",
+      quantity: 1,
+      paymentMethod: "카드",
+      manager: deal.manager,
+      memo: "",
+    };
+    setTransactions((prev) => {
+      const next = [newTx, ...prev];
+      syncDealFromTransactions(next);
+      return next;
+    });
+    setExpandedTxId(newTx.id);
+  };
+
+  const deleteTransaction = (id: string) => {
+    setTransactions((prev) => {
+      const next = prev.filter((t) => t.id !== id);
+      syncDealFromTransactions(next);
+      return next;
+    });
+  };
+
+  // Summary stats
+  const txSummary = useMemo(() => {
+    const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
+    const count = transactions.length;
+    const totalMan = transactions.reduce((s, t) => s + parseAmt(t.amount || "") * (t.quantity || 1), 0);
+    const latest = sorted[sorted.length - 1];
+    const first = sorted[0];
+    const today = new Date().toISOString().slice(0, 10);
+    const daysSinceLatest = latest ? daysBetween(latest.date, today) : 0;
+    let avgInterval = 0;
+    if (sorted.length >= 2) {
+      const gaps: number[] = [];
+      for (let i = 1; i < sorted.length; i++) gaps.push(daysBetween(sorted[i - 1].date, sorted[i].date));
+      avgInterval = Math.round(gaps.reduce((s, n) => s + n, 0) / gaps.length);
+    }
+    const avgAmount = count > 0 ? Math.round(totalMan / count) : 0;
+    const yearsSinceFirst = first ? (daysBetween(first.date, today) / 365) : 0;
+    return { count, totalMan, latest, first, daysSinceLatest, avgInterval, avgAmount, yearsSinceFirst };
+  }, [transactions]);
 
   // Dynamic: driven by customFields (single source of truth for the workspace schema)
   const basicFields = customFields
@@ -2612,6 +2732,160 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
           </div>
         )}
 
+        {/* ── 거래 내역 ── */}
+        {tab === "transactions" && (
+          <div className="px-6 py-5 space-y-5">
+            {/* Summary cards */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "총 구매", value: `${txSummary.count}회`, sub: stageFromPurchaseCount(txSummary.count) },
+                { label: "누적 금액", value: fmtAmt(txSummary.totalMan), sub: `평균 ${fmtAmt(txSummary.avgAmount)}` },
+                { label: "최근 구매", value: txSummary.latest ? `D+${txSummary.daysSinceLatest}` : "-", sub: txSummary.latest?.date || "구매 없음" },
+                { label: "평균 주기", value: txSummary.avgInterval > 0 ? `${txSummary.avgInterval}일` : "-", sub: txSummary.count >= 2 ? "구매 간격" : "재구매 시 계산" },
+                { label: "평균 금액", value: fmtAmt(txSummary.avgAmount), sub: "객단가" },
+                { label: "최초 구매", value: txSummary.first ? `${txSummary.yearsSinceFirst.toFixed(1)}년` : "-", sub: txSummary.first?.date || "-" },
+              ].map((card) => (
+                <div key={card.label} className="rounded-lg border px-2.5 py-2" style={{ borderColor: T.border }}>
+                  <div className="text-[0.6rem] text-[#999] mb-1">{card.label}</div>
+                  <div className="text-[0.85rem] text-[#1A1A1A] tabular-nums font-medium">{card.value}</div>
+                  <div className="text-[0.6rem] text-[#BBB] tabular-nums mt-0.5 truncate">{card.sub}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Churn risk badge */}
+            {txSummary.latest && txSummary.daysSinceLatest >= 90 && (
+              <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-[0.7rem]" style={{ background: "#FEF2F2", color: "#B91C1C" }}>
+                <AlertTriangle size={12} />
+                <span>90일 이상 구매가 없어요 — 휴면 위험</span>
+              </div>
+            )}
+
+            {/* Transactions table */}
+            <div className="border rounded-lg overflow-hidden" style={{ borderColor: T.border }}>
+              <div className="grid grid-cols-[92px_1fr_88px_52px_72px_28px] text-[0.65rem] text-[#888] bg-[#FAFBFC] border-b px-2.5 py-2" style={{ borderColor: T.border }}>
+                <div>구매일</div>
+                <div>품목</div>
+                <div className="text-right">금액</div>
+                <div className="text-right">수량</div>
+                <div>결제</div>
+                <div />
+              </div>
+              {transactions.length === 0 && (
+                <div className="px-3 py-6 text-center text-[0.7rem] text-[#BBB]">등록된 거래가 없어요</div>
+              )}
+              {transactions.map((t) => {
+                const isExpanded = expandedTxId === t.id;
+                return (
+                  <div key={t.id} className="border-b last:border-0" style={{ borderColor: T.border }}>
+                    <div
+                      className="grid grid-cols-[92px_1fr_88px_52px_72px_28px] items-center px-2.5 py-2 text-[0.7rem] hover:bg-[#FAFBFC] cursor-pointer"
+                      onClick={() => setExpandedTxId(isExpanded ? null : t.id)}
+                    >
+                      {/* Date */}
+                      {editingTx?.id === t.id && editingTx.field === "date" ? (
+                        <input
+                          autoFocus type="date" value={t.date}
+                          className="text-[0.7rem] border rounded px-1 py-0.5 focus:outline-none focus:border-[#1A472A]"
+                          style={{ borderColor: T.border }}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => updateTransaction(t.id, { date: e.target.value })}
+                          onBlur={() => setEditingTx(null)}
+                        />
+                      ) : (
+                        <span className="tabular-nums text-[#555]" onClick={(e) => { e.stopPropagation(); setEditingTx({ id: t.id, field: "date" }); }}>{t.date}</span>
+                      )}
+                      {/* Item */}
+                      {editingTx?.id === t.id && editingTx.field === "item" ? (
+                        <input
+                          autoFocus value={t.item}
+                          className="text-[0.7rem] border rounded px-1 py-0.5 mr-1 focus:outline-none focus:border-[#1A472A]"
+                          style={{ borderColor: T.border }}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => updateTransaction(t.id, { item: e.target.value })}
+                          onBlur={() => setEditingTx(null)}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditingTx(null); }}
+                        />
+                      ) : (
+                        <span className="text-[#1A1A1A] truncate mr-1" onClick={(e) => { e.stopPropagation(); setEditingTx({ id: t.id, field: "item" }); }}>{t.item || <span className="text-[#CCC]">품목 입력</span>}</span>
+                      )}
+                      {/* Amount */}
+                      {editingTx?.id === t.id && editingTx.field === "amount" ? (
+                        <input
+                          autoFocus value={t.amount}
+                          className="text-[0.7rem] border rounded px-1 py-0.5 text-right focus:outline-none focus:border-[#1A472A]"
+                          style={{ borderColor: T.border }}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => updateTransaction(t.id, { amount: e.target.value })}
+                          onBlur={() => setEditingTx(null)}
+                          onKeyDown={(e) => { if (e.key === "Enter") setEditingTx(null); }}
+                        />
+                      ) : (
+                        <span className="text-right tabular-nums text-[#1A1A1A]" onClick={(e) => { e.stopPropagation(); setEditingTx({ id: t.id, field: "amount" }); }}>{t.amount}</span>
+                      )}
+                      {/* Quantity */}
+                      {editingTx?.id === t.id && editingTx.field === "quantity" ? (
+                        <input
+                          autoFocus type="number" min={1} value={t.quantity}
+                          className="text-[0.7rem] border rounded px-1 py-0.5 text-right focus:outline-none focus:border-[#1A472A]"
+                          style={{ borderColor: T.border }}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => updateTransaction(t.id, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                          onBlur={() => setEditingTx(null)}
+                        />
+                      ) : (
+                        <span className="text-right tabular-nums text-[#555]" onClick={(e) => { e.stopPropagation(); setEditingTx({ id: t.id, field: "quantity" }); }}>{t.quantity}</span>
+                      )}
+                      {/* Payment method */}
+                      <select
+                        value={t.paymentMethod}
+                        className="text-[0.65rem] bg-transparent border-0 text-[#555] focus:outline-none"
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => updateTransaction(t.id, { paymentMethod: e.target.value })}
+                      >
+                        {PAYMENT_METHODS.map((p) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteTransaction(t.id); }}
+                        className="p-1 rounded hover:bg-[#FEF2F2] opacity-0 group-hover:opacity-100"
+                        title="삭제"
+                      >
+                        <Trash2 size={11} color="#DC2626" />
+                      </button>
+                    </div>
+                    {isExpanded && (
+                      <div className="px-3 py-2.5 bg-[#FAFBFC] border-t" style={{ borderColor: T.border }}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[0.65rem] text-[#999]">메모</span>
+                          <button onClick={() => deleteTransaction(t.id)} className="flex items-center gap-1 text-[0.65rem] text-[#DC2626] hover:underline">
+                            <Trash2 size={10} /> 삭제
+                          </button>
+                        </div>
+                        <textarea
+                          rows={2}
+                          value={t.memo || ""}
+                          onChange={(e) => updateTransaction(t.id, { memo: e.target.value })}
+                          placeholder="이 거래에 대한 메모..."
+                          className="w-full text-[0.7rem] bg-white border rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#1A472A] resize-none"
+                          style={{ borderColor: T.border }}
+                        />
+                        <div className="text-[0.6rem] text-[#BBB] mt-1">담당자: {t.manager}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                onClick={addTransaction}
+                className="w-full flex items-center gap-1.5 px-2.5 py-2 text-[0.7rem] text-[#999] hover:bg-[#FAFBFC] border-t"
+                style={{ borderColor: T.border }}
+              >
+                <Plus size={11} /> 거래 추가
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── 활동 로그 ── */}
         {tab === "activity" && (
           <div className="px-6 py-5">
@@ -2836,7 +3110,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
   const newThisMonth = deals.filter((d) => d.date.startsWith(thisMonth)).length;
   const churned = deals.filter((d) => d.stage === "이탈").length;
   const churnRate = total > 0 ? Math.round((churned / total) * 1000) / 10 : 0;
-  const totalLtv = deals.reduce((s, d) => s + parseAmt(d.ltv || ""), 0);
+  const totalLtv = deals.reduce((s, d) => s + parseAmt(d.amount || ""), 0);
   const contractAmts = deals.map((d) => parseAmt(d.amount)).filter((n) => n > 0);
   const avgContract = contractAmts.length > 0
     ? Math.round(contractAmts.reduce((s, a) => s + a, 0) / contractAmts.length)
@@ -2873,7 +3147,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
       "kpi-new-month":    { title: "이번 달 새 고객",   value: `${newThisMonth}명`,      sub: thisMonth,                     trend: total > 0 ? `전체의 ${Math.round((newThisMonth / total) * 100)}%` : "0%", trendColor: "#5B9170", icon: Plus,          iconBg: "#EDF3EE" },
       "kpi-churn":        { title: "떠난 고객 비율",    value: `${churnRate}%`,           sub: `떠난 고객 ${churned}명`,      trend: `전체 ${total}명`,                                                   trendColor: T.danger,   icon: AlertTriangle, iconBg: "#FEF2F2" },
       "kpi-ltv":          { title: "고객 누적 매출",    value: fmtAmt(totalLtv),          sub: "전체 고객 계약 합계",       trend: total > 0 ? `고객당 ${fmtAmt(Math.round(totalLtv / total))}` : "-",    trendColor: T.primary,  icon: DollarSign,    iconBg: "#EFF5F1" },
-      "kpi-avg-contract": { title: "평균 계약 금액",    value: fmtAmt(avgContract),       sub: `계약 ${contractAmts.length}건 기준`, trend: totalLtv > 0 ? `누적 ${fmtAmt(totalLtv)}` : "-",                    trendColor: T.primary,  icon: Target,        iconBg: "#EFF5F1" },
+      "kpi-avg-contract": { title: "평균 누적 금액",    value: fmtAmt(avgContract),       sub: `고객 ${contractAmts.length}명 기준`, trend: totalLtv > 0 ? `누적 ${fmtAmt(totalLtv)}` : "-",                    trendColor: T.primary,  icon: Target,        iconBg: "#EFF5F1" },
       "kpi-renewals":     { title: "곧 재계약 예정",    value: `${renewalsCount}명`,      sub: "앞으로 90일 이내",            trend: renewalsList[0] ? `가장 임박 D-${renewalsList[0].daysUntil}` : "-",    trendColor: "#4A7B5A",  icon: Calendar,      iconBg: "#EDF3EE" },
       "kpi-repurchase":       { title: "재구매 고객 수",   value: `${repurchaseCount}명`,   sub: "2회 이상 구매",              trend: `전체 ${total}명`,                                                   trendColor: "#10B981", icon: TrendingUp,    iconBg: "#ECFDF5" },
       "kpi-repurchase-rate":  { title: "재구매 전환율",    value: `${repurchaseRate}%`,     sub: `${repurchaseCount} / ${total}명`, trend: "전체 → 재구매",                                              trendColor: "#10B981", icon: Target,        iconBg: "#ECFDF5" },
@@ -2961,7 +3235,7 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
           <p className="text-[0.7rem] text-[#999] py-6 text-center">앞으로 90일 안에 재계약 예정인 고객이 없습니다</p>
         ) : (
           <table className="w-full"><thead><tr className="border-b" style={{ borderColor: T.border }}>{["고객", "재계약일", "남은 일수", "금액"].map((h) => <th key={h} className="text-left py-2.5 px-3 text-[0.65rem] text-[#999]">{h}</th>)}</tr></thead>
-          <tbody>{rows.map((d) => <tr key={d.id} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3 text-[0.7rem] text-[#1A1A1A]">{d.company}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{d.renewalDate}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: d.daysUntil <= 14 ? T.danger : T.primary }}>D-{d.daysUntil}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{d.ltv || d.amount}</td></tr>)}</tbody></table>
+          <tbody>{rows.map((d) => <tr key={d.id} className="border-b last:border-0" style={{ borderColor: T.border }}><td className="py-2.5 px-3 text-[0.7rem] text-[#1A1A1A]">{d.company}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{d.renewalDate}</td><td className="py-2.5 px-3 text-[0.7rem]" style={{ color: d.daysUntil <= 14 ? T.danger : T.primary }}>D-{d.daysUntil}</td><td className="py-2.5 px-3 text-[0.7rem] text-[#555]">{d.amount}</td></tr>)}</tbody></table>
         )}
       </>
     );
@@ -2973,8 +3247,8 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
       .filter((d) => (d.healthScore ?? 0) >= 70 && d.stage !== "이탈")
       .map((d) => ({
         ...d,
-        score: Math.round((d.healthScore ?? 0) * 0.7 + (parseAmt(d.ltv || "") > 0 ? 20 : 10)),
-        reason: parseAmt(d.ltv || "") < 5000 ? "만족도 양호 — 추가 계약 제안에 적합" : "매출 기여도 높음 — 상위 상품 제안 가능",
+        score: Math.round((d.healthScore ?? 0) * 0.7 + (parseAmt(d.amount || "") > 0 ? 20 : 10)),
+        reason: parseAmt(d.amount || "") < 5000 ? "만족도 양호 — 추가 계약 제안에 적합" : "매출 기여도 높음 — 상위 상품 제안 가능",
       }))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
@@ -3082,8 +3356,7 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: "customerGrade", label: "고객등급", required: false, filter: true, sort: true, defaultVisible: true },
   { key: "contact", label: "담당자", required: false, sort: true, defaultVisible: true },
   { key: "position", label: "직책", required: false, sort: true, defaultVisible: false },
-  { key: "amount", label: "계약 금액", required: false, info: true, filter: true, sort: true, defaultVisible: true },
-  { key: "ltv", label: "누적 LTV", required: false, info: true, filter: true, sort: true, defaultVisible: true },
+  { key: "amount", label: "누적 금액", required: false, info: true, filter: true, sort: true, defaultVisible: true },
   { key: "healthScore", label: "헬스 스코어", required: false, filter: true, sort: true, defaultVisible: true },
   { key: "renewalDate", label: "갱신 예정일", required: false, sort: true, defaultVisible: true },
   { key: "manager", label: "고객 책임자", required: false, filter: true, defaultVisible: true },
@@ -4156,7 +4429,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     contact: "sort",
     position: "sort",
     amount: "sort",
-    ltv: "sort",
     healthScore: "sort",
     renewalDate: "sort",
     manager: "filter",
@@ -4812,7 +5084,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           {activeColumns.map((h) => {
                             const sortIdx = sorts.findIndex((s) => s.field === h.key);
                             const sortDir = sortIdx >= 0 ? sorts[sortIdx].dir : null;
-                            const isNumeric = h.key === "amount" || h.key === "ltv" || h.key === "healthScore";
+                            const isNumeric = h.key === "amount" || h.key === "healthScore";
                             const behavior = COLUMN_BEHAVIOR[h.key] || (h.filter ? "filter" : h.sort ? "sort" : "none");
                             const colFilter = getColFilter(h.key);
                             const filterCount = colFilter?.value ? colFilter.value.split(",").filter(Boolean).length : 0;
@@ -5015,7 +5287,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                     ),
                                     position: <span className="text-[0.7rem] text-[#666]">{deal.position}</span>,
                                     amount: <span className="block text-right text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.amount}</span>,
-                                    ltv: <span className="block text-right text-[0.75rem] text-[#1A1A1A] tabular-nums">{deal.ltv ?? "—"}</span>,
                                     healthScore: <span className="block text-right text-[0.7rem] text-[#555] tabular-nums">{deal.healthScore ?? "—"}</span>,
                                     renewalDate: <span className="text-[0.7rem] text-[#555]">{deal.renewalDate || "—"}</span>,
                                     manager: (
@@ -5447,7 +5718,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           {selectedDeal && (() => {
             const liveDeal = customerDeals.find((d) => d.id === selectedDeal.id);
             if (!liveDeal) return null;
-            return <DetailDrawer deal={liveDeal} onClose={() => setSelectedDeal(null)} stageColorMap={stageColors} stageNames={pipelineStages.map((s) => s.name)} onChangeStage={moveDealStage} onChangeStatus={updateDealStatus} customFields={customFields} />;
+            return <DetailDrawer deal={liveDeal} onClose={() => setSelectedDeal(null)} stageColorMap={stageColors} stageNames={pipelineStages.map((s) => s.name)} onChangeStage={moveDealStage} onChangeStatus={updateDealStatus} customFields={customFields} onUpdateField={updateDealField} />;
           })()}
         </div>
       </div>
