@@ -346,6 +346,10 @@ interface SavedView {
   sorts: SortRule[];
   groupBy: GroupByField;
   searchQuery: string;
+  columnOrder?: string[];
+  hiddenKeys?: string[];
+  columnWidths?: Record<string, number>;
+  pinDangolColumns?: boolean;
 }
 
 const DEFAULT_VIEWS: SavedView[] = [];
@@ -3160,22 +3164,29 @@ function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields
 function AddViewModal({
   onAdd,
   onClose,
+  buildSnapshot,
 }: {
   onAdd: (view: SavedView) => void;
   onClose: () => void;
+  buildSnapshot?: () => Omit<SavedView, "id" | "name">;
 }) {
   const [name, setName] = useState("");
 
   const handleAdd = () => {
     if (!name.trim()) return;
+    const snap = buildSnapshot
+      ? buildSnapshot()
+      : {
+          viewType: "table" as ViewType,
+          filters: [],
+          sorts: [],
+          groupBy: "" as GroupByField,
+          searchQuery: "",
+        };
     onAdd({
       id: `v-${Date.now()}`,
       name: name.trim(),
-      viewType: "table",
-      filters: [],
-      sorts: [],
-      groupBy: "",
-      searchQuery: "",
+      ...snap,
     });
     onClose();
   };
@@ -3946,25 +3957,68 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   }, []);
 
   /* ── View Management ── */
+  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
+
+  const buildViewSnapshot = useCallback((): Omit<SavedView, "id" | "name"> => ({
+    viewType: "table",
+    filters,
+    sorts,
+    groupBy,
+    searchQuery,
+    columnOrder,
+    hiddenKeys: mergedColumns.map((c) => c.key).filter((k) => !visibleColumns.has(k)),
+    columnWidths,
+    pinDangolColumns,
+  }), [filters, sorts, groupBy, searchQuery, columnOrder, mergedColumns, visibleColumns, columnWidths, pinDangolColumns]);
+
   const addView = (view: SavedView) => {
     setSavedViews((prev) => [...prev, view]);
-    setActiveView(view.viewType);
+    setActiveSavedViewId(view.id);
+  };
+
+  const applySavedView = (id: string) => {
+    const v = savedViews.find((sv) => sv.id === id);
+    if (!v) return;
+    setFilters(v.filters || []);
+    setSorts(v.sorts || []);
+    setGroupBy(v.groupBy || "");
+    setSearchQuery(v.searchQuery || "");
+    if (v.columnOrder) setColumnOrder(v.columnOrder);
+    if (v.columnWidths) setColumnWidths(v.columnWidths);
+    if (typeof v.pinDangolColumns === "boolean") setPinDangolColumns(v.pinDangolColumns);
+    if (v.hiddenKeys) {
+      const hidden = new Set(v.hiddenKeys);
+      setVisibleColumns(new Set(mergedColumns.map((c) => c.key).filter((k) => !hidden.has(k))));
+    }
+    setActiveSavedViewId(id);
+    setCollapsedGroups(new Set());
+  };
+
+  const clearActiveView = () => {
+    setActiveSavedViewId(null);
+    setFilters([]); setSorts([]); setGroupBy(""); setSearchQuery("");
+    setCollapsedGroups(new Set());
+  };
+
+  const updateActiveView = () => {
+    if (!activeSavedViewId) return;
+    const snap = buildViewSnapshot();
+    setSavedViews((prev) => prev.map((v) => v.id === activeSavedViewId ? { ...v, ...snap } : v));
   };
 
   const [confirmDeleteViewId, setConfirmDeleteViewId] = useState<string | null>(null);
   const removeView = (id: string) => {
-    if (savedViews.length <= 1) return;
     setConfirmDeleteViewId(id);
   };
   const confirmRemoveView = () => {
     if (!confirmDeleteViewId) return;
-    const deletedView = savedViews.find((v) => v.id === confirmDeleteViewId);
     setSavedViews((prev) => prev.filter((v) => v.id !== confirmDeleteViewId));
-    if (deletedView && deletedView.viewType === activeView) {
-      const remaining = savedViews.filter((v) => v.id !== confirmDeleteViewId);
-      if (remaining.length > 0) setActiveView(remaining[0].viewType);
-    }
+    if (activeSavedViewId === confirmDeleteViewId) setActiveSavedViewId(null);
     setConfirmDeleteViewId(null);
+  };
+
+  const renameView = (id: string, name: string) => {
+    setSavedViews((prev) => prev.map((v) => v.id === id ? { ...v, name } : v));
   };
 
   const activeWidgets = useMemo(() => new Set(widgetOrder), [widgetOrder]);
@@ -4439,6 +4493,74 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                   )}
                 </div>
               </div>
+
+              {/* Saved Views chip strip */}
+              {customerDeals.length > 0 && (
+                <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                  <button
+                    onClick={clearActiveView}
+                    className="px-3 py-[5px] rounded-full text-[0.7rem] transition-colors border"
+                    style={{
+                      borderColor: activeSavedViewId === null ? T.primary : T.border,
+                      background: activeSavedViewId === null ? "#F0F7F2" : "white",
+                      color: activeSavedViewId === null ? T.primary : "#666",
+                    }}
+                    title="저장된 조건 없이 전체 보기"
+                  >
+                    모든 고객
+                  </button>
+                  {savedViews.map((v) => {
+                    const active = v.id === activeSavedViewId;
+                    return (
+                      <div
+                        key={v.id}
+                        className="group/view flex items-center rounded-full border transition-colors"
+                        style={{
+                          borderColor: active ? T.primary : T.border,
+                          background: active ? "#F0F7F2" : "white",
+                        }}
+                      >
+                        <button
+                          onClick={() => applySavedView(v.id)}
+                          onDoubleClick={() => {
+                            const next = window.prompt("뷰 이름 변경", v.name);
+                            if (next && next.trim()) renameView(v.id, next.trim());
+                          }}
+                          className="pl-3 pr-1 py-[5px] text-[0.7rem]"
+                          style={{ color: active ? T.primary : "#666" }}
+                          title="클릭: 적용 / 더블클릭: 이름 변경"
+                        >
+                          {v.name}
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeView(v.id); }}
+                          className="px-1.5 py-[5px] text-[#BBB] hover:text-[#DC2626] opacity-0 group-hover/view:opacity-100 transition-opacity"
+                          title="뷰 삭제"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <button
+                    onClick={() => setShowAddView(true)}
+                    className="px-2.5 py-[5px] rounded-full text-[0.7rem] text-[#666] border border-dashed hover:bg-[#F7F8FA] transition-colors flex items-center gap-1"
+                    style={{ borderColor: T.border }}
+                    title="현재 필터·정렬·컬럼 상태를 뷰로 저장"
+                  >
+                    <Plus size={10} /> 뷰 저장
+                  </button>
+                  {activeSavedViewId && (
+                    <button
+                      onClick={updateActiveView}
+                      className="px-2.5 py-[5px] rounded-full text-[0.7rem] text-[#666] hover:bg-[#F7F8FA] transition-colors"
+                      title="현재 화면을 이 뷰에 덮어쓰기"
+                    >
+                      현재 상태로 업데이트
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Shared Filter/Sort/Search Toolbar — visible across all views */}
               {customerDeals.length > 0 && (
@@ -5343,6 +5465,15 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         <GoalModal
           onAdd={(goal) => setGoals((prev) => [...prev, goal])}
           onClose={() => setShowGoalModal(false)}
+        />
+      )}
+
+      {/* Add View Modal */}
+      {showAddView && (
+        <AddViewModal
+          onAdd={addView}
+          onClose={() => setShowAddView(false)}
+          buildSnapshot={buildViewSnapshot}
         />
       )}
 
