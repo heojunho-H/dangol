@@ -856,15 +856,12 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
   );
 
   /* ── targetFields built from live customFields (not hardcoded) ──
-         고객등급·고객상태는 Dangol 전용 필드라 엑셀에 존재하지 않는 게 일반적
-         → AI 매핑 후보에서 제외. 가져오기 완료 후 빈 컬럼으로 노출되어
-         사용자가 Dangol 기능을 직접 체험하도록 유도.
+         고객등급·고객상태는 Dangol 전용 필드지만 엑셀에 실제 컬럼이 있다면
+         AI가 자동 매핑할 수 있도록 후보에는 포함. 매칭되는 엑셀 컬럼이
+         없으면 낮은 신뢰도 섹션에 숨겨지므로 UI 노이즈는 없다.
          기업명은 맨 앞 required로 고정. */
-  const DANGOL_NATIVE_KEYS = ["customerGrade", "stage"];
   const targetFields = useMemo(() => {
-    const importable = customFields.filter(
-      (f) => f.type !== "file" && !DANGOL_NATIVE_KEYS.includes(f.key)
-    );
+    const importable = customFields.filter((f) => f.type !== "file");
     const head = importable.filter((f) => f.key === "company");
     const rest = importable.filter((f) => f.key !== "company");
     return [...head, ...rest].map((f) => ({ name: f.label, required: f.required }));
