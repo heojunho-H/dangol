@@ -499,6 +499,10 @@ const allWidgets: WidgetDef[] = [
   { id: "kpi-ltv",          name: "고객 누적 매출",       description: "모든 고객이 지금까지 만든 매출의 합계",             category: "kpi",   icon: DollarSign,    colSpan: 1 },
   { id: "kpi-avg-contract", name: "평균 계약 금액",       description: "계약 한 건당 평균 금액",                             category: "kpi",   icon: Target,        colSpan: 1 },
   { id: "kpi-renewals",     name: "곧 재계약 예정",       description: "앞으로 90일 안에 재계약이 예정된 고객 수",          category: "kpi",   icon: Calendar,      colSpan: 1 },
+  { id: "kpi-repurchase",       name: "재구매 고객 수",    description: "2회 이상 구매한 고객 수 (재구매 + 충성고객)",       category: "kpi",   icon: TrendingUp,    colSpan: 1 },
+  { id: "kpi-repurchase-rate",  name: "재구매 전환율",     description: "전체 고객 중 재구매로 전환된 비율",                  category: "kpi",   icon: Target,        colSpan: 1 },
+  { id: "kpi-loyal",            name: "충성고객 수",       description: "3회 이상 재구매한 충성고객 수",                      category: "kpi",   icon: Sparkles,      colSpan: 1 },
+  { id: "kpi-loyal-rate",       name: "충성고객 전환율",   description: "전체 고객 중 충성고객으로 전환된 비율",              category: "kpi",   icon: Target,        colSpan: 1 },
   { id: "chart-health",     name: "고객 상태 분포",       description: "고객을 활발/주의/위험으로 나눠 도넛으로 보여줍니다", category: "chart", icon: PieIcon,       colSpan: 1 },
   { id: "chart-retention",  name: "고객 유지율 추이",     description: "최근 6개월 동안 고객이 얼마나 남아 있는지 추이",    category: "chart", icon: TrendingUp,    colSpan: 2 },
   { id: "chart-lifecycle",  name: "고객 단계별 분포",     description: "신규/재구매/충성고객 단계별 고객 수를 막대로 표시", category: "chart", icon: BarChart3,     colSpan: 2 },
@@ -526,7 +530,7 @@ function fmtAmt(manWon: number): string {
   return "₩0";
 }
 
-const DEFAULT_ACTIVE_WIDGETS = ["kpi-customers", "kpi-churn", "kpi-ltv", "kpi-renewals", "chart-health", "chart-lifecycle"];
+const DEFAULT_ACTIVE_WIDGETS = ["kpi-repurchase", "kpi-repurchase-rate", "kpi-loyal", "kpi-loyal-rate", "chart-lifecycle", "chart-health"];
 
 /* ─── SMART DASHBOARD RECOMMENDATION (Dashboard AI) ─── */
 
@@ -2826,6 +2830,12 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
   const healthRisk    = deals.filter((d) => (d.healthScore ?? 0) < 50).length;
   const avgHealth = total > 0 ? Math.round(deals.reduce((s, d) => s + (d.healthScore ?? 0), 0) / total) : 0;
   const activeCount = deals.filter((d) => d.stage === "활성").length;
+  /* Repurchase / Loyal counts (stage-based) */
+  const loyalCount = deals.filter((d) => d.stage === "충성고객").length;
+  const repurchaseCount = deals.filter((d) => d.stage === "재구매" || d.stage === "충성고객").length;
+  const repurchaseRate = total > 0 ? Math.round((repurchaseCount / total) * 100) : 0;
+  const loyalRate = total > 0 ? Math.round((loyalCount / total) * 100) : 0;
+  const loyalFromRepurchase = repurchaseCount > 0 ? Math.round((loyalCount / repurchaseCount) * 100) : 0;
 
   if (widgetId.startsWith("kpi-")) {
     type KpiEntry = { title: string; value: string; sub: string; trend: string; trendColor: string; icon: typeof BarChart3; iconBg: string };
@@ -2836,6 +2846,10 @@ function WidgetContent({ widgetId, deals, stageColorMap, onAddDeal, onImportExce
       "kpi-ltv":          { title: "고객 누적 매출",    value: fmtAmt(totalLtv),          sub: "전체 고객 계약 합계",       trend: total > 0 ? `고객당 ${fmtAmt(Math.round(totalLtv / total))}` : "-",    trendColor: T.primary,  icon: DollarSign,    iconBg: "#EFF5F1" },
       "kpi-avg-contract": { title: "평균 계약 금액",    value: fmtAmt(avgContract),       sub: `계약 ${contractAmts.length}건 기준`, trend: totalLtv > 0 ? `누적 ${fmtAmt(totalLtv)}` : "-",                    trendColor: T.primary,  icon: Target,        iconBg: "#EFF5F1" },
       "kpi-renewals":     { title: "곧 재계약 예정",    value: `${renewalsCount}명`,      sub: "앞으로 90일 이내",            trend: renewalsList[0] ? `가장 임박 D-${renewalsList[0].daysUntil}` : "-",    trendColor: "#4A7B5A",  icon: Calendar,      iconBg: "#EDF3EE" },
+      "kpi-repurchase":       { title: "재구매 고객 수",   value: `${repurchaseCount}명`,   sub: "2회 이상 구매",              trend: `전체 ${total}명`,                                                   trendColor: "#10B981", icon: TrendingUp,    iconBg: "#ECFDF5" },
+      "kpi-repurchase-rate":  { title: "재구매 전환율",    value: `${repurchaseRate}%`,     sub: `${repurchaseCount} / ${total}명`, trend: "전체 → 재구매",                                              trendColor: "#10B981", icon: Target,        iconBg: "#ECFDF5" },
+      "kpi-loyal":            { title: "충성고객 수",      value: `${loyalCount}명`,        sub: "3회 이상 재구매",            trend: repurchaseCount > 0 ? `재구매 중 ${loyalFromRepurchase}%` : "-",  trendColor: "#8B5CF6", icon: Sparkles,      iconBg: "#F5F3FF" },
+      "kpi-loyal-rate":       { title: "충성고객 전환율",  value: `${loyalRate}%`,          sub: `${loyalCount} / ${total}명`, trend: "전체 → 충성고객",                                            trendColor: "#8B5CF6", icon: Target,        iconBg: "#F5F3FF" },
     };
     const kpi = kpiMap[widgetId];
     if (!kpi) return null;
