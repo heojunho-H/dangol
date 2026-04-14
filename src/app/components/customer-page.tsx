@@ -205,7 +205,7 @@ const FIELD_FILTER_TYPE: Record<string, string> = {
 };
 
 const FILTERABLE_FIELDS = [
-  { key: "stage", label: "진행상태" }, { key: "amount", label: "견적금액" },
+  { key: "stage", label: "고객상태" }, { key: "amount", label: "견적금액" },
   { key: "manager", label: "담당자" },
   { key: "date", label: "등록일" }, { key: "company", label: "기업명" },
   { key: "contact", label: "연락처" }, { key: "service", label: "희망서비스" },
@@ -213,14 +213,14 @@ const FILTERABLE_FIELDS = [
 ];
 
 const SORTABLE_FIELDS = [
-  { key: "company", label: "기업명" }, { key: "stage", label: "진행상태" },
+  { key: "company", label: "기업명" }, { key: "stage", label: "고객상태" },
   { key: "amount", label: "견적금액" }, { key: "quantity", label: "수량" },
   { key: "manager", label: "담당자" },
   { key: "date", label: "등록일" },
 ];
 
 const GROUPABLE_FIELDS: { key: GroupByField; label: string }[] = [
-  { key: "", label: "없음" }, { key: "stage", label: "진행상태" },
+  { key: "", label: "없음" }, { key: "stage", label: "고객상태" },
   { key: "manager", label: "담당자" },
   { key: "service", label: "희망서비스" },
 ];
@@ -384,8 +384,8 @@ const FIELD_TYPE_ICONS: Record<FieldType, string> = {
 
 const DEFAULT_FIELDS: CustomField[] = [
   { id: "f1",  key: "company",      label: "고객사",           type: "text",   required: true,  locked: true,  visible: true },
-  { id: "f2",  key: "stage",        label: "라이프사이클",     type: "select", required: false, locked: false, visible: true, options: ["온보딩", "활성", "휴면", "이탈"] },
-  { id: "f17", key: "customerGrade",label: "고객 등급",        type: "select", required: false, locked: false, visible: true, options: ["S등급", "A등급", "B등급", "그 외"] },
+  { id: "f2",  key: "stage",        label: "고객상태",         type: "select", required: false, locked: false, visible: true, options: ["온보딩", "활성", "휴면", "이탈"] },
+  { id: "f17", key: "customerGrade",label: "고객등급",        type: "select", required: false, locked: false, visible: true, options: ["S등급", "A등급", "B등급", "그 외"] },
   { id: "f3",  key: "contact",      label: "담당자",           type: "text",   required: false, locked: false, visible: true },
   { id: "f4",  key: "position",     label: "직책",             type: "text",   required: false, locked: false, visible: false },
   { id: "f6",  key: "amount",       label: "계약 금액",        type: "number", required: false, locked: false, visible: true },
@@ -2951,8 +2951,8 @@ interface ColumnDef {
 
 const ALL_COLUMNS: ColumnDef[] = [
   { key: "company", label: "기업명", required: true, filter: true, sort: true, defaultVisible: true },
-  { key: "stage", label: "진행상태", required: false, info: true, filter: true, sort: true, defaultVisible: true },
-  { key: "customerGrade", label: "고객 등급", required: false, filter: true, sort: true, defaultVisible: true },
+  { key: "stage", label: "고객상태", required: false, info: true, filter: true, sort: true, defaultVisible: true },
+  { key: "customerGrade", label: "고객등급", required: false, filter: true, sort: true, defaultVisible: true },
   { key: "contact", label: "담당자", required: false, sort: true, defaultVisible: true },
   { key: "position", label: "직책", required: false, sort: true, defaultVisible: false },
   { key: "service", label: "희망서비스", required: false, filter: true, sort: true, defaultVisible: true },
@@ -3680,7 +3680,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   /* ── Column order (user-defined via column config) ── */
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
-  // Dangol 기본 필드(기업명·라이프사이클·고객 등급)를 항상 맨 앞으로 고정.
+  // Dangol 기본 필드(기업명·고객상태·고객등급)를 항상 맨 앞으로 고정.
   // 사용자가 싫으면 필드 관리 다이얼로그에서 끌 수 있음.
   const [pinDangolColumns, setPinDangolColumns] = useState(true);
   const [colDragKey, setColDragKey] = useState<string | null>(null);
@@ -5080,7 +5080,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                       <label className="flex items-center justify-between px-5 py-2.5 border-b cursor-pointer hover:bg-[#FAFBFC]" style={{ borderColor: T.border }}>
                         <div className="flex flex-col">
                           <span className="text-[0.7rem] text-[#333]">Dangol 기본 필드 고정</span>
-                          <span className="text-[0.6rem] text-[#999] mt-0.5">기업명·라이프사이클·고객 등급을 맨 앞으로 유지</span>
+                          <span className="text-[0.6rem] text-[#999] mt-0.5">기업명·고객상태·고객등급을 맨 앞으로 유지</span>
                         </div>
                         <div
                           onClick={(e) => { e.preventDefault(); setPinDangolColumns((p) => !p); }}
