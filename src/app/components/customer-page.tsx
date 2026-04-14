@@ -405,6 +405,33 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   충성고객: { bg: "#F5F3FF", text: "#8B5CF6" },
 };
 
+const GRADE_COLORS: Record<string, { bg: string; text: string }> = {
+  "S등급": { bg: "#FEF3C7", text: "#B45309" },
+  "A등급": { bg: "#DBEAFE", text: "#1D4ED8" },
+  "B등급": { bg: "#D1FAE5", text: "#047857" },
+  "그 외": { bg: "#F1F5F9", text: "#64748B" },
+};
+
+/* palette for generic select chips (custom select fields) */
+const CHIP_PALETTE: { bg: string; text: string }[] = [
+  { bg: "#EFF6FF", text: "#3B82F6" },
+  { bg: "#ECFDF5", text: "#10B981" },
+  { bg: "#FEF3C7", text: "#B45309" },
+  { bg: "#F5F3FF", text: "#8B5CF6" },
+  { bg: "#FEE2E2", text: "#DC2626" },
+  { bg: "#E0E7FF", text: "#4F46E5" },
+  { bg: "#FFE4E6", text: "#E11D48" },
+  { bg: "#ECFEFF", text: "#0891B2" },
+];
+
+function getSelectChipColor(fieldKey: string, value: string, options: string[]): { bg: string; text: string } {
+  if (fieldKey === "stage" || fieldKey === "status") return statusColors[value] || { bg: "#F1F5F9", text: "#64748B" };
+  if (fieldKey === "customerGrade") return GRADE_COLORS[value] || { bg: "#F1F5F9", text: "#64748B" };
+  const idx = options.indexOf(value);
+  if (idx < 0) return { bg: "#F1F5F9", text: "#64748B" };
+  return CHIP_PALETTE[idx % CHIP_PALETTE.length];
+}
+
 interface Customer {
   id: number;
   company: string;
@@ -2153,6 +2180,61 @@ function StatusDropdown({ currentStatus, onChange, compact }: { currentStatus: s
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ─── SELECT CELL EDITOR (Notion-style popover with colored chips + 자유 입력) ─── */
+function SelectCellEditor({ value, options, fieldKey, onCommit, onCancel }: {
+  value: string;
+  options: string[];
+  fieldKey: string;
+  onCommit: (v: string) => void;
+  onCancel: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const filtered = options.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
+  const hasExactMatch = options.some((o) => o === search);
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <input
+        autoFocus
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); onCommit(search || value); }
+          else if (e.key === "Escape") { e.preventDefault(); onCancel(); }
+        }}
+        onBlur={() => setTimeout(onCancel, 150)}
+        placeholder="선택 또는 입력"
+        className="w-full bg-transparent outline-none text-[0.75rem] border border-[#1A472A] rounded px-1.5 py-1"
+      />
+      <div className="absolute left-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-50 py-1 min-w-[160px] max-h-[240px] overflow-y-auto" style={{ borderColor: T.border }}>
+        {filtered.map((o) => {
+          const c = getSelectChipColor(fieldKey, o, options);
+          return (
+            <button
+              key={o}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); onCommit(o); }}
+              className="w-full text-left px-2 py-1.5 text-[0.7rem] hover:bg-[#F7F8FA] flex items-center gap-2"
+            >
+              <span className="px-2 py-0.5 rounded-md text-[0.65rem]" style={{ background: c.bg, color: c.text }}>{o}</span>
+              {o === value && <CheckCircle2 size={10} className="ml-auto text-[#2CBF60]" />}
+            </button>
+          );
+        })}
+        {search && !hasExactMatch && (
+          <button
+            type="button"
+            onMouseDown={(e) => { e.preventDefault(); onCommit(search); }}
+            className="w-full text-left px-2 py-1.5 text-[0.7rem] text-[#1A472A] hover:bg-[#F7F8FA] border-t"
+            style={{ borderColor: T.border }}
+          >
+            + "{search}" 추가
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -4783,54 +4865,67 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                                         const raw = (deal as Record<string, unknown>)[col.key];
                                         const canInlineEdit = !hasCustomCell || col.key === "company";
                                         const isEmpty = raw === undefined || raw === null || raw === "";
-                                        const editField = customFields.find((f) => f.key === col.key);
-                                        const editOptions = editField?.type === "select" ? (editField.options || []) : [];
-                                        const datalistId = `dl-${deal.id}-${col.key}`;
-                                        const rendered = isEditing && canInlineEdit ? (
-                                          <>
-                                            <input
-                                              autoFocus
-                                              list={editOptions.length > 0 ? datalistId : undefined}
-                                              defaultValue={raw === undefined || raw === null ? "" : String(raw)}
-                                              onBlur={(e) => {
-                                                const v = e.currentTarget.value;
-                                                updateDealField(deal.id, col.key, typeof raw === "number" ? (Number(v) || 0) : v);
-                                                setEditingCell(null);
-                                              }}
-                                              onKeyDown={(e) => {
-                                                if (e.key === "Enter" || e.key === "Tab") {
-                                                  e.preventDefault();
-                                                  const v = e.currentTarget.value;
-                                                  updateDealField(deal.id, col.key, typeof raw === "number" ? (Number(v) || 0) : v);
-                                                  const idx = activeColumns.findIndex((c) => c.key === col.key);
-                                                  const next = activeColumns[idx + 1];
-                                                  if (e.key === "Tab" && next) {
-                                                    setEditingCell({ id: deal.id, key: next.key });
-                                                  } else if (e.key === "Enter") {
-                                                    setEditingCell(null);
-                                                  } else {
-                                                    setEditingCell(null);
-                                                  }
-                                                } else if (e.key === "Escape") {
-                                                  setEditingCell(null);
-                                                }
-                                              }}
-                                              className="w-full bg-transparent outline-none text-[0.75rem] text-[#1A1A1A] border border-[#1A472A] rounded px-1.5 py-1"
-                                            />
-                                            {editOptions.length > 0 && (
-                                              <datalist id={datalistId}>
-                                                {editOptions.map((o) => <option key={o} value={o} />)}
-                                              </datalist>
-                                            )}
-                                          </>
-                                        ) : canInlineEdit && isEmpty ? (
-                                          <span className="text-[0.7rem] text-[#BBB] italic hover:text-[#1A472A] transition-colors">클릭해서 입력</span>
-                                        ) : hasCustomCell ? (
-                                          cellMap[col.key]
-                                        ) : isEmpty ? (
-                                          <span className="text-[0.7rem] text-[#BBB]">—</span>
-                                        ) : (
-                                          <span className="text-[0.7rem] text-[#555] truncate block">{typeof raw === "number" ? raw.toLocaleString() : String(raw)}</span>
+                                        const fieldDef = customFields.find((f) => f.key === col.key);
+                                        const fieldType = fieldDef?.type ?? "text";
+                                        const fieldOptions = fieldType === "select" ? (fieldDef?.options || []) : [];
+                                        const commitValue = (v: string, moveNext?: boolean) => {
+                                          updateDealField(deal.id, col.key, typeof raw === "number" ? (Number(v) || 0) : v);
+                                          if (moveNext) {
+                                            const idx = activeColumns.findIndex((c) => c.key === col.key);
+                                            const next = activeColumns[idx + 1];
+                                            setEditingCell(next ? { id: deal.id, key: next.key } : null);
+                                          } else {
+                                            setEditingCell(null);
+                                          }
+                                        };
+                                        const inputTypeAttr = fieldType === "date" ? "date" : fieldType === "number" ? "number" : fieldType === "email" ? "email" : fieldType === "phone" ? "tel" : "text";
+                                        let editor: React.ReactNode = null;
+                                        if (isEditing && canInlineEdit) {
+                                          if (fieldType === "select" && fieldOptions.length > 0) {
+                                            editor = (
+                                              <SelectCellEditor
+                                                value={String(raw ?? "")}
+                                                options={fieldOptions}
+                                                fieldKey={col.key}
+                                                onCommit={(v) => commitValue(v)}
+                                                onCancel={() => setEditingCell(null)}
+                                              />
+                                            );
+                                          } else {
+                                            editor = (
+                                              <input
+                                                type={inputTypeAttr}
+                                                inputMode={fieldType === "number" ? "decimal" : undefined}
+                                                autoFocus
+                                                defaultValue={raw === undefined || raw === null ? "" : String(raw)}
+                                                onBlur={(e) => commitValue(e.currentTarget.value)}
+                                                onKeyDown={(e) => {
+                                                  if (e.key === "Enter") { e.preventDefault(); commitValue(e.currentTarget.value); }
+                                                  else if (e.key === "Tab") { e.preventDefault(); commitValue(e.currentTarget.value, true); }
+                                                  else if (e.key === "Escape") { setEditingCell(null); }
+                                                }}
+                                                className="w-full bg-transparent outline-none text-[0.75rem] text-[#1A1A1A] border border-[#1A472A] rounded px-1.5 py-1"
+                                              />
+                                            );
+                                          }
+                                        }
+                                        const rendered = editor ?? (
+                                          canInlineEdit && isEmpty ? (
+                                            <span className="text-[0.7rem] text-[#BBB] italic hover:text-[#1A472A] transition-colors">클릭해서 입력</span>
+                                          ) : hasCustomCell ? (
+                                            cellMap[col.key]
+                                          ) : isEmpty ? (
+                                            <span className="text-[0.7rem] text-[#BBB]">—</span>
+                                          ) : fieldType === "select" && fieldOptions.length > 0 ? (
+                                            (() => {
+                                              const c = getSelectChipColor(col.key, String(raw), fieldOptions);
+                                              return (
+                                                <span className="text-[0.7rem] px-2 py-0.5 rounded-md inline-block" style={{ background: c.bg, color: c.text }}>{String(raw)}</span>
+                                              );
+                                            })()
+                                          ) : (
+                                            <span className="text-[0.7rem] text-[#555] truncate block">{typeof raw === "number" ? raw.toLocaleString() : String(raw)}</span>
+                                          )
                                         );
                                         return (
                                           <td
