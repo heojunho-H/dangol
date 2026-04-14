@@ -188,7 +188,7 @@ interface SortRule {
   dir: "asc" | "desc";
 }
 
-type GroupByField = "" | "stage" | "manager" | "status" | "service";
+type GroupByField = "" | "stage" | "manager" | "service";
 
 const FILTER_OPS_BY_TYPE: Record<string, { op: FilterOp; label: string }[]> = {
   text:   [{ op: "contains", label: "포함" }, { op: "eq", label: "같음" }, { op: "neq", label: "같지 않음" }, { op: "not_contains", label: "포함하지 않음" }, { op: "is_empty", label: "비어있음" }, { op: "is_not_empty", label: "비어있지 않음" }],
@@ -201,12 +201,12 @@ const FILTER_OPS_BY_TYPE: Record<string, { op: FilterOp; label: string }[]> = {
 const FIELD_FILTER_TYPE: Record<string, string> = {
   company: "text", stage: "select", contact: "text", position: "text",
   service: "text", amount: "number", quantity: "number", manager: "person",
-  status: "select", date: "date", phone: "text", email: "text", memo: "text",
+  date: "date", phone: "text", email: "text", memo: "text",
 };
 
 const FILTERABLE_FIELDS = [
   { key: "stage", label: "진행상태" }, { key: "amount", label: "견적금액" },
-  { key: "manager", label: "담당자" }, { key: "status", label: "성공여부" },
+  { key: "manager", label: "담당자" },
   { key: "date", label: "등록일" }, { key: "company", label: "기업명" },
   { key: "contact", label: "연락처" }, { key: "service", label: "희망서비스" },
   { key: "quantity", label: "수량" },
@@ -215,13 +215,13 @@ const FILTERABLE_FIELDS = [
 const SORTABLE_FIELDS = [
   { key: "company", label: "기업명" }, { key: "stage", label: "진행상태" },
   { key: "amount", label: "견적금액" }, { key: "quantity", label: "수량" },
-  { key: "manager", label: "담당자" }, { key: "status", label: "성공여부" },
+  { key: "manager", label: "담당자" },
   { key: "date", label: "등록일" },
 ];
 
 const GROUPABLE_FIELDS: { key: GroupByField; label: string }[] = [
   { key: "", label: "없음" }, { key: "stage", label: "진행상태" },
-  { key: "manager", label: "담당자" }, { key: "status", label: "성공여부" },
+  { key: "manager", label: "담당자" },
   { key: "service", label: "희망서비스" },
 ];
 
@@ -393,7 +393,6 @@ const DEFAULT_FIELDS: CustomField[] = [
   { id: "f15", key: "ltv",          label: "누적 LTV",         type: "number", required: false, locked: false, visible: true },
   { id: "f16", key: "renewalDate",  label: "갱신 예정일",      type: "date",   required: false, locked: false, visible: true },
   { id: "f8",  key: "manager",      label: "고객 책임자",      type: "person", required: false, locked: false, visible: true },
-  { id: "f9",  key: "status",       label: "상태",             type: "select", required: false, locked: false, visible: false, options: ["온보딩", "활성", "휴면", "이탈"] },
   { id: "f10", key: "date",         label: "등록일",           type: "date",   required: false, locked: false, visible: true },
   { id: "f11", key: "phone",        label: "전화번호",         type: "phone",  required: false, locked: false, visible: false },
   { id: "f12", key: "email",        label: "이메일",           type: "email",  required: false, locked: false, visible: false },
@@ -2343,12 +2342,6 @@ function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage,
             stageColorMap={stageColorMap}
             onChange={(s) => onChangeStage(deal.id, s)}
           />
-          <span
-            className="px-2.5 py-0.5 rounded-md text-[0.65rem]"
-            style={{ background: statusColors[deal.status]?.bg || "#F1F5F9", color: statusColors[deal.status]?.text || "#64748B" }}
-          >
-            {deal.status}
-          </span>
           <span className="text-[0.7rem] text-[#1A1A1A] tabular-nums ml-auto font-medium">{deal.amount}</span>
         </div>
       </div>
@@ -2966,7 +2959,6 @@ const ALL_COLUMNS: ColumnDef[] = [
   { key: "amount", label: "견적금액(VAT미포함)", required: false, info: true, filter: true, sort: true, defaultVisible: true },
   { key: "quantity", label: "총수량", required: false, info: true, sort: true, defaultVisible: true },
   { key: "manager", label: "고객책임자", required: false, filter: true, defaultVisible: true },
-  { key: "status", label: "성공여부", required: false, filter: true, sort: true, defaultVisible: true },
   { key: "date", label: "등록일", required: false, sort: true, defaultVisible: true },
   { key: "phone", label: "전화번호", required: false, sort: false, defaultVisible: false },
   { key: "email", label: "이메일", required: false, sort: true, defaultVisible: false },
@@ -3688,7 +3680,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   /* ── Column order (user-defined via column config) ── */
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
-  // Dangol 기본 필드(기업명·라이프사이클·고객 등급·성공여부)를 항상 맨 앞·맨 뒤로 고정.
+  // Dangol 기본 필드(기업명·라이프사이클·고객 등급)를 항상 맨 앞으로 고정.
   // 사용자가 싫으면 필드 관리 다이얼로그에서 끌 수 있음.
   const [pinDangolColumns, setPinDangolColumns] = useState(true);
   const [colDragKey, setColDragKey] = useState<string | null>(null);
@@ -3726,17 +3718,11 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     const inactive = out.filter((c) => !visibleColumns.has(c.key));
     if (pinDangolColumns) {
       const frontKeys = ["company", "stage", "customerGrade"];
-      const backKeys = ["status"];
       const front = frontKeys
         .map((k) => active.find((c) => c.key === k))
         .filter((c): c is ColumnDef => Boolean(c));
-      const back = backKeys
-        .map((k) => active.find((c) => c.key === k))
-        .filter((c): c is ColumnDef => Boolean(c));
-      const middle = active.filter(
-        (c) => !frontKeys.includes(c.key) && !backKeys.includes(c.key)
-      );
-      active = [...front, ...middle, ...back];
+      const rest = active.filter((c) => !frontKeys.includes(c.key));
+      active = [...front, ...rest];
     }
     return [...active, ...inactive];
   }, [mergedColumns, columnOrder, visibleColumns, pinDangolColumns]);
@@ -4500,22 +4486,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     <div className="flex items-center gap-3 px-5 py-2.5 border-b" style={{ borderColor: T.border, background: "#F0F7F2" }}>
                       <span className="text-[0.75rem] text-[#1A1A1A] font-medium">{selectedIds.size}건 선택</span>
                       <div className="w-px h-5" style={{ background: T.border }} />
-                      {/* Status change */}
-                      <div className="relative">
-                        <button onClick={() => setBulkActionMenu(bulkActionMenu === "status" ? "" : "status")} className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-white transition-colors text-[#555] flex items-center gap-1">
-                          상태 변경 <ChevronDown size={10} />
-                        </button>
-                        {bulkActionMenu === "status" && (
-                          <>
-                            <div className="fixed inset-0 z-40" onClick={() => setBulkActionMenu("")} />
-                            <div className="absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg z-50 py-1 w-[120px]" style={{ borderColor: T.border }}>
-                              {["진행중", "성공", "실패"].map((s) => (
-                                <button key={s} onClick={() => bulkChangeStatus(s)} className="w-full text-left px-3 py-2 text-[0.75rem] text-[#444] hover:bg-[#F7F8FA] transition-colors">{s}</button>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
                       {/* Manager assign */}
                       <div className="relative">
                         <button onClick={() => setBulkActionMenu(bulkActionMenu === "manager" ? "" : "manager")} className="px-3 py-1.5 rounded-md text-[0.7rem] hover:bg-white transition-colors flex items-center gap-1" style={{ color: T.primary }}>
@@ -5021,7 +4991,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                   const field = customFields.find((f) => f.key === col.key);
                   const isLocked = field?.locked || col.required;
                   const isCustom = !ALL_COLUMNS.some((c) => c.key === col.key);
-                  const isDangolFeature = col.key === "stage" || col.key === "status" || col.key === "customerGrade";
+                  const isDangolFeature = col.key === "stage" || col.key === "customerGrade";
                   const currentType = field?.type ?? "text";
                   const dragging = colDragKey === col.key;
                   return (
@@ -5110,7 +5080,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                       <label className="flex items-center justify-between px-5 py-2.5 border-b cursor-pointer hover:bg-[#FAFBFC]" style={{ borderColor: T.border }}>
                         <div className="flex flex-col">
                           <span className="text-[0.7rem] text-[#333]">Dangol 기본 필드 고정</span>
-                          <span className="text-[0.6rem] text-[#999] mt-0.5">기업명·라이프사이클·고객 등급을 맨 앞, 성공여부를 맨 뒤로 유지</span>
+                          <span className="text-[0.6rem] text-[#999] mt-0.5">기업명·라이프사이클·고객 등급을 맨 앞으로 유지</span>
                         </div>
                         <div
                           onClick={(e) => { e.preventDefault(); setPinDangolColumns((p) => !p); }}
