@@ -855,13 +855,20 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
     [parsedSheet, FALLBACK_EXCEL_COLUMNS]
   );
 
-  /* ── targetFields built from live customFields (not hardcoded) ── */
-  const targetFields = useMemo(
-    () => customFields
-      .filter((f) => f.type !== "file")    // can't import files from spreadsheet
-      .map((f) => ({ name: f.label, required: f.required })),
-    [customFields]
-  );
+  /* ── targetFields built from live customFields (not hardcoded) ──
+         기업명·고객등급·고객상태를 맨 앞으로 고정해 추천 순서를 강제.
+         기업명은 required 그대로(취소 불가), 나머지는 취소 가능. */
+  const targetFields = useMemo(() => {
+    const importable = customFields.filter((f) => f.type !== "file");
+    const priorityKeys = ["company", "customerGrade", "stage"];
+    const head: typeof importable = [];
+    for (const k of priorityKeys) {
+      const f = importable.find((x) => x.key === k);
+      if (f) head.push(f);
+    }
+    const rest = importable.filter((f) => !priorityKeys.includes(f.key));
+    return [...head, ...rest].map((f) => ({ name: f.label, required: f.required }));
+  }, [customFields]);
 
   /* ── Map from field label → CustomField (needed to find key + type at transform time) ── */
   const fieldByLabel = useMemo(() => {
