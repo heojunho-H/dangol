@@ -856,17 +856,17 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
   );
 
   /* ── targetFields built from live customFields (not hardcoded) ──
-         기업명·고객등급·고객상태를 맨 앞으로 고정해 추천 순서를 강제.
-         기업명은 required 그대로(취소 불가), 나머지는 취소 가능. */
+         고객등급·고객상태는 Dangol 전용 필드라 엑셀에 존재하지 않는 게 일반적
+         → AI 매핑 후보에서 제외. 가져오기 완료 후 빈 컬럼으로 노출되어
+         사용자가 Dangol 기능을 직접 체험하도록 유도.
+         기업명은 맨 앞 required로 고정. */
+  const DANGOL_NATIVE_KEYS = ["customerGrade", "stage"];
   const targetFields = useMemo(() => {
-    const importable = customFields.filter((f) => f.type !== "file");
-    const priorityKeys = ["company", "customerGrade", "stage"];
-    const head: typeof importable = [];
-    for (const k of priorityKeys) {
-      const f = importable.find((x) => x.key === k);
-      if (f) head.push(f);
-    }
-    const rest = importable.filter((f) => !priorityKeys.includes(f.key));
+    const importable = customFields.filter(
+      (f) => f.type !== "file" && !DANGOL_NATIVE_KEYS.includes(f.key)
+    );
+    const head = importable.filter((f) => f.key === "company");
+    const rest = importable.filter((f) => f.key !== "company");
     return [...head, ...rest].map((f) => ({ name: f.label, required: f.required }));
   }, [customFields]);
 
@@ -1391,21 +1391,12 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
               const getConfidence = (fieldName: string) =>
                 analysisResults.find(r => r.targetField === fieldName)?.confidence ?? 0;
 
-              // Dangol 고객관리 핵심 3축 — AI 신뢰도와 무관하게 "추천" 섹션에 고정 노출.
-              const recommendedKeys = ["company", "customerGrade", "stage"];
-              const recommendedLabels = new Set(
-                customFields
-                  .filter((f) => recommendedKeys.includes(f.key))
-                  .map((f) => f.label)
-              );
-              const recommended = targetFields.filter((f) => recommendedLabels.has(f.name));
-              const rest = targetFields.filter((f) => !recommendedLabels.has(f.name));
-              const autoMapped = rest.filter(f => getConfidence(f.name) >= 0.8);
-              const needsReview = rest.filter(f => {
+              const autoMapped = targetFields.filter(f => getConfidence(f.name) >= 0.8);
+              const needsReview = targetFields.filter(f => {
                 const c = getConfidence(f.name);
                 return c >= 0.4 && c < 0.8;
               });
-              const unmapped = rest.filter(f => getConfidence(f.name) < 0.4);
+              const unmapped = targetFields.filter(f => getConfidence(f.name) < 0.4);
 
               const requiredUnmapped = unmapped.filter(f => f.required && !mappings[f.name]).length;
               const canProceed = targetFields.filter(f => f.required).every(f => !!mappings[f.name]);
@@ -1546,22 +1537,6 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
                             </select>
                           </div>
                         ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Section: Dangol 추천 (고객관리 핵심 3축) */}
-                  {recommended.length > 0 && (
-                    <div className="mb-4">
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "#F0F7F2" }}>
-                          <Sparkles size={12} color={T.primary} />
-                        </div>
-                        <span className="text-[0.85rem] text-[#1A1A1A] font-medium">추천 · Dangol 핵심 필드</span>
-                        <span className="text-[0.7rem] text-[#999]">기업명·고객등급·고객상태 — 기업명 외에는 선택하지 않음 가능</span>
-                      </div>
-                      <div className="space-y-2">
-                        {recommended.map(renderFieldRow)}
                       </div>
                     </div>
                   )}
@@ -3996,13 +3971,20 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         const next = new Set<string>();
         for (const k of prev) if (hasData.has(k)) next.add(k);
         next.add("company"); // required — always visible
+        // Dangol 전용 필드는 엑셀에 없어도 강제 노출 → 가져오기 직후
+        // 사용자가 바로 고객등급·고객상태를 채우며 기능을 체험하도록.
+        next.add("customerGrade");
+        next.add("stage");
         return next;
       });
       // Flip empty custom fields to visible:false so the auto-reveal
       // effect doesn't re-add them and the field-settings UI reflects it.
+      // 단, Dangol 전용 필드(고객등급·고객상태)는 visible 유지.
+      const DANGOL_KEEP_VISIBLE = new Set(["customerGrade", "stage"]);
       setCustomFields((prev) =>
         prev.map((f) => {
           if (f.locked || f.required) return f;
+          if (DANGOL_KEEP_VISIBLE.has(f.key)) return { ...f, visible: true };
           if (hasData.has(f.key)) return f;
           return { ...f, visible: false };
         })
