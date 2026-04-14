@@ -16,9 +16,7 @@ import {
   Target,
   FileText,
   DollarSign,
-  Bell,
   Clock,
-  CalendarCheck,
   MoreHorizontal,
   Link2,
   Copy,
@@ -66,9 +64,7 @@ const navSections: NavSection[] = [
   {
     label: "스마트 리마인드",
     items: [
-      { id: "alarm", icon: Bell, label: "알림 센터", to: "/" },
-      { id: "followup", icon: CalendarCheck, label: "후속 조치", to: "/" },
-      { id: "schedule", icon: Clock, label: "예정 일정", to: "/" },
+      { id: "wip", icon: Clock, label: "기능추가중", to: "/" },
     ],
   },
 ];
