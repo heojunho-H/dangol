@@ -1391,12 +1391,21 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
               const getConfidence = (fieldName: string) =>
                 analysisResults.find(r => r.targetField === fieldName)?.confidence ?? 0;
 
-              const autoMapped = targetFields.filter(f => getConfidence(f.name) >= 0.8);
-              const needsReview = targetFields.filter(f => {
+              // Dangol 고객관리 핵심 3축 — AI 신뢰도와 무관하게 "추천" 섹션에 고정 노출.
+              const recommendedKeys = ["company", "customerGrade", "stage"];
+              const recommendedLabels = new Set(
+                customFields
+                  .filter((f) => recommendedKeys.includes(f.key))
+                  .map((f) => f.label)
+              );
+              const recommended = targetFields.filter((f) => recommendedLabels.has(f.name));
+              const rest = targetFields.filter((f) => !recommendedLabels.has(f.name));
+              const autoMapped = rest.filter(f => getConfidence(f.name) >= 0.8);
+              const needsReview = rest.filter(f => {
                 const c = getConfidence(f.name);
                 return c >= 0.4 && c < 0.8;
               });
-              const unmapped = targetFields.filter(f => getConfidence(f.name) < 0.4);
+              const unmapped = rest.filter(f => getConfidence(f.name) < 0.4);
 
               const requiredUnmapped = unmapped.filter(f => f.required && !mappings[f.name]).length;
               const canProceed = targetFields.filter(f => f.required).every(f => !!mappings[f.name]);
@@ -1537,6 +1546,22 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
                             </select>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section: Dangol 추천 (고객관리 핵심 3축) */}
+                  {recommended.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "#F0F7F2" }}>
+                          <Sparkles size={12} color={T.primary} />
+                        </div>
+                        <span className="text-[0.85rem] text-[#1A1A1A] font-medium">추천 · Dangol 핵심 필드</span>
+                        <span className="text-[0.7rem] text-[#999]">기업명·고객등급·고객상태 — 기업명 외에는 선택하지 않음 가능</span>
+                      </div>
+                      <div className="space-y-2">
+                        {recommended.map(renderFieldRow)}
                       </div>
                     </div>
                   )}
