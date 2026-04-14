@@ -148,10 +148,9 @@ interface PipelineStage {
 
 // Customer lifecycle stages: onboarding → active → dormant → churned.
 const DEFAULT_STAGES: PipelineStage[] = [
-  { id: "s1", name: "온보딩", color: "#3B82F6", type: "active" },
-  { id: "s2", name: "활성",   color: "#10B981", type: "active" },
-  { id: "s3", name: "휴면",   color: "#F59E0B", type: "active" },
-  { id: "s4", name: "이탈",   color: "#9CA3AF", type: "lost" },
+  { id: "s1", name: "신규",     color: "#3B82F6", type: "active" },
+  { id: "s2", name: "재구매",   color: "#10B981", type: "active" },
+  { id: "s3", name: "충성고객", color: "#8B5CF6", type: "active" },
 ];
 
 // Muted palette — brand greens + restrained neutrals/warm tones for
@@ -384,7 +383,7 @@ const FIELD_TYPE_ICONS: Record<FieldType, string> = {
 
 const DEFAULT_FIELDS: CustomField[] = [
   { id: "f1",  key: "company",      label: "고객사",           type: "text",   required: true,  locked: true,  visible: true },
-  { id: "f2",  key: "stage",        label: "고객상태",         type: "select", required: false, locked: false, visible: true, options: ["온보딩", "활성", "휴면", "이탈"] },
+  { id: "f2",  key: "stage",        label: "고객상태",         type: "select", required: false, locked: false, visible: true, options: ["신규", "재구매", "충성고객"] },
   { id: "f17", key: "customerGrade",label: "고객등급",        type: "select", required: false, locked: false, visible: true, options: ["S등급", "A등급", "B등급", "그 외"] },
   { id: "f3",  key: "contact",      label: "담당자",           type: "text",   required: false, locked: false, visible: true },
   { id: "f4",  key: "position",     label: "직책",             type: "text",   required: false, locked: false, visible: false },
@@ -401,16 +400,15 @@ const DEFAULT_FIELDS: CustomField[] = [
 
 /* ─── SAMPLE DATA ─── */
 const statusColors: Record<string, { bg: string; text: string }> = {
-  온보딩: { bg: "#EFF6FF", text: "#3B82F6" },
-  활성:   { bg: "#ECFDF5", text: "#10B981" },
-  휴면:   { bg: "#FFFBEB", text: "#F59E0B" },
-  이탈:   { bg: "#F3F4F6", text: "#6B7280" },
+  신규:     { bg: "#EFF6FF", text: "#3B82F6" },
+  재구매:   { bg: "#ECFDF5", text: "#10B981" },
+  충성고객: { bg: "#F5F3FF", text: "#8B5CF6" },
 };
 
 interface Customer {
   id: number;
   company: string;
-  stage: string; // lifecycle stage: 온보딩 | 활성 | 휴면 | 이탈
+  stage: string; // 고객상태: 신규 | 재구매 | 충성고객
   contact: string;
   position: string;
   service: string;
@@ -428,21 +426,21 @@ interface Customer {
 
 /* ─── SAMPLE CUSTOMERS (onboarding 완료 시 로드) ─── */
 const SAMPLE_DEALS: Customer[] = [
-  { id: 1,  company: "(주)테크솔루션",     stage: "활성",   contact: "김영호", position: "이사",  service: "",          quantity: 0, amount: "₩3,200만", healthScore: 88, ltv: "₩1.2억", renewalDate: "2026-09-15", manager: "박지은", status: "활성",   date: "2025-03-15" },
-  { id: 2,  company: "스마트팩토리(주)",   stage: "활성",   contact: "이수진", position: "부장",  service: "",          quantity: 0, amount: "₩2,800만", healthScore: 76, ltv: "₩8,400만", renewalDate: "2026-08-18", manager: "김태현", status: "활성",   date: "2025-08-18" },
-  { id: 3,  company: "(주)글로벌트레이드", stage: "온보딩", contact: "박민수", position: "과장",  service: "",          quantity: 0, amount: "₩5,500만", healthScore: 65, ltv: "₩5,500만", renewalDate: "2027-03-20", manager: "이서연", status: "온보딩", date: "2026-03-20" },
-  { id: 4,  company: "디지털커머스(주)",   stage: "온보딩", contact: "최지아", position: "대리",  service: "",          quantity: 0, amount: "₩1,200만", healthScore: 72, ltv: "₩1,200만", renewalDate: "2027-03-22", manager: "박지은", status: "온보딩", date: "2026-03-22" },
-  { id: 5,  company: "(주)바이오헬스",     stage: "휴면",   contact: "정대현", position: "팀장",  service: "",          quantity: 0, amount: "₩980만",   healthScore: 42, ltv: "₩2,940만", renewalDate: "2026-05-25", manager: "김태현", status: "휴면",   date: "2024-09-25" },
-  { id: 6,  company: "에너지플러스(주)",   stage: "활성",   contact: "한소희", position: "차장",  service: "",          quantity: 0, amount: "₩4,100만", healthScore: 91, ltv: "₩9,200만", renewalDate: "2026-09-28", manager: "이서연", status: "활성",   date: "2025-09-28" },
-  { id: 7,  company: "(주)푸드테크",       stage: "온보딩", contact: "오재석", position: "과장",  service: "",          quantity: 0, amount: "₩1,500만", healthScore: 68, ltv: "₩1,500만", renewalDate: "2027-04-01", manager: "박지은", status: "온보딩", date: "2026-04-01" },
-  { id: 8,  company: "클라우드원(주)",     stage: "활성",   contact: "윤미래", position: "부장",  service: "",          quantity: 0, amount: "₩6,200만", healthScore: 84, ltv: "₩1.4억", renewalDate: "2026-10-03", manager: "김태현", status: "활성",   date: "2024-10-03" },
-  { id: 9,  company: "(주)핀테크랩",       stage: "활성",   contact: "서준혁", position: "이사",  service: "",          quantity: 0, amount: "₩2,300만", healthScore: 79, ltv: "₩4,600만", renewalDate: "2026-07-05", manager: "이서연", status: "활성",   date: "2025-07-05" },
-  { id: 10, company: "모빌리티솔루션(주)", stage: "온보딩", contact: "강하은", position: "대리",  service: "",          quantity: 0, amount: "₩8,500만", healthScore: 71, ltv: "₩8,500만", renewalDate: "2027-04-07", manager: "박지은", status: "온보딩", date: "2026-04-07" },
-  { id: 11, company: "(주)헬스케어AI",     stage: "활성",   contact: "윤성민", position: "팀장",  service: "",          quantity: 0, amount: "₩1.2억",  healthScore: 93, ltv: "₩2.8억", renewalDate: "2026-09-10", manager: "김태현", status: "활성",   date: "2024-03-10" },
-  { id: 12, company: "리테일허브(주)",     stage: "활성",   contact: "조은지", position: "과장",  service: "",          quantity: 0, amount: "₩4,700만", healthScore: 82, ltv: "₩1.1억", renewalDate: "2026-08-28", manager: "이서연", status: "활성",   date: "2024-08-28" },
-  { id: 13, company: "(주)스마트물류",     stage: "이탈",   contact: "임재현", position: "부장",  service: "",          quantity: 0, amount: "₩3,400만", healthScore: 28, ltv: "₩3,400만", renewalDate: "",           manager: "박지은", status: "이탈",   date: "2024-02-14" },
-  { id: 14, company: "에듀테크파트너(주)", stage: "활성",   contact: "노지수", position: "이사",  service: "",          quantity: 0, amount: "₩9,800만", healthScore: 87, ltv: "₩1.9억", renewalDate: "2026-10-08", manager: "김태현", status: "활성",   date: "2025-04-08" },
-  { id: 15, company: "(주)그린에너지",     stage: "휴면",   contact: "배소연", position: "차장",  service: "",          quantity: 0, amount: "₩2,100만", healthScore: 48, ltv: "₩2,100만", renewalDate: "2026-07-20", manager: "이서연", status: "휴면",   date: "2025-01-20" },
+  { id: 1,  company: "(주)테크솔루션",     stage: "충성고객", contact: "김영호", position: "이사",  service: "",          quantity: 0, amount: "₩3,200만", healthScore: 88, ltv: "₩1.2억", renewalDate: "2026-09-15", manager: "박지은", status: "충성고객", date: "2025-03-15" },
+  { id: 2,  company: "스마트팩토리(주)",   stage: "재구매",   contact: "이수진", position: "부장",  service: "",          quantity: 0, amount: "₩2,800만", healthScore: 76, ltv: "₩8,400만", renewalDate: "2026-08-18", manager: "김태현", status: "재구매",   date: "2025-08-18" },
+  { id: 3,  company: "(주)글로벌트레이드", stage: "신규",     contact: "박민수", position: "과장",  service: "",          quantity: 0, amount: "₩5,500만", healthScore: 65, ltv: "₩5,500만", renewalDate: "2027-03-20", manager: "이서연", status: "신규",     date: "2026-03-20" },
+  { id: 4,  company: "디지털커머스(주)",   stage: "신규",     contact: "최지아", position: "대리",  service: "",          quantity: 0, amount: "₩1,200만", healthScore: 72, ltv: "₩1,200만", renewalDate: "2027-03-22", manager: "박지은", status: "신규",     date: "2026-03-22" },
+  { id: 5,  company: "(주)바이오헬스",     stage: "신규",     contact: "정대현", position: "팀장",  service: "",          quantity: 0, amount: "₩980만",   healthScore: 42, ltv: "₩2,940만", renewalDate: "2026-05-25", manager: "김태현", status: "신규",     date: "2024-09-25" },
+  { id: 6,  company: "에너지플러스(주)",   stage: "재구매",   contact: "한소희", position: "차장",  service: "",          quantity: 0, amount: "₩4,100만", healthScore: 91, ltv: "₩9,200만", renewalDate: "2026-09-28", manager: "이서연", status: "재구매",   date: "2025-09-28" },
+  { id: 7,  company: "(주)푸드테크",       stage: "신규",     contact: "오재석", position: "과장",  service: "",          quantity: 0, amount: "₩1,500만", healthScore: 68, ltv: "₩1,500만", renewalDate: "2027-04-01", manager: "박지은", status: "신규",     date: "2026-04-01" },
+  { id: 8,  company: "클라우드원(주)",     stage: "충성고객", contact: "윤미래", position: "부장",  service: "",          quantity: 0, amount: "₩6,200만", healthScore: 84, ltv: "₩1.4억", renewalDate: "2026-10-03", manager: "김태현", status: "충성고객", date: "2024-10-03" },
+  { id: 9,  company: "(주)핀테크랩",       stage: "재구매",   contact: "서준혁", position: "이사",  service: "",          quantity: 0, amount: "₩2,300만", healthScore: 79, ltv: "₩4,600만", renewalDate: "2026-07-05", manager: "이서연", status: "재구매",   date: "2025-07-05" },
+  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",     contact: "강하은", position: "대리",  service: "",          quantity: 0, amount: "₩8,500만", healthScore: 71, ltv: "₩8,500만", renewalDate: "2027-04-07", manager: "박지은", status: "신규",     date: "2026-04-07" },
+  { id: 11, company: "(주)헬스케어AI",     stage: "충성고객", contact: "윤성민", position: "팀장",  service: "",          quantity: 0, amount: "₩1.2억",  healthScore: 93, ltv: "₩2.8억", renewalDate: "2026-09-10", manager: "김태현", status: "충성고객", date: "2024-03-10" },
+  { id: 12, company: "리테일허브(주)",     stage: "충성고객", contact: "조은지", position: "과장",  service: "",          quantity: 0, amount: "₩4,700만", healthScore: 82, ltv: "₩1.1억", renewalDate: "2026-08-28", manager: "이서연", status: "충성고객", date: "2024-08-28" },
+  { id: 13, company: "(주)스마트물류",     stage: "신규",     contact: "임재현", position: "부장",  service: "",          quantity: 0, amount: "₩3,400만", healthScore: 28, ltv: "₩3,400만", renewalDate: "",           manager: "박지은", status: "신규",     date: "2024-02-14" },
+  { id: 14, company: "에듀테크파트너(주)", stage: "충성고객", contact: "노지수", position: "이사",  service: "",          quantity: 0, amount: "₩9,800만", healthScore: 87, ltv: "₩1.9억", renewalDate: "2026-10-08", manager: "김태현", status: "충성고객", date: "2025-04-08" },
+  { id: 15, company: "(주)그린에너지",     stage: "신규",     contact: "배소연", position: "차장",  service: "",          quantity: 0, amount: "₩2,100만", healthScore: 48, ltv: "₩2,100만", renewalDate: "2026-07-20", manager: "이서연", status: "신규",     date: "2025-01-20" },
 ];
 
 /* ─── WIDGET DEFINITIONS ─── */
@@ -472,7 +470,7 @@ const allWidgets: WidgetDef[] = [
   { id: "kpi-renewals",     name: "곧 재계약 예정",       description: "앞으로 90일 안에 재계약이 예정된 고객 수",          category: "kpi",   icon: Calendar,      colSpan: 1 },
   { id: "chart-health",     name: "고객 상태 분포",       description: "고객을 활발/주의/위험으로 나눠 도넛으로 보여줍니다", category: "chart", icon: PieIcon,       colSpan: 1 },
   { id: "chart-retention",  name: "고객 유지율 추이",     description: "최근 6개월 동안 고객이 얼마나 남아 있는지 추이",    category: "chart", icon: TrendingUp,    colSpan: 2 },
-  { id: "chart-lifecycle",  name: "고객 단계별 분포",     description: "온보딩/활발/휴면/떠남 단계별 고객 수를 막대로 표시", category: "chart", icon: BarChart3,     colSpan: 2 },
+  { id: "chart-lifecycle",  name: "고객 단계별 분포",     description: "신규/재구매/충성고객 단계별 고객 수를 막대로 표시", category: "chart", icon: BarChart3,     colSpan: 2 },
   { id: "table-renewals",   name: "곧 재계약 고객 목록",  description: "재계약이 가까운 순서로 최대 10명까지 표시",          category: "table", icon: Calendar,      colSpan: 2 },
   { id: "table-upsell",     name: "추가 제안 추천 Top 5", description: "만족도 높고 추가 계약 가능성이 높은 고객 5명",      category: "table", icon: Sparkles,      colSpan: 2 },
   { id: "table-recent-customers", name: "최근 등록된 고객", description: "가장 최근에 등록된 고객 5명",                   category: "table", icon: Clock,         colSpan: 2 },
@@ -1800,9 +1798,9 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
 
 /* ─── WEB FORM SAMPLE DEALS ─── */
 const WEB_FORM_SAMPLE_DEALS: Customer[] = [
-  { id: 101, company: "(주)넥스트커머스", stage: "온보딩", contact: "김서현", position: "마케팅 팀장", service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "박지은", status: "온보딩", date: "2026-04-12" },
-  { id: 102, company: "스마트로직(주)",   stage: "온보딩", contact: "이동훈", position: "대표이사",   service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "김태현", status: "온보딩", date: "2026-04-12" },
-  { id: 103, company: "(주)블루오션테크", stage: "온보딩", contact: "정하나", position: "기획팀",     service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "이서연", status: "온보딩", date: "2026-04-11" },
+  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "박지은", status: "신규", date: "2026-04-12" },
+  { id: 102, company: "스마트로직(주)",   stage: "신규", contact: "이동훈", position: "대표이사",   service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "김태현", status: "신규", date: "2026-04-12" },
+  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀",     service: "", quantity: 0, amount: "₩0", healthScore: 70, ltv: "₩0", renewalDate: "", manager: "이서연", status: "신규", date: "2026-04-11" },
 ];
 
 /* ─── WEB FORM ONBOARDING FLOW ─── */
@@ -3642,14 +3640,14 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     const blank: Customer = {
       id,
       company: "",
-      stage: pipelineStages[0]?.name || "온보딩",
+      stage: pipelineStages[0]?.name || "신규",
       contact: "",
       position: "",
       service: "",
       quantity: 0,
       amount: "",
       manager: "",
-      status: "온보딩",
+      status: "신규",
       date: new Date().toISOString().slice(0, 10),
     };
     setCustomerDeals([blank]);
@@ -3661,14 +3659,14 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     const blank: Customer = {
       id,
       company: "",
-      stage: pipelineStages[0]?.name || "온보딩",
+      stage: pipelineStages[0]?.name || "신규",
       contact: "",
       position: "",
       service: "",
       quantity: 0,
       amount: "",
       manager: "",
-      status: "온보딩",
+      status: "신규",
       date: new Date().toISOString().slice(0, 10),
     };
     setCustomerDeals((prev) => [...prev, blank]);
