@@ -4195,9 +4195,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           <h1 className="text-[24px] text-[#1A1A1A]">고객 관리</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate("/settings/pipeline")} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="파이프라인 설정">
-            <Settings size={12} /> 파이프라인
-          </button>
           <button onClick={() => setShowColumnConfig(true)} className="flex items-center gap-1.5 px-3 py-2 border rounded-lg text-[0.75rem] text-[#666] hover:bg-[#F7F8FA] transition-colors" style={{ borderColor: T.border }} title="필드 관리">
             <Grid3X3 size={12} /> 필드
           </button>
@@ -4633,7 +4630,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                     </div>
                     <p className="text-[1.1rem] text-[#1A1A1A] mb-2">고객 데이터를 추가해보세요</p>
                     <p className="text-[0.8rem] text-[#999] mb-9 text-center leading-relaxed">
-                      고객 정보와 고객 정보를 등록하면 파이프라인을 한 눈에 관리할 수 있습니다.
+                      고객을 등록하면 재구매·충성 전환을 한눈에 관리할 수 있어요.
                     </p>
                     <div className="flex items-stretch gap-4 w-full max-w-[512px]">
                       <button
