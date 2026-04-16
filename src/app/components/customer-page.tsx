@@ -3952,7 +3952,7 @@ function RelationView({
 }
 
 /* ─── MAIN PAGE ─── */
-function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
+function DealflowPageInner({ pageId, urlViewType }: { pageId: string; urlViewType: ViewType }) {
   /* ── Customization State ── */
   const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(DEFAULT_STAGES);
   const [savedViews, setSavedViews] = useState<SavedView[]>(DEFAULT_VIEWS);
@@ -3960,7 +3960,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   /* ── Navigation ── */
   const navigate = useNavigate();
-  const { pageId } = useParams<{ pageId: string }>();
 
   /* ── Modal Toggles ── */
   const [showAddView, setShowAddView] = useState(false);
@@ -3973,7 +3972,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const activeViewId = savedViews.find((v) => v.viewType === urlViewType)?.id || savedViews[0]?.id || "v1";
 
   const setActiveView = (vt: ViewType) => {
-    navigate(`/customers/${pageId || "default"}/${vt}`, { replace: true });
+    navigate(`/customers/${pageId}/${vt}`, { replace: true });
   };
 
   /* ── Original State ── */
@@ -4012,12 +4011,12 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [showDensityMenu, setShowDensityMenu] = useState(false);
   const [customerDeals, setCustomerDeals] = useState<Customer[]>([]);
   const { activeWorkspaceId } = useAuth();
-  const { data: dbCustomers } = useCustomers();
+  const { data: dbCustomers } = useCustomers(pageId);
   const { data: lifecycleStages = [] } = useLifecycleStages();
   const { data: dbCustomFields } = useCustomFields("customer");
-  const createCustomerMut = useCreateCustomer();
-  const updateCustomerMut = useUpdateCustomer();
-  const deleteCustomerMut = useDeleteCustomer();
+  const createCustomerMut = useCreateCustomer(pageId);
+  const updateCustomerMut = useUpdateCustomer(pageId);
+  const deleteCustomerMut = useDeleteCustomer(pageId);
   const createCustomFieldMut = useCreateCustomField("customer");
   const updateCustomFieldMut = useUpdateCustomField("customer");
   const deleteCustomFieldMut = useDeleteCustomField("customer");
@@ -6081,5 +6080,6 @@ export function CustomerPage() {
   const resolvedViewType: ViewType = VALID_VIEW_TYPES.includes(viewType as ViewType)
     ? (viewType as ViewType)
     : "table";
-  return <DealflowPageInner key={pageId} urlViewType={resolvedViewType} />;
+  if (!pageId) return null;
+  return <DealflowPageInner key={pageId} pageId={pageId} urlViewType={resolvedViewType} />;
 }

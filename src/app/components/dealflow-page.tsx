@@ -4040,7 +4040,7 @@ function TimelineView({
 }
 
 /* ─── MAIN PAGE ─── */
-function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
+function DealflowPageInner({ pageId, urlViewType }: { pageId: string; urlViewType: ViewType }) {
   /* ── Customization State ── */
   const [pipelineStages, setPipelineStages] = useState<PipelineStage[]>(DEFAULT_STAGES);
   const [savedViews, setSavedViews] = useState<SavedView[]>(DEFAULT_VIEWS);
@@ -4164,10 +4164,10 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   );
 
   /* ── Deals 데이터 소스 + 뮤테이션 (Day 4 Phase B) ── */
-  const { data: dbDeals } = useDeals();
-  const createDealMut = useCreateDeal();
-  const updateDealMut = useUpdateDeal();
-  const deleteDealMut = useDeleteDeal();
+  const { data: dbDeals } = useDeals(pageId);
+  const createDealMut = useCreateDeal(pageId);
+  const updateDealMut = useUpdateDeal(pageId);
+  const deleteDealMut = useDeleteDeal(pageId);
 
   /* ── Deal 편집 값 → DB patch 변환 ──
    * built-in 필드는 각 컬럼으로, 나머지는 custom_field_values jsonb 머지.
@@ -4247,7 +4247,6 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   /* ── Navigation ── */
   const navigate = useNavigate();
-  const { pageId } = useParams<{ pageId: string }>();
 
   /* ── Modal Toggles ── */
   const [showAddView, setShowAddView] = useState(false);
@@ -4260,7 +4259,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const activeViewId = savedViews.find((v) => v.viewType === urlViewType)?.id || savedViews[0]?.id || "v1";
 
   const setActiveView = (vt: ViewType) => {
-    navigate(`/dealflow/${pageId || "main"}/${vt}`, { replace: true });
+    navigate(`/dealflow/${pageId}/${vt}`, { replace: true });
   };
 
   /* ── Original State ── */
@@ -6123,5 +6122,6 @@ export function DealflowPage() {
   const resolvedViewType: ViewType = VALID_VIEW_TYPES.includes(viewType as ViewType)
     ? (viewType as ViewType)
     : "table";
-  return <DealflowPageInner key={pageId} urlViewType={resolvedViewType} />;
+  if (!pageId) return null;
+  return <DealflowPageInner key={pageId} pageId={pageId} urlViewType={resolvedViewType} />;
 }

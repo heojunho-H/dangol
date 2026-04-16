@@ -11,6 +11,7 @@ import { FieldSettingsPage } from "./components/field-settings-page";
 import { LoginPage } from "./components/login-page";
 import { LandingPage } from "./components/landing-page";
 import { RequireAuth } from "./components/require-auth";
+import { PageRedirect } from "./components/page-redirect";
 
 export const router = createBrowserRouter([
   { path: "/", Component: LandingPage },
@@ -26,6 +27,10 @@ export const router = createBrowserRouter([
       { path: "/home", Component: HomePage },
       { path: "/dashboard", Component: DashboardPage },
       { path: "/sales", Component: SalesPage },
+      {
+        path: "/dealflow",
+        element: <PageRedirect scope="deal" basePath="/dealflow" defaultName="영업 파이프라인" />,
+      },
       { path: "/dealflow/:pageId/:viewType?", Component: DealflowPage },
       { path: "/settings/pipeline", Component: PipelineSettingsPage },
       { path: "/settings/fields", Component: FieldSettingsPage },
