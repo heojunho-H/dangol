@@ -9,8 +9,8 @@
   overflow: hidden;
 }
 
-/* 로그인 셸이 마운트되면 body·html 까지 다크로 물들여서, 스크롤 오버슈트/iOS rubber-banding 시 흰 배경이 새어 나오지 않게 한다. */
+/* 로그인 셸이 마운트되면 body·html 까지 브랜드 배경(off-white)으로 맞춰, 스크롤 오버슈트/iOS rubber-banding 시 테마 흰색이 번지지 않게 한다. */
 html:has(.login-shell),
 body:has(.login-shell) {
-  background: #0f1115;
+  background: #f5f6fa;
 }
