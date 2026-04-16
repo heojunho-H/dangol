@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 export function LoginPage() {
   const nav = useNavigate();
   const loc = useLocation();
-  const redirectTo = (loc.state as any)?.from?.pathname ?? "/";
+  const redirectTo = (loc.state as any)?.from?.pathname ?? "/home";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

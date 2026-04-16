@@ -25,7 +25,7 @@ export function SignupPage() {
       return;
     }
     // 이메일 확인 off 가정 → 바로 세션 생성됨
-    nav("/", { replace: true });
+    nav("/home", { replace: true });
   };
 
   return (

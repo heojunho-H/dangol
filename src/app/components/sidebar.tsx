@@ -44,7 +44,7 @@ const navSections: NavSection[] = [
   {
     label: null,
     items: [
-      { id: "home", icon: Home, label: "홈", to: "/" },
+      { id: "home", icon: Home, label: "홈", to: "/home" },
       { id: "dashboard", icon: LayoutDashboard, label: "대시보드", to: "/dashboard" },
     ],
   },
@@ -63,7 +63,7 @@ const navSections: NavSection[] = [
   {
     label: "스마트 리마인드",
     items: [
-      { id: "wip", icon: Clock, label: "기능추가중", to: "/" },
+      { id: "wip", icon: Clock, label: "기능추가중", to: "/home" },
     ],
   },
 ];

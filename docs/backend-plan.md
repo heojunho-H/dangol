@@ -801,3 +801,68 @@ PORT=3001
 3. **공개 폼 submit = Edge Function** 으로 (Express 완전 제거) vs Express에 남김? → Edge Function 권장.
 
 확정되면 **Day 1 마이그레이션 SQL** 파일 작성부터 착수합니다.
+
+---
+
+## 16. 진행 현황 (2026-04-16 기준)
+
+### ✅ 완료 (Day 1–4 대부분)
+
+#### Day 1 — Supabase 기반 전부 완료
+- 프로젝트 생성(서울) + 19개 테이블 + 인덱스 + `updated_at` 트리거 (`0001_init_schema.sql`)
+- `handle_new_user`, `seed_workspace`, `on_deal_won`, `validate_required_custom_fields`, `purge_orphan_custom_field_values`, `migrate_field_type` (`0002`)
+- signup → workspace + 파이프라인 7개 + lifecycle 4개 + 뷰 5개 + widget 2개 수동 검증 완료
+
+#### Day 2 — RLS + Storage 전부 완료
+- 19개 테이블 RLS 정책 (`0003`)
+- `attachments` (private) + `avatars` (public) 버킷·정책 (`0004`)
+- cross-tenant 격리 검증 (User A/B 수동 테스트)
+- 핫픽스: `0005` (memberships 42P17 무한재귀), `0006` (SECURITY DEFINER search_path)
+
+#### Day 3 — FE 인증·스키마 로드 전부 완료
+- `supabase.ts`, `auth-context` (activeWorkspaceId 관리), `/login` `/signup` 페이지, `require-auth` 가드
+- 훅 4종: `useCustomFields`, `usePipelineStages`, `useLifecycleStages`, `useSavedViews`
+- dealflow-page 스키마 state 4개 DB hydrate
+
+#### Day 4 — Deal 연결 (부분 완료)
+- `useDeals` + `useCreateDeal` + `useUpdateDeal`(낙관적) + `useDeleteDeal`(낙관적)
+- `customerDeals` DB 연동 + `adaptDealRow` 어댑터
+- 뮤테이션 11곳 연결: 셀 편집·단계 이동·상태 변경·bulk 상태/삭제·AddDealModal·addBlankDeal·startBlankTable
+
+### ⏳ 남은 작업
+
+#### Day 4 잔여
+- `useActivityLogs(dealId)` — 활동로그 (드로어 타임라인)
+- `useAttachedFiles(dealId)` + Storage presigned URL — 파일 업로드/다운로드
+- `manager_user_id` ↔ 이름 매핑 (현재 text manager 편집 시 `null` 저장)
+- `handleOnboardingComplete` (엑셀 임포트) 로컬 전용 → bulk insert 전환
+- 컬럼 삭제 시 `purge_orphan_custom_field_values` RPC 호출
+
+#### Day 5 — Customer 복제 + AI 프록시 슬림화 (0%)
+- `useCustomers` + CRUD, `useContracts`
+- `customer-page.tsx` 미러 마이그레이션 (dealflow와 동일 패턴)
+- `server/src/routes/` 14개 중 AI 제외 전부 삭제: auth, deals, customers, custom-fields, pipeline-stages, views, widget-config, custom-kpis, goals, activity-logs, files, forms, chat
+- AI 3개 라우트를 Supabase JWT 검증 미들웨어로 전환 + `ai_usage_logs` insert
+
+#### Day 6 — 엑셀·폼·챗 (0%)
+- 엑셀 임포트: AI 매핑 → `custom_fields` upsert → `deals.insert([...])` bulk
+- 공개 폼 Edge Function `public-form-submit` (service_role 사용)
+- Chat UI + `chat_sessions`/`chat_messages` 연결
+
+#### Day 7 — 다듬기·검증 (0%)
+- 빈 상태/로딩/에러 UI 일관화
+- 낙관적 업데이트 롤백 케이스 수동 QA
+- 두 워크스페이스 E2E 격리 재검증
+- Sentry (FE + 서버) 연결
+
+#### Day 8 — 배포 (0%)
+- FE Cloudflare Pages/Vercel
+- AI 서버 Fly.io (Dockerfile)
+- 프로덕션 `.env`, CORS 화이트리스트
+- Supabase Pro 전환 결정
+
+#### 기획안 §15 재확인 필요
+- 이메일 확인 off 확정?
+- 공개 폼 = Edge Function 확정? (권장안)
+
+**다음 권장 진입점:** Day 5 Customer 미러링부터. dealflow의 Phase A+B 패턴이 template으로 잡혔으니 customer-page 복제가 가장 빠르게 끝나고, 그 뒤 Express 라우트 대량 삭제로 서버 단순화.
