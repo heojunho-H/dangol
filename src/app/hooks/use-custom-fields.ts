@@ -29,6 +29,7 @@ export interface CustomFieldRow {
   label: string;
   type: FieldType;
   required: boolean;
+  locked: boolean;
   options: CustomFieldOption[];
   visible: boolean;
   sort_order: number;
@@ -38,7 +39,7 @@ export interface CustomFieldRow {
 }
 
 const CUSTOM_FIELD_SELECT =
-  "id, workspace_id, scope, key, label, type, required, options, visible, sort_order, deleted_at, created_at, updated_at";
+  "id, workspace_id, scope, key, label, type, required, locked, options, visible, sort_order, deleted_at, created_at, updated_at";
 
 export function useCustomFields(scope: FieldScope) {
   const workspaceId = useActiveWorkspaceId();

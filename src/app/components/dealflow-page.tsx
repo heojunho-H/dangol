@@ -394,6 +394,7 @@ interface CustomField {
   locked: boolean;
   options?: string[];
   visible: boolean;
+  sort_order: number;
 }
 
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
@@ -413,20 +414,24 @@ const FIELD_TYPE_ICONS: Record<FieldType, string> = {
   date: "📅", person: "👤", phone: "📞", email: "✉️", file: "📎",
 };
 
+// DB가 아직 로드되기 전의 낙관적 초기값. 마이그레이션 0009와 동일한 시드여서
+// 대부분의 경우 플래시 없이 DB 상태로 자연스럽게 교체된다. 사용자가 커스터마이즈한
+// 워크스페이스에서는 로드 직후 visible/순서가 재정렬될 수 있지만, 새로고침 시마다
+// 로컬 기본값으로 되돌아가던 종전 문제를 대체한다.
 const DEFAULT_FIELDS: CustomField[] = [
-  { id: "f1",  key: "company",  label: "기업명",           type: "text",    required: true,  locked: true,  visible: true },
-  { id: "f2",  key: "stage",    label: "진행상태",         type: "select",  required: false, locked: false, visible: true, options: [] },
-  { id: "f3",  key: "contact",  label: "담당자",           type: "text",    required: false, locked: false, visible: true },
-  { id: "f4",  key: "position", label: "직책",             type: "text",    required: false, locked: false, visible: false },
-  { id: "f5",  key: "service",  label: "희망서비스",       type: "text",    required: false, locked: false, visible: true },
-  { id: "f6",  key: "amount",   label: "견적금액(VAT미포함)", type: "number",  required: false, locked: false, visible: true },
-  { id: "f7",  key: "quantity", label: "총수량",           type: "number",  required: false, locked: false, visible: true },
-  { id: "f8",  key: "manager",  label: "고객책임자",       type: "person",  required: false, locked: false, visible: true },
-  { id: "f9",  key: "status",   label: "성공여부",         type: "select",  required: false, locked: false, visible: true, options: ["진행중", "성공", "실패"] },
-  { id: "f10", key: "date",     label: "등록일",           type: "date",    required: false, locked: false, visible: true },
-  { id: "f11", key: "phone",    label: "전화번호",         type: "phone",   required: false, locked: false, visible: false },
-  { id: "f12", key: "email",    label: "이메일",           type: "email",   required: false, locked: false, visible: false },
-  { id: "f13", key: "memo",     label: "비고",             type: "text",    required: false, locked: false, visible: false },
+  { id: "f1",  key: "company",  label: "기업명",              type: "text",    required: true,  locked: true, visible: true,  sort_order: 0 },
+  { id: "f2",  key: "stage",    label: "진행상태",            type: "select",  required: false, locked: true, visible: true,  sort_order: 1, options: [] },
+  { id: "f3",  key: "contact",  label: "담당자",              type: "text",    required: false, locked: true, visible: true,  sort_order: 2 },
+  { id: "f4",  key: "position", label: "직책",                type: "text",    required: false, locked: true, visible: false, sort_order: 3 },
+  { id: "f5",  key: "service",  label: "희망서비스",          type: "text",    required: false, locked: true, visible: true,  sort_order: 4 },
+  { id: "f6",  key: "amount",   label: "견적금액(VAT미포함)", type: "number",  required: false, locked: true, visible: true,  sort_order: 5 },
+  { id: "f7",  key: "quantity", label: "총수량",              type: "number",  required: false, locked: true, visible: true,  sort_order: 6 },
+  { id: "f8",  key: "manager",  label: "고객책임자",          type: "person",  required: false, locked: true, visible: true,  sort_order: 7 },
+  { id: "f9",  key: "status",   label: "성공여부",            type: "select",  required: false, locked: true, visible: true,  sort_order: 8, options: ["진행중", "성공", "실패"] },
+  { id: "f10", key: "date",     label: "등록일",              type: "date",    required: false, locked: true, visible: true,  sort_order: 9 },
+  { id: "f11", key: "phone",    label: "전화번호",            type: "phone",   required: false, locked: true, visible: false, sort_order: 10 },
+  { id: "f12", key: "email",    label: "이메일",              type: "email",   required: false, locked: true, visible: false, sort_order: 11 },
+  { id: "f13", key: "memo",     label: "비고",                type: "text",    required: false, locked: true, visible: false, sort_order: 12 },
 ];
 
 /* ─── SAMPLE DATA ─── */
@@ -1209,6 +1214,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
           required: false,
           locked: false,
           visible: true,
+          sort_order: 1000 + createdFields.length, // 기존 필드 뒤에 붙음
           options:
             nf.type === "select" && nf.suggestedOptions
               ? nf.suggestedOptions
@@ -4074,25 +4080,25 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   useEffect(() => {
     if (!dbCustomFields) return;
-    // built-in 키는 DEFAULT_FIELDS가 단일 진실 — DB 사용자 필드는 append만
-    const builtInKeys = new Set(DEFAULT_FIELDS.map((f) => f.key));
-    const userFields: CustomField[] = dbCustomFields
-      .filter((f) => !builtInKeys.has(f.key))
-      .map((f) => ({
-        id: f.id,
-        key: f.key,
-        label: f.label,
-        type: f.type,
-        required: f.required,
-        locked: false,
-        visible: f.visible,
-        options: Array.isArray(f.options)
-          ? f.options.map((o) =>
-              typeof o === "string" ? o : (o.value ?? o.label ?? "")
-            )
-          : [],
-      }));
-    setCustomFields([...DEFAULT_FIELDS, ...userFields]);
+    // migration 0009 이후 built-in 필드도 DB에 존재하므로 DB가 단일 진실.
+    // visible / sort_order / label 모두 DB 상태 그대로 반영해 새로고침 시 레이아웃이
+    // 튀지 않는다.
+    const next: CustomField[] = dbCustomFields.map((f) => ({
+      id: f.id,
+      key: f.key,
+      label: f.label,
+      type: f.type,
+      required: f.required,
+      locked: f.locked,
+      visible: f.visible,
+      sort_order: f.sort_order,
+      options: Array.isArray(f.options)
+        ? f.options.map((o) =>
+            typeof o === "string" ? o : (o.value ?? o.label ?? "")
+          )
+        : [],
+    }));
+    setCustomFields(next);
   }, [dbCustomFields]);
 
   const createCustomFieldMut = useCreateCustomField("deal");
@@ -4100,7 +4106,8 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const deleteCustomFieldMut = useDeleteCustomField("deal");
 
   // setCustomFields 래퍼 — 로컬 상태 변경과 동시에 DB 에 create/update/delete 디스패치.
-  // built-in(locked) 필드는 DB 에 없으므로 제외. OnboardingFlow 같은 자식에게도 이 래퍼를 넘긴다.
+  // locked(built-in) 필드는 type/required 변경·삭제·생성 불가, 하지만 label/visible/
+  // options/sort_order 는 허용. OnboardingFlow 같은 자식에게도 이 래퍼를 넘긴다.
   const setCustomFieldsAndPersist: React.Dispatch<
     React.SetStateAction<CustomField[]>
   > = useCallback(
@@ -4114,9 +4121,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         const nextByKey = new Map(next.map((f) => [f.key, f]));
 
         for (const [key, field] of nextByKey) {
-          if (field.locked) continue;
           const old = prevByKey.get(key);
           if (!old) {
+            if (field.locked) continue; // built-in 필드는 재생성 금지
             createCustomFieldMut.mutate({
               key,
               label: field.label,
@@ -4124,14 +4131,16 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
               required: field.required,
               options: field.options,
               visible: field.visible,
+              sort_order: field.sort_order,
             });
             continue;
           }
           const patch: UpdateCustomFieldPatch = {};
           if (old.label !== field.label) patch.label = field.label;
-          if (old.type !== field.type) patch.type = field.type;
-          if (old.required !== field.required) patch.required = field.required;
+          if (!field.locked && old.type !== field.type) patch.type = field.type;
+          if (!field.locked && old.required !== field.required) patch.required = field.required;
           if (old.visible !== field.visible) patch.visible = field.visible;
+          if (old.sort_order !== field.sort_order) patch.sort_order = field.sort_order;
           const optsChanged =
             JSON.stringify(old.options ?? []) !==
             JSON.stringify(field.options ?? []);
@@ -4142,7 +4151,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         }
 
         for (const [key, field] of prevByKey) {
-          if (field.locked) continue;
+          if (field.locked) continue; // built-in 삭제 금지
           if (!nextByKey.has(key)) {
             deleteCustomFieldMut.mutate(key);
           }
@@ -4317,6 +4326,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   const startBlankTable = useCallback(() => {
     const t = Date.now();
+    const keepVisible = new Set(["company", "stage", "status"]);
     const blankCols: CustomField[] = Array.from({ length: 4 }, (_, i) => ({
       id: `cf_blank_${t}_${i}`,
       key: `col_${t}_${i + 1}`,
@@ -4325,11 +4335,26 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       required: false,
       locked: false,
       visible: true,
+      sort_order: 2 + i, // company, stage, [blanks...], status
     }));
-    setCustomFieldsAndPersist((prev) => [...prev, ...blankCols]);
-    const blankKeys = blankCols.map((c) => c.key);
-    setVisibleColumns(new Set(["company", "stage", ...blankKeys, "status"]));
-    setColumnOrder(["company", "stage", ...blankKeys, "status"]);
+    setCustomFieldsAndPersist((prev) => {
+      // 1) existing 필드: keepVisible 만 visible, 그 외는 hidden
+      // 2) company=0, stage=1 로 고정, status 는 맨 뒤, blanks 는 그 사이
+      const existing = prev.map((f) => ({
+        ...f,
+        visible: keepVisible.has(f.key) ? true : false,
+      }));
+      // sort_order 재배치
+      const statusOrder = 2 + blankCols.length; // blanks 뒤
+      let nextOrder = statusOrder + 1;
+      const reordered = existing.map((f) => {
+        if (f.key === "company") return { ...f, sort_order: 0 };
+        if (f.key === "stage") return { ...f, sort_order: 1 };
+        if (f.key === "status") return { ...f, sort_order: statusOrder };
+        return { ...f, sort_order: nextOrder++ };
+      });
+      return [...reordered, ...blankCols];
+    });
     setActiveView("table");
     const firstStage = pipelineStages[0];
     createDealMut.mutate(
@@ -4369,6 +4394,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setCustomFieldsAndPersist((prev) => {
       const existing = new Set(prev.map((f) => f.key));
       while (existing.has(key)) { key = `${baseKey}_${i++}`; }
+      const maxOrder = prev.reduce((m, f) => Math.max(m, f.sort_order ?? 0), -1);
       return [...prev, {
         id: `cf_${Date.now()}`,
         key,
@@ -4377,9 +4403,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         required: false,
         locked: false,
         visible: true,
+        sort_order: maxOrder + 1,
       }];
     });
-    setVisibleColumns((prev) => { const n = new Set(prev); n.add(key); return n; });
     setNewColName("");
     setNewColType("text");
     setShowAddColumn(false);
@@ -4398,7 +4424,8 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       if (existing) {
         return prev.map((f) => (f.key === key ? { ...f, label: trimmed } : f));
       }
-      return [...prev, { id: `cf_${Date.now()}`, key, label: trimmed, type: "text", required: false, locked: false, visible: true }];
+      const maxOrder = prev.reduce((m, f) => Math.max(m, f.sort_order ?? 0), -1);
+      return [...prev, { id: `cf_${Date.now()}`, key, label: trimmed, type: "text", required: false, locked: false, visible: true, sort_order: maxOrder + 1 }];
     });
   }, [setCustomFieldsAndPersist]);
 
@@ -4410,55 +4437,50 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     }
     if (!window.confirm(`"${field.label}" 컬럼을 삭제하시겠습니까? 모든 행의 해당 값이 사라집니다.`)) return;
     setCustomFieldsAndPersist((prev) => prev.filter((f) => f.key !== key));
-    setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
     setCustomerDeals((prev) => prev.map((d) => { const { [key]: _, ...rest } = d as Record<string, unknown>; return rest as Deal; }));
   }, [customFields, setCustomFieldsAndPersist]);
 
   const hideColumn = useCallback((key: string) => {
-    setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
-  }, []);
-  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
-    new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
-  );
+    setCustomFieldsAndPersist((prev) => prev.map((f) => (f.key === key ? { ...f, visible: false } : f)));
+  }, [setCustomFieldsAndPersist]);
 
-  /* ── Column order (user-defined via column config) ── */
-  const [columnOrder, setColumnOrder] = useState<string[]>([]);
   // Dangol 기본 3필드(기업명·진행상태·성공여부)를 항상 맨 앞·맨 뒤로 고정.
   // 사용자가 싫으면 필드 관리 다이얼로그에서 끌 수 있음.
   const [pinDangolColumns, setPinDangolColumns] = useState(true);
   const [colDragKey, setColDragKey] = useState<string | null>(null);
 
-  /* ── Merge ALL_COLUMNS with dynamic customFields (auto-created on import) ── */
+  /* ── visibleColumns: customFields.visible 에서 파생. DB 상태를 그대로 반영하므로
+        새로고침해도 흔들리지 않는다. ── */
+  const visibleColumns = useMemo<Set<string>>(
+    () => new Set(customFields.filter((f) => f.visible).map((f) => f.key)),
+    [customFields]
+  );
+
+  /* ── Merge ALL_COLUMNS UI 메타데이터(filter/sort/info) 를 customFields 에 오버레이.
+        customFields 는 DB 쿼리에서 sort_order ASC 로 이미 정렬됨. ── */
   const mergedColumns = useMemo<ColumnDef[]>(() => {
-    const builtInKeys = new Set(ALL_COLUMNS.map((c) => c.key));
-    const extras: ColumnDef[] = customFields
-      .filter((f) => !builtInKeys.has(f.key))
-      .map((f) => ({
+    const metaByKey = new Map(ALL_COLUMNS.map((c) => [c.key, c]));
+    const sorted = [...customFields].sort(
+      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    );
+    return sorted.map((f) => {
+      const meta = metaByKey.get(f.key);
+      return {
         key: f.key,
         label: f.label,
         required: f.required,
-        filter: f.type === "select" || f.type === "person",
-        sort: f.type !== "file",
+        info: meta?.info,
+        filter: meta?.filter ?? (f.type === "select" || f.type === "person"),
+        sort: meta?.sort ?? (f.type !== "file"),
         defaultVisible: f.visible,
-      }));
-    return [...ALL_COLUMNS, ...extras];
+      };
+    });
   }, [customFields]);
 
-  /* ── Ordered columns: columnOrder first (if set), then natural order;
-        active columns surface on top, inactive at the bottom. ── */
+  /* ── 활성 컬럼이 위로, 비활성은 아래로. Dangol 기본 3필드 고정 옵션 유지. ── */
   const orderedColumns = useMemo<ColumnDef[]>(() => {
-    const byKey = new Map(mergedColumns.map((c) => [c.key, c]));
-    const seen = new Set<string>();
-    const out: ColumnDef[] = [];
-    for (const k of columnOrder) {
-      const c = byKey.get(k);
-      if (c && !seen.has(k)) { out.push(c); seen.add(k); }
-    }
-    for (const c of mergedColumns) {
-      if (!seen.has(c.key)) { out.push(c); seen.add(c.key); }
-    }
-    let active = out.filter((c) => visibleColumns.has(c.key));
-    const inactive = out.filter((c) => !visibleColumns.has(c.key));
+    let active = mergedColumns.filter((c) => visibleColumns.has(c.key));
+    const inactive = mergedColumns.filter((c) => !visibleColumns.has(c.key));
     if (pinDangolColumns) {
       const frontKeys = ["company", "stage"];
       const backKeys = ["status"];
@@ -4474,7 +4496,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       active = [...front, ...middle, ...back];
     }
     return [...active, ...inactive];
-  }, [mergedColumns, columnOrder, visibleColumns, pinDangolColumns]);
+  }, [mergedColumns, visibleColumns, pinDangolColumns]);
 
   const activeColumns = useMemo(
     () => orderedColumns.filter((c) => visibleColumns.has(c.key)),
@@ -4485,41 +4507,37 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     [orderedColumns, visibleColumns]
   );
 
-  /* ── Drag to reorder active columns in config dialog ── */
+  /* ── Drag to reorder active columns. sort_order 를 0..N 로 재번호해 DB 에 저장.
+        드래그 중에는 로컬 customFields 만 갱신하고, dragEnd 때 실제 DB 뮤테이션 디스패치. ── */
+  const pendingReorderRef = useRef(false);
   const handleColDragOver = (e: React.DragEvent, targetKey: string) => {
     e.preventDefault();
     if (!colDragKey || colDragKey === targetKey) return;
-    // only reorder within the active section
     if (!visibleColumns.has(targetKey) || !visibleColumns.has(colDragKey)) return;
-    setColumnOrder((prev) => {
-      // materialize current ordered key list as the baseline
-      const base = prev.length > 0
-        ? [...prev.filter((k) => mergedColumns.some((c) => c.key === k)),
-           ...mergedColumns.map((c) => c.key).filter((k) => !prev.includes(k))]
-        : mergedColumns.map((c) => c.key);
-      const from = base.indexOf(colDragKey);
-      const to = base.indexOf(targetKey);
+    setCustomFields((prev) => {
+      const sorted = [...prev].sort(
+        (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+      );
+      const from = sorted.findIndex((f) => f.key === colDragKey);
+      const to = sorted.findIndex((f) => f.key === targetKey);
       if (from === -1 || to === -1) return prev;
-      const next = [...base];
-      const [item] = next.splice(from, 1);
-      next.splice(to, 0, item);
-      return next;
+      const arr = [...sorted];
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
+      pendingReorderRef.current = true;
+      return arr.map((f, i) => ({ ...f, sort_order: i }));
     });
   };
 
-  // Auto-reveal newly-added custom field columns (post-import) in the table
-  useEffect(() => {
-    const builtInKeys = new Set(ALL_COLUMNS.map((c) => c.key));
-    setVisibleColumns((prev) => {
-      const next = new Set(prev);
-      let changed = false;
-      for (const f of customFields) {
-        if (builtInKeys.has(f.key)) continue;
-        if (f.visible && !next.has(f.key)) { next.add(f.key); changed = true; }
-      }
-      return changed ? next : prev;
-    });
-  }, [customFields]);
+  const handleColDragEnd = useCallback(() => {
+    setColDragKey(null);
+    if (!pendingReorderRef.current) return;
+    pendingReorderRef.current = false;
+    // customFields 는 이미 새 sort_order 로 업데이트됨 → 각 필드 DB 에 영속.
+    for (const f of customFields) {
+      updateCustomFieldMut.mutate({ key: f.key, patch: { sort_order: f.sort_order } });
+    }
+  }, [customFields, updateCustomFieldMut]);
 
   /* ── CSV Export (dynamic: built-ins + custom fields) ── */
   const exportDealsCsv = useCallback((list: Deal[]) => {
@@ -4542,11 +4560,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const toggleColumn = (key: string) => {
     const col = mergedColumns.find((c) => c.key === key);
     if (col?.required) return;
-    setVisibleColumns((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
+    setCustomFieldsAndPersist((prev) =>
+      prev.map((f) => (f.key === key ? { ...f, visible: !f.visible } : f))
+    );
   };
 
   const addDeal = (deal: Deal) => {
@@ -4571,19 +4587,13 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
           if (!isEmpty((d as Record<string, unknown>)[k])) hasData.add(k);
         }
       }
-      setVisibleColumns((prev) => {
-        const next = new Set<string>();
-        for (const k of prev) if (hasData.has(k)) next.add(k);
-        next.add("company"); // required — always visible
-        return next;
-      });
-      // Flip empty custom fields to visible:false so the auto-reveal
-      // effect doesn't re-add them and the field-settings UI reflects it.
+      // 데이터가 없는 컬럼은 visible:false 로 숨김. company 는 required 라 항상 표시.
+      // locked/required 필드도 포함해 일괄 업데이트 — 사용자가 임포트한 파일에 맞게
+      // 테이블이 자동 정리된다.
       setCustomFieldsAndPersist((prev) =>
         prev.map((f) => {
-          if (f.locked || f.required) return f;
-          if (hasData.has(f.key)) return f;
-          return { ...f, visible: false };
+          if (f.required) return { ...f, visible: true };
+          return { ...f, visible: hasData.has(f.key) };
         })
       );
     }
@@ -5836,7 +5846,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                       draggable={active && !isLocked}
                       onDragStart={() => active && !isLocked && setColDragKey(col.key)}
                       onDragOver={(e) => active && handleColDragOver(e, col.key)}
-                      onDragEnd={() => setColDragKey(null)}
+                      onDragEnd={handleColDragEnd}
                       className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-[#F8F9FA] transition-colors"
                       style={{ opacity: dragging ? 0.5 : 1, cursor: active && !isLocked ? "grab" : "default" }}
                     >
