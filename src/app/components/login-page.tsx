@@ -79,24 +79,24 @@ export function LoginPage() {
       <div className="pointer-events-none absolute w-[520px] h-[520px] rounded-full blur-[110px] bg-[rgba(26,71,42,0.08)] -top-[180px] -right-[120px]"></div>
       <div className="pointer-events-none absolute w-[420px] h-[420px] rounded-full blur-[110px] bg-[rgba(45,103,65,0.08)] -bottom-[160px] left-[6%]"></div>
 
-      <header className="relative z-10 flex items-center justify-center pt-10 pb-6">
-        <a href="/" className="flex items-center gap-2.5 font-black text-[1.05rem] tracking-tight text-[#0f1117] no-underline">
-          <div className="w-7 h-7 rounded-[8px] bg-[#1a472a] flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-white"></div>
+      <header className="relative z-10 flex items-center justify-center pt-7 pb-4">
+        <a href="/" className="flex items-center gap-2 font-black text-[0.9rem] tracking-tight text-[#0f1117] no-underline">
+          <div className="w-5 h-5 rounded-[6px] bg-[#1a472a] flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
           </div>
           Dangol CRM
         </a>
       </header>
 
-      <main className="relative z-10 flex-1 px-6 md:px-[5vw] pb-12">
-        <div className="mx-auto max-w-[1120px] rounded-[20px] border border-[#e2e5ef] bg-white shadow-[0_12px_48px_rgba(15,17,23,0.08)] overflow-hidden">
-          <div className="grid md:grid-cols-[1fr_0.9fr]">
-            <section className="px-7 md:px-12 py-12 md:py-16 border-b md:border-b-0 md:border-r border-[#e2e5ef]">
-              <div className="mb-9">
-                <h1 className="text-[1.5rem] md:text-[1.65rem] font-black text-[#0f1117] tracking-[-0.5px] mb-2 leading-tight">
+      <main className="relative z-10 flex-1 px-6 md:px-[5vw] pb-8 flex items-start justify-center">
+        <div className="w-full max-w-[880px] rounded-[16px] border border-[#e2e5ef] bg-white shadow-[0_8px_32px_rgba(15,17,23,0.06)] overflow-hidden">
+          <div className="grid md:grid-cols-[1fr_0.88fr]">
+            <section className="px-6 md:px-9 py-8 md:py-10 border-b md:border-b-0 md:border-r border-[#e2e5ef]">
+              <div className="mb-6">
+                <h1 className="text-[1.15rem] md:text-[1.2rem] font-black text-[#0f1117] tracking-[-0.3px] mb-1 leading-tight">
                   지금 바로 시작하세요
                 </h1>
-                <p className="text-[0.9rem] text-[#7c8099]">
+                <p className="text-[0.8rem] text-[#7c8099]">
                   이메일 또는 Google 계정으로 3분이면 CRM 을 띄울 수 있어요.
                 </p>
               </div>
@@ -105,22 +105,22 @@ export function LoginPage() {
                 type="button"
                 onClick={onGoogle}
                 disabled={busy}
-                className="w-full h-[50px] flex items-center justify-center gap-2.5 bg-white hover:bg-[#f8f9fc] border-[1.5px] border-[#e2e5ef] hover:border-[#cfd3df] rounded-[12px] text-[0.92rem] font-semibold text-[#0f1117] transition-all disabled:opacity-60 cursor-pointer"
+                className="w-full h-[40px] flex items-center justify-center gap-2 bg-white hover:bg-[#f8f9fc] border-[1.5px] border-[#e2e5ef] hover:border-[#cfd3df] rounded-[10px] text-[0.83rem] font-semibold text-[#0f1117] transition-all disabled:opacity-60 cursor-pointer"
               >
                 <GoogleIcon />
                 Google 계정으로 계속
               </button>
 
-              <div className="my-6 flex items-center gap-3 text-[0.72rem] text-[#9ea3b8] uppercase tracking-[1.5px]">
+              <div className="my-4 flex items-center gap-3 text-[0.66rem] text-[#9ea3b8] uppercase tracking-[1.5px]">
                 <div className="flex-1 h-px bg-[#e2e5ef]"></div>
                 또는
                 <div className="flex-1 h-px bg-[#e2e5ef]"></div>
               </div>
 
               {step === "email" ? (
-                <form onSubmit={onContinue} className="flex flex-col gap-3">
+                <form onSubmit={onContinue} className="flex flex-col gap-2.5">
                   <label className="relative block">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9ea3b8]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ea3b8]">
                       <MailIcon />
                     </span>
                     <input
@@ -131,21 +131,21 @@ export function LoginPage() {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       placeholder="회사 이메일을 입력하세요"
-                      className="w-full h-[50px] bg-white border-[1.5px] border-[#e2e5ef] rounded-[12px] pl-11 pr-4 text-[0.92rem] text-[#0f1117] placeholder:text-[#9ea3b8] focus:outline-none focus:border-[#1a472a] focus:shadow-[0_0_0_4px_rgba(26,71,42,0.08)] transition-all"
+                      className="w-full h-[40px] bg-white border-[1.5px] border-[#e2e5ef] rounded-[10px] pl-9 pr-3 text-[0.83rem] text-[#0f1117] placeholder:text-[#9ea3b8] focus:outline-none focus:border-[#1a472a] focus:shadow-[0_0_0_3px_rgba(26,71,42,0.08)] transition-all"
                     />
                   </label>
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full h-[50px] bg-[#1a472a] hover:bg-[#0f3820] disabled:opacity-60 rounded-[12px] text-[0.92rem] font-bold text-white shadow-[0_4px_16px_rgba(26,71,42,0.22)] hover:shadow-[0_6px_22px_rgba(26,71,42,0.3)] transition-all cursor-pointer"
+                    className="w-full h-[40px] bg-[#1a472a] hover:bg-[#0f3820] disabled:opacity-60 rounded-[10px] text-[0.83rem] font-bold text-white shadow-[0_3px_12px_rgba(26,71,42,0.2)] hover:shadow-[0_4px_16px_rgba(26,71,42,0.28)] transition-all cursor-pointer"
                   >
                     이메일로 계속
                   </button>
                 </form>
               ) : (
-                <form onSubmit={onAuthSubmit} className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between bg-[#f8f9fc] border-[1.5px] border-[#e2e5ef] rounded-[12px] px-4 h-[50px]">
-                    <span className="text-[0.9rem] text-[#3a3f52] truncate">{email}</span>
+                <form onSubmit={onAuthSubmit} className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between bg-[#f8f9fc] border-[1.5px] border-[#e2e5ef] rounded-[10px] px-3 h-[40px]">
+                    <span className="text-[0.8rem] text-[#3a3f52] truncate">{email}</span>
                     <button
                       type="button"
                       onClick={() => {
@@ -153,13 +153,13 @@ export function LoginPage() {
                         setPassword("");
                         setError(null);
                       }}
-                      className="text-[0.78rem] font-semibold text-[#1a472a] hover:text-[#0f3820] cursor-pointer bg-transparent border-0"
+                      className="text-[0.72rem] font-semibold text-[#1a472a] hover:text-[#0f3820] cursor-pointer bg-transparent border-0"
                     >
                       변경
                     </button>
                   </div>
                   <label className="relative block">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9ea3b8]">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9ea3b8]">
                       <LockIcon />
                     </span>
                     <input
@@ -171,13 +171,13 @@ export function LoginPage() {
                       required
                       minLength={6}
                       placeholder="비밀번호 (6자 이상)"
-                      className="w-full h-[50px] bg-white border-[1.5px] border-[#e2e5ef] rounded-[12px] pl-11 pr-4 text-[0.92rem] text-[#0f1117] placeholder:text-[#9ea3b8] focus:outline-none focus:border-[#1a472a] focus:shadow-[0_0_0_4px_rgba(26,71,42,0.08)] transition-all"
+                      className="w-full h-[40px] bg-white border-[1.5px] border-[#e2e5ef] rounded-[10px] pl-9 pr-3 text-[0.83rem] text-[#0f1117] placeholder:text-[#9ea3b8] focus:outline-none focus:border-[#1a472a] focus:shadow-[0_0_0_3px_rgba(26,71,42,0.08)] transition-all"
                     />
                   </label>
                   <button
                     type="submit"
                     disabled={busy}
-                    className="w-full h-[50px] bg-[#1a472a] hover:bg-[#0f3820] disabled:opacity-60 rounded-[12px] text-[0.92rem] font-bold text-white shadow-[0_4px_16px_rgba(26,71,42,0.22)] hover:shadow-[0_6px_22px_rgba(26,71,42,0.3)] transition-all cursor-pointer"
+                    className="w-full h-[40px] bg-[#1a472a] hover:bg-[#0f3820] disabled:opacity-60 rounded-[10px] text-[0.83rem] font-bold text-white shadow-[0_3px_12px_rgba(26,71,42,0.2)] hover:shadow-[0_4px_16px_rgba(26,71,42,0.28)] transition-all cursor-pointer"
                   >
                     {busy ? "확인 중…" : "로그인 또는 가입"}
                   </button>
@@ -185,12 +185,12 @@ export function LoginPage() {
               )}
 
               {error && (
-                <div className="mt-4 text-[0.82rem] text-[#b42318] bg-[#fef3f2] border border-[#fecdca] rounded-[10px] px-3.5 py-2.5">
+                <div className="mt-3 text-[0.75rem] text-[#b42318] bg-[#fef3f2] border border-[#fecdca] rounded-[8px] px-3 py-2">
                   {error}
                 </div>
               )}
 
-              <p className="mt-8 text-[0.76rem] leading-relaxed text-[#7c8099] max-w-[440px]">
+              <p className="mt-6 text-[0.68rem] leading-relaxed text-[#7c8099] max-w-[380px]">
                 이메일을 입력하면 Dangol CRM 가입·로그인 안내를 받기로 동의하는 것으로 간주됩니다. 안내 메일은 언제든 수신 거부할 수 있고, 자세한 내용은{" "}
                 <a href="#" className="underline text-[#3a3f52] hover:text-[#1a472a]">
                   개인정보처리방침
@@ -199,15 +199,15 @@ export function LoginPage() {
               </p>
             </section>
 
-            <section className="px-7 md:px-12 py-12 md:py-16 bg-[#f8faf9] flex flex-col">
-              <div className="inline-flex self-start items-center gap-2 bg-[#e8f0ec] text-[#1a472a] px-3 py-1.5 rounded-full text-[0.72rem] font-bold tracking-wide mb-6">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#1a472a]"></div>
+            <section className="px-6 md:px-9 py-8 md:py-10 bg-[#f8faf9] flex flex-col">
+              <div className="inline-flex self-start items-center gap-1.5 bg-[#e8f0ec] text-[#1a472a] px-2.5 py-1 rounded-full text-[0.65rem] font-bold tracking-wide mb-4">
+                <div className="w-1 h-1 rounded-full bg-[#1a472a]"></div>
                 한국 SMB 를 위한 CRM
               </div>
-              <h2 className="text-[1.45rem] md:text-[1.6rem] font-black text-[#0f1117] tracking-[-0.5px] leading-[1.3] mb-5">
+              <h2 className="text-[1.1rem] md:text-[1.2rem] font-black text-[#0f1117] tracking-[-0.3px] leading-[1.35] mb-3.5">
                 Dangol CRM 에<br />오신 것을 환영합니다.
               </h2>
-              <div className="space-y-4 text-[0.92rem] text-[#3a3f52] leading-[1.72] max-w-[420px]">
+              <div className="space-y-3 text-[0.82rem] text-[#3a3f52] leading-[1.65] max-w-[360px]">
                 <p>무거운 설정·복잡한 용어 없이, 우리 회사 업무 흐름에 맞게 항목과 단계를 직접 정의하세요.</p>
                 <p>
                   영업 파이프라인부터 고객 라이프사이클까지, 한 곳에서 보고 관리할 수 있도록{" "}
@@ -215,18 +215,18 @@ export function LoginPage() {
                 </p>
               </div>
 
-              <div className="mt-10 pt-8 border-t border-[#e2e5ef] grid grid-cols-3 gap-4">
+              <div className="mt-6 pt-5 border-t border-[#e2e5ef] grid grid-cols-3 gap-3">
                 <div>
-                  <div className="text-[1.25rem] font-black text-[#0f1117] tracking-[-0.5px]">3분</div>
-                  <div className="text-[0.7rem] text-[#7c8099] mt-1">평균 설정 시간</div>
+                  <div className="text-[1rem] font-black text-[#0f1117] tracking-[-0.3px]">3분</div>
+                  <div className="text-[0.62rem] text-[#7c8099] mt-0.5">평균 설정 시간</div>
                 </div>
                 <div>
-                  <div className="text-[1.25rem] font-black text-[#0f1117] tracking-[-0.5px]">98%</div>
-                  <div className="text-[0.7rem] text-[#7c8099] mt-1">고객 만족도</div>
+                  <div className="text-[1rem] font-black text-[#0f1117] tracking-[-0.3px]">98%</div>
+                  <div className="text-[0.62rem] text-[#7c8099] mt-0.5">고객 만족도</div>
                 </div>
                 <div>
-                  <div className="text-[1.25rem] font-black text-[#0f1117] tracking-[-0.5px]">500+</div>
-                  <div className="text-[0.7rem] text-[#7c8099] mt-1">도입 기업</div>
+                  <div className="text-[1rem] font-black text-[#0f1117] tracking-[-0.3px]">500+</div>
+                  <div className="text-[0.62rem] text-[#7c8099] mt-0.5">도입 기업</div>
                 </div>
               </div>
             </section>
@@ -234,8 +234,8 @@ export function LoginPage() {
         </div>
       </main>
 
-      <footer className="relative z-10 pb-8 px-6 md:px-[5vw]">
-        <div className="mx-auto max-w-[1120px] flex items-center justify-center gap-6 md:gap-8 text-[0.76rem] text-[#7c8099]">
+      <footer className="relative z-10 pb-5 px-6 md:px-[5vw]">
+        <div className="mx-auto max-w-[880px] flex items-center justify-center gap-5 md:gap-7 text-[0.68rem] text-[#7c8099]">
           <span>© 2026 Dangol CRM</span>
           <a href="#" className="hover:text-[#1a472a] transition-colors">
             개인정보처리방침
