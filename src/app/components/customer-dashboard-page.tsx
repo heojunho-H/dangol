@@ -12,6 +12,8 @@ import {
   TrendingDown,
   Users,
 } from "lucide-react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/auth-context";
 import {
   BarChart,
   Bar,
@@ -58,29 +60,29 @@ function formatManwon(manwon: number): string {
   return `₩${manwon.toLocaleString()}만`;
 }
 
-async function fetchDashboard(): Promise<DashboardData | null> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("dangol_access_token") : null;
-  if (!token) return null;
-  try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/customers/dashboard`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as DashboardData;
-  } catch {
+async function fetchDashboard(wid: string): Promise<DashboardData | null> {
+  const { data, error } = await supabase.rpc("customer_dashboard", { wid });
+  if (error) {
+    console.error("[customer_dashboard rpc]", error);
     return null;
   }
+  return data as DashboardData;
 }
 
 export function CustomerDashboardPage() {
+  const { activeWorkspaceId } = useAuth();
   const [healthActive, setHealthActive] = useState(true);
   const [data, setData] = useState<DashboardData>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
+    if (!activeWorkspaceId) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
-    fetchDashboard().then((d) => {
+    fetchDashboard(activeWorkspaceId).then((d) => {
       if (cancelled) return;
       if (d) {
         setData(d);
@@ -91,7 +93,7 @@ export function CustomerDashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [activeWorkspaceId]);
 
   const kpiCards = [
     {

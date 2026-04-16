@@ -8,6 +8,18 @@ import {
   type FieldMapping,
 } from "../lib/excel-import";
 import {
+  useCustomers,
+  useCreateCustomer,
+  useUpdateCustomer,
+  useDeleteCustomer,
+  type CustomerRow,
+  type CustomerPatch,
+  type CustomerInsertInput,
+} from "../hooks/use-customers";
+import { useLifecycleStages } from "../hooks/use-lifecycle-stages";
+import { useAuth } from "../lib/auth-context";
+import { supabase } from "../lib/supabase";
+import {
   BarChart,
   Bar,
   XAxis,
@@ -471,7 +483,7 @@ function getSelectChipColor(fieldKey: string, value: string, options: string[]):
 }
 
 interface Customer {
-  id: number;
+  id: string;
   company: string;
   stage: string; // 고객상태: 신규 | 재구매 | 충성고객
   contact: string;
@@ -485,24 +497,49 @@ interface Customer {
   [key: string]: unknown;
 }
 
+const CUSTOMER_BUILTIN_KEYS = new Set([
+  "id", "company", "stage", "contact", "position", "amount",
+  "healthScore", "renewalDate", "manager", "status", "date",
+  "phone", "email", "memo", "customerGrade",
+]);
+
+// DB → UI 변환. custom_field_values 와 lifecycle_stage 조인을 Customer 모양으로 풀어낸다.
+function adaptCustomerRow(row: CustomerRow): Customer {
+  const cfv = (row.custom_field_values ?? {}) as Record<string, unknown>;
+  return {
+    id: row.id,
+    company: row.company || row.name || "",
+    stage: row.lifecycle_stage?.name ?? "",
+    contact: row.name || "",
+    position: row.title || "",
+    amount: typeof cfv.amount === "string" ? cfv.amount : "",
+    healthScore: row.health_score,
+    renewalDate: typeof cfv.renewalDate === "string" ? cfv.renewalDate : "",
+    manager: typeof cfv.manager === "string" ? cfv.manager : "",
+    status: row.lifecycle_stage?.name ?? row.status ?? "",
+    date: row.created_at ? row.created_at.slice(0, 10) : "",
+    ...cfv,
+  };
+}
+
 
 /* ─── SAMPLE CUSTOMERS (onboarding 완료 시 로드) ─── */
 const SAMPLE_DEALS: Customer[] = [
-  { id: 1,  company: "(주)테크솔루션",     stage: "충성고객", contact: "김영호", position: "이사",  amount: "₩1.2억", healthScore: 88, renewalDate: "2026-09-15", manager: "박지은", status: "충성고객", date: "2025-03-15" },
-  { id: 2,  company: "스마트팩토리(주)",   stage: "재구매",   contact: "이수진", position: "부장",  amount: "₩8,400만", healthScore: 76, renewalDate: "2026-08-18", manager: "김태현", status: "재구매",   date: "2025-08-18" },
-  { id: 3,  company: "(주)글로벌트레이드", stage: "신규",     contact: "박민수", position: "과장",  amount: "₩5,500만", healthScore: 65, renewalDate: "2027-03-20", manager: "이서연", status: "신규",     date: "2026-03-20" },
-  { id: 4,  company: "디지털커머스(주)",   stage: "신규",     contact: "최지아", position: "대리",  amount: "₩1,200만", healthScore: 72, renewalDate: "2027-03-22", manager: "박지은", status: "신규",     date: "2026-03-22" },
-  { id: 5,  company: "(주)바이오헬스",     stage: "신규",     contact: "정대현", position: "팀장",  amount: "₩2,940만",   healthScore: 42, renewalDate: "2026-05-25", manager: "김태현", status: "신규",     date: "2024-09-25" },
-  { id: 6,  company: "에너지플러스(주)",   stage: "재구매",   contact: "한소희", position: "차장",  amount: "₩9,200만", healthScore: 91, renewalDate: "2026-09-28", manager: "이서연", status: "재구매",   date: "2025-09-28" },
-  { id: 7,  company: "(주)푸드테크",       stage: "신규",     contact: "오재석", position: "과장",  amount: "₩1,500만", healthScore: 68, renewalDate: "2027-04-01", manager: "박지은", status: "신규",     date: "2026-04-01" },
-  { id: 8,  company: "클라우드원(주)",     stage: "충성고객", contact: "윤미래", position: "부장",  amount: "₩1.4억", healthScore: 84, renewalDate: "2026-10-03", manager: "김태현", status: "충성고객", date: "2024-10-03" },
-  { id: 9,  company: "(주)핀테크랩",       stage: "재구매",   contact: "서준혁", position: "이사",  amount: "₩4,600만", healthScore: 79, renewalDate: "2026-07-05", manager: "이서연", status: "재구매",   date: "2025-07-05" },
-  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",     contact: "강하은", position: "대리",  amount: "₩8,500만", healthScore: 71, renewalDate: "2027-04-07", manager: "박지은", status: "신규",     date: "2026-04-07" },
-  { id: 11, company: "(주)헬스케어AI",     stage: "충성고객", contact: "윤성민", position: "팀장",  amount: "₩2.8억",  healthScore: 93, renewalDate: "2026-09-10", manager: "김태현", status: "충성고객", date: "2024-03-10" },
-  { id: 12, company: "리테일허브(주)",     stage: "충성고객", contact: "조은지", position: "과장",  amount: "₩1.1억", healthScore: 82, renewalDate: "2026-08-28", manager: "이서연", status: "충성고객", date: "2024-08-28" },
-  { id: 13, company: "(주)스마트물류",     stage: "신규",     contact: "임재현", position: "부장",  amount: "₩3,400만", healthScore: 28, renewalDate: "",           manager: "박지은", status: "신규",     date: "2024-02-14" },
-  { id: 14, company: "에듀테크파트너(주)", stage: "충성고객", contact: "노지수", position: "이사",  amount: "₩1.9억", healthScore: 87, renewalDate: "2026-10-08", manager: "김태현", status: "충성고객", date: "2025-04-08" },
-  { id: 15, company: "(주)그린에너지",     stage: "신규",     contact: "배소연", position: "차장",  amount: "₩2,100만", healthScore: 48, renewalDate: "2026-07-20", manager: "이서연", status: "신규",     date: "2025-01-20" },
+  { id: "1",  company: "(주)테크솔루션",     stage: "충성고객", contact: "김영호", position: "이사",  amount: "₩1.2억", healthScore: 88, renewalDate: "2026-09-15", manager: "박지은", status: "충성고객", date: "2025-03-15" },
+  { id: "2",  company: "스마트팩토리(주)",   stage: "재구매",   contact: "이수진", position: "부장",  amount: "₩8,400만", healthScore: 76, renewalDate: "2026-08-18", manager: "김태현", status: "재구매",   date: "2025-08-18" },
+  { id: "3",  company: "(주)글로벌트레이드", stage: "신규",     contact: "박민수", position: "과장",  amount: "₩5,500만", healthScore: 65, renewalDate: "2027-03-20", manager: "이서연", status: "신규",     date: "2026-03-20" },
+  { id: "4",  company: "디지털커머스(주)",   stage: "신규",     contact: "최지아", position: "대리",  amount: "₩1,200만", healthScore: 72, renewalDate: "2027-03-22", manager: "박지은", status: "신규",     date: "2026-03-22" },
+  { id: "5",  company: "(주)바이오헬스",     stage: "신규",     contact: "정대현", position: "팀장",  amount: "₩2,940만",   healthScore: 42, renewalDate: "2026-05-25", manager: "김태현", status: "신규",     date: "2024-09-25" },
+  { id: "6",  company: "에너지플러스(주)",   stage: "재구매",   contact: "한소희", position: "차장",  amount: "₩9,200만", healthScore: 91, renewalDate: "2026-09-28", manager: "이서연", status: "재구매",   date: "2025-09-28" },
+  { id: "7",  company: "(주)푸드테크",       stage: "신규",     contact: "오재석", position: "과장",  amount: "₩1,500만", healthScore: 68, renewalDate: "2027-04-01", manager: "박지은", status: "신규",     date: "2026-04-01" },
+  { id: "8",  company: "클라우드원(주)",     stage: "충성고객", contact: "윤미래", position: "부장",  amount: "₩1.4억", healthScore: 84, renewalDate: "2026-10-03", manager: "김태현", status: "충성고객", date: "2024-10-03" },
+  { id: "9",  company: "(주)핀테크랩",       stage: "재구매",   contact: "서준혁", position: "이사",  amount: "₩4,600만", healthScore: 79, renewalDate: "2026-07-05", manager: "이서연", status: "재구매",   date: "2025-07-05" },
+  { id: "10", company: "모빌리티솔루션(주)", stage: "신규",     contact: "강하은", position: "대리",  amount: "₩8,500만", healthScore: 71, renewalDate: "2027-04-07", manager: "박지은", status: "신규",     date: "2026-04-07" },
+  { id: "11", company: "(주)헬스케어AI",     stage: "충성고객", contact: "윤성민", position: "팀장",  amount: "₩2.8억",  healthScore: 93, renewalDate: "2026-09-10", manager: "김태현", status: "충성고객", date: "2024-03-10" },
+  { id: "12", company: "리테일허브(주)",     stage: "충성고객", contact: "조은지", position: "과장",  amount: "₩1.1억", healthScore: 82, renewalDate: "2026-08-28", manager: "이서연", status: "충성고객", date: "2024-08-28" },
+  { id: "13", company: "(주)스마트물류",     stage: "신규",     contact: "임재현", position: "부장",  amount: "₩3,400만", healthScore: 28, renewalDate: "",           manager: "박지은", status: "신규",     date: "2024-02-14" },
+  { id: "14", company: "에듀테크파트너(주)", stage: "충성고객", contact: "노지수", position: "이사",  amount: "₩1.9억", healthScore: 87, renewalDate: "2026-10-08", manager: "김태현", status: "충성고객", date: "2025-04-08" },
+  { id: "15", company: "(주)그린에너지",     stage: "신규",     contact: "배소연", position: "차장",  amount: "₩2,100만", healthScore: 48, renewalDate: "2026-07-20", manager: "이서연", status: "신규",     date: "2025-01-20" },
 ];
 
 /* ─── WIDGET DEFINITIONS ─── */
@@ -952,7 +989,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
         stage = stageAliases[stage] || firstActive?.name || pipelineStages[0]?.name || "";
       }
       return {
-        id: now + i,
+        id: `tmp_${now + i}`,
         company: String(r.company ?? ""),
         stage,
         contact: String(r.contact ?? ""),
@@ -1001,9 +1038,15 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
     setTimeout(() => { if (!controller.signal.aborted) setDashboardProgress(2); }, 750);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/ai/dashboard-recommendation`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("세션이 없습니다");
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-dashboard-recommendation`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
         body: JSON.stringify({
           deals: dealsForAnalysisRef.current,
           availableWidgets: allWidgets.map(w => ({ id: w.id, name: w.name, category: w.category })),
@@ -1065,9 +1108,15 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
     setTimeout(() => { if (!controller.signal.aborted) setAnalysisProgress(2); }, 900);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/ai/column-mapping`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("세션이 없습니다");
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-column-mapping`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
         body: JSON.stringify({ excelColumns, targetFields }),
         signal: controller.signal,
       });
@@ -1863,9 +1912,9 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
 
 /* ─── WEB FORM SAMPLE DEALS ─── */
 const WEB_FORM_SAMPLE_DEALS: Customer[] = [
-  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", amount: "₩0", healthScore: 70, renewalDate: "", manager: "박지은", status: "신규", date: "2026-04-12" },
-  { id: 102, company: "스마트로직(주)",   stage: "신규", contact: "이동훈", position: "대표이사",   amount: "₩0", healthScore: 70, renewalDate: "", manager: "김태현", status: "신규", date: "2026-04-12" },
-  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀",     amount: "₩0", healthScore: 70, renewalDate: "", manager: "이서연", status: "신규", date: "2026-04-11" },
+  { id: "101", company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", amount: "₩0", healthScore: 70, renewalDate: "", manager: "박지은", status: "신규", date: "2026-04-12" },
+  { id: "102", company: "스마트로직(주)",   stage: "신규", contact: "이동훈", position: "대표이사",   amount: "₩0", healthScore: 70, renewalDate: "", manager: "김태현", status: "신규", date: "2026-04-12" },
+  { id: "103", company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀",     amount: "₩0", healthScore: 70, renewalDate: "", manager: "이서연", status: "신규", date: "2026-04-11" },
 ];
 
 /* ─── WEB FORM ONBOARDING FLOW ─── */
@@ -2393,7 +2442,7 @@ const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   "기타":       { bg: "#F3F4F6", color: "#6B7280" },
 };
 
-function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields, onUpdateField }: { deal: Customer; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void; customFields: CustomField[]; onUpdateField: (id: number, key: string, value: unknown) => void }) {
+function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields, onUpdateField }: { deal: Customer; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: string, stage: string) => void; onChangeStatus: (dealId: string, status: string) => void; customFields: CustomField[]; onUpdateField: (id: string, key: string, value: unknown) => void }) {
   const [tab, setTab] = useState<DrawerTab>("basic");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -3387,7 +3436,7 @@ function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields
   const handleSubmit = () => {
     if (!form.company?.trim()) return;
     const deal: Customer = {
-      id: Date.now(),
+      id: `tmp_${Date.now()}`,
       company: form.company,
       stage: form.stage || stageNames[0] || "신규",
       contact: form.contact || "",
@@ -3923,7 +3972,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [showColumnConfig, setShowColumnConfig] = useState(false);
   const [customizeMode, setCustomizeMode] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Customer | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [sorts, setSorts] = useState<SortRule[]>([]);
@@ -3951,7 +4000,77 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [rowDensity, setRowDensity] = useState<RowDensity>("normal");
   const [showDensityMenu, setShowDensityMenu] = useState(false);
   const [customerDeals, setCustomerDeals] = useState<Customer[]>([]);
-  const [editingCell, setEditingCell] = useState<{ id: number; key: string } | null>(null);
+  const { activeWorkspaceId } = useAuth();
+  const { data: dbCustomers } = useCustomers();
+  const { data: lifecycleStages = [] } = useLifecycleStages();
+  const createCustomerMut = useCreateCustomer();
+  const updateCustomerMut = useUpdateCustomer();
+  const deleteCustomerMut = useDeleteCustomer();
+
+  useEffect(() => {
+    if (!dbCustomers) return;
+    setCustomerDeals(dbCustomers.map(adaptCustomerRow));
+  }, [dbCustomers]);
+
+  // UI 필드 → DB patch 변환. stage(고객상태) 는 customer_lifecycle_stages 이름 매칭.
+  // amount/renewalDate/manager 처럼 스키마에 없는 필드는 custom_field_values 에 저장.
+  const buildCustomerPatch = useCallback(
+    (id: string, key: string, value: unknown): CustomerPatch | null => {
+      switch (key) {
+        case "company":
+          return { company: String(value ?? "") };
+        case "contact":
+          return { name: String(value ?? "") };
+        case "position":
+          return { title: String(value ?? "") };
+        case "phone":
+          return { phone: String(value ?? "") };
+        case "email":
+          return { email: String(value ?? "") };
+        case "healthScore":
+          return { health_score: Number(value) || 0 };
+        case "status":
+        case "stage": {
+          const st = lifecycleStages.find((s) => s.name === value);
+          return { lifecycle_stage_id: st?.id ?? null, status: String(value ?? "") };
+        }
+        default: {
+          const cur = dbCustomers?.find((r) => r.id === id)?.custom_field_values ?? {};
+          return { custom_field_values: { ...cur, [key]: value } };
+        }
+      }
+    },
+    [lifecycleStages, dbCustomers]
+  );
+
+  const buildCustomerInsert = useCallback(
+    (c: Customer): CustomerInsertInput => {
+      const st = lifecycleStages.find((s) => s.name === c.stage);
+      const cfv: Record<string, unknown> = {};
+      for (const k in c) {
+        if (CUSTOMER_BUILTIN_KEYS.has(k)) continue;
+        const v = (c as Record<string, unknown>)[k];
+        if (v !== undefined && v !== "") cfv[k] = v;
+      }
+      if (c.amount) cfv.amount = c.amount;
+      if (c.renewalDate) cfv.renewalDate = c.renewalDate;
+      if (c.manager) cfv.manager = c.manager;
+      return {
+        name: c.contact || c.company || "",
+        company: c.company || "",
+        title: c.position || "",
+        phone: (c.phone as string) ?? "",
+        email: (c.email as string) ?? "",
+        status: c.status || "활성",
+        lifecycle_stage_id: st?.id ?? null,
+        health_score: typeof c.healthScore === "number" ? c.healthScore : 70,
+        custom_field_values: cfv,
+      };
+    },
+    [lifecycleStages]
+  );
+
+  const [editingCell, setEditingCell] = useState<{ id: string; key: string } | null>(null);
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [headerMenu, setHeaderMenu] = useState<{ key: string; x: number; y: number } | null>(null);
   const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
@@ -3983,7 +4102,13 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setCustomFields((prev) => prev.filter((f) => f.key !== key));
     setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
     setCustomerDeals((prev) => prev.map((d) => { const { [key]: _, ...rest } = d as Record<string, unknown>; return rest as Customer; }));
-  }, [customFields]);
+    // 서버측 jsonb 값도 purge (orphan 청소). 실패해도 UI 는 정상.
+    if (!CUSTOMER_BUILTIN_KEYS.has(key) && activeWorkspaceId) {
+      void supabase.rpc("purge_orphan_custom_field_values", {
+        wid: activeWorkspaceId, field_scope: "customer", field_key: key,
+      }).then(() => { /* noop */ });
+    }
+  }, [customFields, activeWorkspaceId]);
 
   const hideColumn = useCallback((key: string) => {
     setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
@@ -4016,7 +4141,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setShowAddColumn(false);
   }, [newColName, newColType]);
 
-  const updateDealField = useCallback((id: number, key: string, value: unknown) => {
+  const updateDealField = useCallback((id: string, key: string, value: unknown) => {
     setCustomerDeals((prev) => prev.map((d) => (d.id === id ? { ...d, [key]: value } : d)));
     const field = customFields.find((f) => f.key === key);
     if (field && (field.type === "select" || field.type === "multi-select")) {
@@ -4027,7 +4152,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         }
       }
     }
-  }, [customFields]);
+    const patch = buildCustomerPatch(id, key, value);
+    if (patch) updateCustomerMut.mutate({ id, patch });
+  }, [customFields, buildCustomerPatch, updateCustomerMut]);
 
   const startBlankTable = useCallback(() => {
     const t = Date.now();
@@ -4044,38 +4171,30 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setVisibleColumns(new Set(["company", "stage", "customerGrade", ...blankCols.map((c) => c.key)]));
     setColumnOrder(["company", "customerGrade", "stage", ...blankCols.map((c) => c.key)]);
     setActiveView("table");
-    const id = t + Math.floor(Math.random() * 1000);
-    const blank: Customer = {
-      id,
-      company: "",
-      stage: pipelineStages[0]?.name || "신규",
-      contact: "",
-      position: "",
-      amount: "",
-      manager: "",
-      status: "신규",
-      date: new Date().toISOString().slice(0, 10),
-    };
-    setCustomerDeals([blank]);
-    setEditingCell(null);
-  }, [pipelineStages]);
+    const firstStage = lifecycleStages[0];
+    createCustomerMut.mutate(
+      {
+        name: "",
+        company: "",
+        lifecycle_stage_id: firstStage?.id ?? null,
+        status: firstStage?.name ?? "신규",
+      },
+      { onSuccess: (row) => setEditingCell({ id: row.id, key: "company" }) }
+    );
+  }, [lifecycleStages, createCustomerMut]);
 
   const addBlankDeal = useCallback(() => {
-    const id = Date.now() + Math.floor(Math.random() * 1000);
-    const blank: Customer = {
-      id,
-      company: "",
-      stage: pipelineStages[0]?.name || "신규",
-      contact: "",
-      position: "",
-      amount: "",
-      manager: "",
-      status: "신규",
-      date: new Date().toISOString().slice(0, 10),
-    };
-    setCustomerDeals((prev) => [...prev, blank]);
-    setEditingCell({ id, key: "company" });
-  }, [pipelineStages]);
+    const firstStage = lifecycleStages[0];
+    createCustomerMut.mutate(
+      {
+        name: "",
+        company: "",
+        lifecycle_stage_id: firstStage?.id ?? null,
+        status: firstStage?.name ?? "신규",
+      },
+      { onSuccess: (row) => setEditingCell({ id: row.id, key: "company" }) }
+    );
+  }, [lifecycleStages, createCustomerMut]);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
     new Set(ALL_COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key))
   );
@@ -4203,15 +4322,13 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   };
 
   const addDeal = (deal: Customer) => {
-    setCustomerDeals((prev) => [deal, ...prev]);
+    createCustomerMut.mutate(buildCustomerInsert(deal));
   };
 
   const handleOnboardingComplete = (importedDeals: Customer[], recommendedWidgets?: string[]) => {
-    setCustomerDeals((prev) => {
-      const existingIds = new Set(prev.map((d) => d.id));
-      const newDeals = importedDeals.filter((d) => !existingIds.has(d.id));
-      return [...newDeals, ...prev];
-    });
+    for (const d of importedDeals) {
+      createCustomerMut.mutate(buildCustomerInsert(d));
+    }
 
     // Hide columns that have no data across imported rows
     if (importedDeals.length > 0) {
@@ -4254,25 +4371,27 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setShowOnboarding(false);
   };
 
-  const moveDealStage = useCallback((dealId: number, toStage: string) => {
-    const targetStage = pipelineStages.find((s) => s.name === toStage);
+  const moveDealStage = useCallback((dealId: string, toStage: string) => {
     setCustomerDeals((prev) =>
-      prev.map((d) => {
-        if (d.id !== dealId) return d;
-        let nextStatus = d.status;
-        if (targetStage?.type === "won") nextStatus = "성공";
-        else if (targetStage?.type === "lost") nextStatus = "실패";
-        else if (d.status !== "진행중") nextStatus = "진행중";
-        return { ...d, stage: toStage, status: nextStatus };
-      })
+      prev.map((d) => (d.id === dealId ? { ...d, stage: toStage, status: toStage } : d))
     );
-  }, [pipelineStages]);
+    const st = lifecycleStages.find((s) => s.name === toStage);
+    updateCustomerMut.mutate({
+      id: dealId,
+      patch: { lifecycle_stage_id: st?.id ?? null, status: toStage },
+    });
+  }, [lifecycleStages, updateCustomerMut]);
 
-  const updateDealStatus = useCallback((dealId: number, status: string) => {
+  const updateDealStatus = useCallback((dealId: string, status: string) => {
     setCustomerDeals((prev) =>
       prev.map((d) => (d.id === dealId ? { ...d, status } : d))
     );
-  }, []);
+    const st = lifecycleStages.find((s) => s.name === status);
+    updateCustomerMut.mutate({
+      id: dealId,
+      patch: { lifecycle_stage_id: st?.id ?? null, status },
+    });
+  }, [lifecycleStages, updateCustomerMut]);
 
   /* ── View Management ── */
   const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(null);
@@ -4455,7 +4574,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     else setSelectedIds(new Set(paginatedDeals.map((d) => d.id)));
   };
 
-  const toggleOne = (id: number) => {
+  const toggleOne = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -4465,19 +4584,37 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   /* ── Bulk Actions ── */
   const bulkChangeStatus = (newStatus: string) => {
+    const ids = Array.from(selectedIds);
     setCustomerDeals((prev) => prev.map((d) => selectedIds.has(d.id) ? { ...d, status: newStatus } : d));
+    const st = lifecycleStages.find((s) => s.name === newStatus);
+    for (const id of ids) {
+      updateCustomerMut.mutate({
+        id,
+        patch: { lifecycle_stage_id: st?.id ?? null, status: newStatus },
+      });
+    }
     setSelectedIds(new Set());
     setBulkActionMenu("");
   };
 
   const bulkChangeManager = (newManager: string) => {
+    const ids = Array.from(selectedIds);
     setCustomerDeals((prev) => prev.map((d) => selectedIds.has(d.id) ? { ...d, manager: newManager } : d));
+    for (const id of ids) {
+      const cur = (dbCustomers?.find((r) => r.id === id)?.custom_field_values ?? {}) as Record<string, unknown>;
+      updateCustomerMut.mutate({
+        id,
+        patch: { custom_field_values: { ...cur, manager: newManager } },
+      });
+    }
     setSelectedIds(new Set());
     setBulkActionMenu("");
   };
 
   const bulkDelete = () => {
+    const ids = Array.from(selectedIds);
     setCustomerDeals((prev) => prev.filter((d) => !selectedIds.has(d.id)));
+    for (const id of ids) deleteCustomerMut.mutate(id);
     setSelectedIds(new Set());
     setBulkActionMenu("");
   };

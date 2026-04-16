@@ -79,6 +79,8 @@ import {
   Code2,
   RefreshCw,
 } from "lucide-react";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../lib/auth-context";
 import { usePipelineStages } from "../hooks/use-pipeline-stages";
 import { useSavedViews } from "../hooks/use-saved-views";
 import { useCustomFields } from "../hooks/use-custom-fields";
@@ -1053,9 +1055,15 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
     setTimeout(() => { if (!controller.signal.aborted) setDashboardProgress(2); }, 750);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/ai/dashboard-recommendation`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("세션이 없습니다");
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-dashboard-recommendation`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
         body: JSON.stringify({
           deals: dealsForAnalysisRef.current,
           availableWidgets: allWidgets.map(w => ({ id: w.id, name: w.name, category: w.category })),
@@ -1117,9 +1125,15 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
     setTimeout(() => { if (!controller.signal.aborted) setAnalysisProgress(2); }, 900);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL ?? ""}/api/ai/column-mapping`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("세션이 없습니다");
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-column-mapping`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
         body: JSON.stringify({ excelColumns, targetFields }),
         signal: controller.signal,
       });
@@ -1943,11 +1957,9 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
   const [isCreating, setIsCreating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const apiBase = import.meta.env.VITE_API_URL ?? "";
-  const authHeaders = (): Record<string, string> => {
-    const tok = typeof window !== "undefined" ? localStorage.getItem("dangol_access_token") : null;
-    return tok ? { Authorization: `Bearer ${tok}` } : {};
-  };
+  const { activeWorkspaceId } = useAuth();
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? "";
+  const submitEndpoint = (id: string) => `${supabaseUrl}/functions/v1/submit-form/${id}`;
 
   const activeFields = fields.filter((f) => f.required || f.locked);
   const toggleField = (key: string) => {
@@ -1960,23 +1972,28 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
 
   const handleCreateForm = async () => {
     if (!formName.trim() || isCreating) return;
+    if (!activeWorkspaceId) return;
     setIsCreating(true);
     setErrorMsg(null);
     try {
-      const res = await fetch(`${apiBase}/api/forms`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({
+      const { data, error } = await supabase
+        .from("web_forms")
+        .insert({
+          workspace_id: activeWorkspaceId,
           name: formName,
-          fields: activeFields.map((f) => ({ key: f.key, label: f.label, required: f.required || f.locked })),
-        }),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const data = await res.json();
+          fields: activeFields.map((f) => ({
+            key: f.key,
+            label: f.label,
+            required: f.required || f.locked,
+          })),
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
       setFormId(data.id);
       setStep(2);
     } catch (err) {
-      // 백엔드 연결 실패 시 데모 모드로 진행
+      // 실패 시 데모 모드로 진행
       console.warn("폼 생성 실패, 데모 모드로 진행", err);
       setFormId(null);
       setStep(2);
@@ -1986,8 +2003,8 @@ function WebFormOnboarding({ onComplete }: { onComplete: (deals: Deal[]) => void
   };
 
   const submitUrl = formId
-    ? `${apiBase || ""}/api/public/forms/${formId}/submit`
-    : "https://api.dangol.io/api/public/forms/{FORM_ID}/submit";
+    ? submitEndpoint(formId)
+    : `${supabaseUrl || "https://<project>.supabase.co"}/functions/v1/submit-form/{FORM_ID}`;
 
   const embedCode = formId
     ? `<!-- dangol CRM 웹 폼 -->
@@ -2016,7 +2033,7 @@ ${activeFields.map((f) => `  <input name="${f.key}" placeholder="${f.label}"${f.
       return;
     }
     try {
-      const res = await fetch(`${apiBase}/api/public/forms/${formId}/submit`, {
+      const res = await fetch(submitEndpoint(formId), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -2033,7 +2050,7 @@ ${activeFields.map((f) => `  <input name="${f.key}" placeholder="${f.label}"${f.
       setSubmissionCount((c) => c + 1);
     } catch (err) {
       console.warn("테스트 제출 실패", err);
-      setErrorMsg("테스트 제출 실패 — 백엔드 상태를 확인하세요");
+      setErrorMsg("테스트 제출 실패 — Edge Function 배포 상태를 확인하세요");
     }
   };
 
@@ -2043,18 +2060,21 @@ ${activeFields.map((f) => `  <input name="${f.key}" placeholder="${f.label}"${f.
       return;
     }
     try {
-      const res = await fetch(`${apiBase}/api/forms/${formId}/submissions`, {
-        headers: authHeaders(),
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      const subs = (await res.json()) as Array<{
+      const { data, error } = await supabase
+        .from("form_submissions")
+        .select("id, deal_id, payload, created_at")
+        .eq("form_id", formId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      const subs = (data ?? []) as Array<{
         id: string;
-        dealId: string | null;
+        deal_id: string | null;
         payload: Record<string, unknown>;
-        createdAt: string;
+        created_at: string;
       }>;
       const deals: Deal[] = subs
-        .filter((s) => s.dealId)
+        .filter((s) => s.deal_id)
         .map((s, i) => ({
           id: String(Date.now() + i),
           company: String(s.payload?.company ?? "알 수 없음"),
@@ -2066,7 +2086,7 @@ ${activeFields.map((f) => `  <input name="${f.key}" placeholder="${f.label}"${f.
           amount: "₩0",
           manager: "",
           status: "진행중",
-          date: String(s.createdAt).slice(0, 10),
+          date: String(s.created_at).slice(0, 10),
         }));
       onComplete(deals.length > 0 ? deals : WEB_FORM_SAMPLE_DEALS);
     } catch (err) {

@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import { config } from "dotenv";
 import { aiRouter } from "./routes/ai.js";
-import { authRouter } from "./routes/auth.js";
 import { dealsRouter } from "./routes/deals.js";
 import { pipelineStagesRouter } from "./routes/pipeline-stages.js";
 import { customFieldsRouter } from "./routes/custom-fields.js";
@@ -33,9 +32,6 @@ app.use(
 );
 
 app.use(express.json({ limit: "2mb" }));
-
-// Public routes
-app.use("/api/auth", authRouter);
 
 // AI routes (will be protected later)
 app.use("/api/ai", aiRouter);

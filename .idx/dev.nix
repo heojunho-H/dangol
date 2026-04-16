@@ -1,3 +1,4 @@
+
 # To learn more about how to use Nix to configure your environment
 # see: https://developers.google.com/idx/guides/customize-idx-env
 { pkgs, ... }: {
@@ -29,7 +30,12 @@
       enable = true;
       previews = {
         web = {
-          command = ["npm" "run" "dev" "--" "--port" "$PORT" "--host" "0.0.0.0"];
+          # $PORT/--host 는 concurrently 가 먹어버리므로 vite 자식에게 직접 꽂아야 Firebase Studio 프록시가 붙음
+          command = [
+            "npx" "concurrently" "-k" "-n" "fe,be" "-c" "cyan,green"
+            "npx vite --port $PORT --host 0.0.0.0"
+            "npm run dev --prefix server"
+          ];
           manager = "web";
         };
       };

@@ -1,0 +1,18 @@
+# Dangol CRM · Supabase project config
+# CLI deploy 시점에 읽히는 설정. Dashboard 에서 배포할 땐 동일 설정을 UI로 지정.
+
+project_id = "dangol"
+
+# ─── Edge Functions ───
+# submit-form 은 외부 웹사이트의 익명 폼 제출을 받으므로 JWT 검증을 끈다.
+# (함수 내부에서는 service_role 로 DB 에 쓴다.)
+[functions.submit-form]
+verify_jwt = false
+
+# ai-* 는 인증된 사용자만 호출 가능 (기본 verify_jwt=true).
+# 기본값이지만 명시적으로 둬서 Dashboard 설정과 일치시킴.
+[functions.ai-column-mapping]
+verify_jwt = true
+
+[functions.ai-dashboard-recommendation]
+verify_jwt = true
