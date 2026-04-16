@@ -79,6 +79,18 @@ import {
   Code2,
   RefreshCw,
 } from "lucide-react";
+import { usePipelineStages } from "../hooks/use-pipeline-stages";
+import { useSavedViews } from "../hooks/use-saved-views";
+import { useCustomFields } from "../hooks/use-custom-fields";
+import {
+  useDeals,
+  useCreateDeal,
+  useUpdateDeal,
+  useDeleteDeal,
+  type DealRow,
+  type DealPatch,
+  type DealInsertInput,
+} from "../hooks/use-deals";
 
 /* ─── DESIGN TOKENS ─── */
 const T = {
@@ -417,7 +429,7 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 };
 
 interface Deal {
-  id: number;
+  id: string;
   company: string;
   stage: string;
   contact: string;
@@ -431,24 +443,79 @@ interface Deal {
   [key: string]: unknown;
 }
 
+/* ─── DB row → 기존 Deal shape 어댑터 ───
+ * Supabase가 int 만원으로 주는 amount를 '₩XX만' 포맷으로,
+ * stage_id는 조인된 stage.name 으로 매핑.
+ * custom_field_values 는 기존 Deal 의 인덱스 시그니처로 펼쳐 넣음.
+ * manager는 auth.users.id uuid — 이름 lookup은 Phase B 에서. */
+function formatAmountKrw(man: number): string {
+  if (!man) return "";
+  if (man >= 10000) {
+    const eok = man / 10000;
+    return `₩${Number.isInteger(eok) ? eok : eok.toFixed(1)}억`;
+  }
+  return `₩${man.toLocaleString()}만`;
+}
+
+const DB_STATUS_TO_UI: Record<string, string> = {
+  IN_PROGRESS: "진행중",
+  WON: "성공",
+  LOST: "실패",
+};
+
+const UI_STATUS_TO_DB: Record<string, "IN_PROGRESS" | "WON" | "LOST"> = {
+  진행중: "IN_PROGRESS",
+  성공: "WON",
+  실패: "LOST",
+};
+
+// "₩3,200만" / "₩1.2억" / "₩0" → int (단위: 만원). 포맷이 어그러지면 0.
+function parseAmountKrw(s: string): number {
+  if (!s) return 0;
+  const t = s.replace(/[₩,\s]/g, "");
+  const eok = t.match(/^([\d.]+)억$/);
+  if (eok) return Math.round(parseFloat(eok[1]) * 10000);
+  const man = t.match(/^([\d.]+)만$/);
+  if (man) return Math.round(parseFloat(man[1]));
+  const num = parseFloat(t);
+  return Number.isFinite(num) ? Math.round(num) : 0;
+}
+
+function adaptDealRow(row: DealRow): Deal {
+  const cfv = row.custom_field_values ?? {};
+  return {
+    id: row.id,
+    company: row.company,
+    stage: row.stage?.name ?? "",
+    contact: row.contact ?? "",
+    position: row.position ?? "",
+    service: row.service ?? "",
+    quantity: row.quantity ?? 0,
+    amount: formatAmountKrw(row.amount),
+    manager: row.manager_user_id ?? "",
+    status: DB_STATUS_TO_UI[row.status] ?? "진행중",
+    date: row.date ? row.date.slice(0, 10) : "",
+    ...cfv,
+  };
+}
 
 /* ─── SAMPLE DEALS (onboarding 완료 시 로드) ─── */
 const SAMPLE_DEALS: Deal[] = [
-  { id: 1,  company: "(주)테크솔루션",     stage: "수주확정",    contact: "김영호", position: "이사",  service: "ERP 구축",            quantity: 120, amount: "₩3,200만", manager: "박지은", status: "성공",  date: "2026-03-15" },
-  { id: 2,  company: "스마트팩토리(주)",   stage: "가격조율",    contact: "이수진", position: "부장",  service: "MES 도입",            quantity: 85,  amount: "₩2,800만", manager: "김태현", status: "진행중", date: "2026-03-18" },
-  { id: 3,  company: "(주)글로벌트레이드", stage: "견적서 발송", contact: "박민수", position: "과장",  service: "SCM 컨설팅",          quantity: 200, amount: "₩5,500만", manager: "이서연", status: "진행중", date: "2026-03-20" },
-  { id: 4,  company: "디지털커머스(주)",   stage: "신규",        contact: "최지아", position: "대리",  service: "CRM 솔루션",          quantity: 50,  amount: "₩1,200만", manager: "박지은", status: "진행중", date: "2026-03-22" },
-  { id: 5,  company: "(주)바이오헬스",     stage: "유선상담",    contact: "정대현", position: "팀장",  service: "데이터 분석",         quantity: 30,  amount: "₩980만",  manager: "김태현", status: "진행중", date: "2026-03-25" },
-  { id: 6,  company: "에너지플러스(주)",   stage: "일정조율",    contact: "한소희", position: "차장",  service: "IoT 플랫폼",          quantity: 150, amount: "₩4,100만", manager: "이서연", status: "진행중", date: "2026-03-28" },
-  { id: 7,  company: "(주)푸드테크",       stage: "유선견적상담",contact: "오재석", position: "과장",  service: "POS 시스템",          quantity: 90,  amount: "₩1,500만", manager: "박지은", status: "진행중", date: "2026-04-01" },
-  { id: 8,  company: "클라우드원(주)",     stage: "수주확정",    contact: "윤미래", position: "부장",  service: "클라우드 마이그레이션",quantity: 40,  amount: "₩6,200만", manager: "김태현", status: "성공",  date: "2026-04-03" },
-  { id: 9,  company: "(주)핀테크랩",       stage: "견적서 발송", contact: "서준혁", position: "이사",  service: "결제 시스템",         quantity: 60,  amount: "₩2,300만", manager: "이서연", status: "진행중", date: "2026-04-05" },
-  { id: 10, company: "모빌리티솔루션(주)", stage: "신규",        contact: "강하은", position: "대리",  service: "차량 관제 시스템",    quantity: 200, amount: "₩8,500만", manager: "박지은", status: "진행중", date: "2026-04-07" },
-  { id: 11, company: "(주)헬스케어AI",     stage: "가격조율",    contact: "윤성민", position: "팀장",  service: "의료 AI 솔루션",      quantity: 1,   amount: "₩1.2억",   manager: "김태현", status: "진행중", date: "2026-03-10" },
-  { id: 12, company: "리테일허브(주)",     stage: "수주확정",    contact: "조은지", position: "과장",  service: "POS 통합 시스템",     quantity: 300, amount: "₩4,700만", manager: "이서연", status: "성공",  date: "2026-02-28" },
-  { id: 13, company: "(주)스마트물류",     stage: "유선상담",    contact: "임재현", position: "부장",  service: "WMS 도입",            quantity: 80,  amount: "₩3,400만", manager: "박지은", status: "실패",  date: "2026-02-14" },
-  { id: 14, company: "에듀테크파트너(주)", stage: "유선견적상담",contact: "노지수", position: "이사",  service: "LMS 구축",            quantity: 500, amount: "₩9,800만", manager: "김태현", status: "진행중", date: "2026-04-08" },
-  { id: 15, company: "(주)그린에너지",     stage: "일정조율",    contact: "배소연", position: "차장",  service: "에너지 모니터링",     quantity: 100, amount: "₩2,100만", manager: "이서연", status: "진행중", date: "2026-01-20" },
+  { id: "1",  company: "(주)테크솔루션",     stage: "수주확정",    contact: "김영호", position: "이사",  service: "ERP 구축",            quantity: 120, amount: "₩3,200만", manager: "박지은", status: "성공",  date: "2026-03-15" },
+  { id: "2",  company: "스마트팩토리(주)",   stage: "가격조율",    contact: "이수진", position: "부장",  service: "MES 도입",            quantity: 85,  amount: "₩2,800만", manager: "김태현", status: "진행중", date: "2026-03-18" },
+  { id: "3",  company: "(주)글로벌트레이드", stage: "견적서 발송", contact: "박민수", position: "과장",  service: "SCM 컨설팅",          quantity: 200, amount: "₩5,500만", manager: "이서연", status: "진행중", date: "2026-03-20" },
+  { id: "4",  company: "디지털커머스(주)",   stage: "신규",        contact: "최지아", position: "대리",  service: "CRM 솔루션",          quantity: 50,  amount: "₩1,200만", manager: "박지은", status: "진행중", date: "2026-03-22" },
+  { id: "5",  company: "(주)바이오헬스",     stage: "유선상담",    contact: "정대현", position: "팀장",  service: "데이터 분석",         quantity: 30,  amount: "₩980만",  manager: "김태현", status: "진행중", date: "2026-03-25" },
+  { id: "6",  company: "에너지플러스(주)",   stage: "일정조율",    contact: "한소희", position: "차장",  service: "IoT 플랫폼",          quantity: 150, amount: "₩4,100만", manager: "이서연", status: "진행중", date: "2026-03-28" },
+  { id: "7",  company: "(주)푸드테크",       stage: "유선견적상담",contact: "오재석", position: "과장",  service: "POS 시스템",          quantity: 90,  amount: "₩1,500만", manager: "박지은", status: "진행중", date: "2026-04-01" },
+  { id: "8",  company: "클라우드원(주)",     stage: "수주확정",    contact: "윤미래", position: "부장",  service: "클라우드 마이그레이션",quantity: 40,  amount: "₩6,200만", manager: "김태현", status: "성공",  date: "2026-04-03" },
+  { id: "9",  company: "(주)핀테크랩",       stage: "견적서 발송", contact: "서준혁", position: "이사",  service: "결제 시스템",         quantity: 60,  amount: "₩2,300만", manager: "이서연", status: "진행중", date: "2026-04-05" },
+  { id: "10", company: "모빌리티솔루션(주)", stage: "신규",        contact: "강하은", position: "대리",  service: "차량 관제 시스템",    quantity: 200, amount: "₩8,500만", manager: "박지은", status: "진행중", date: "2026-04-07" },
+  { id: "11", company: "(주)헬스케어AI",     stage: "가격조율",    contact: "윤성민", position: "팀장",  service: "의료 AI 솔루션",      quantity: 1,   amount: "₩1.2억",   manager: "김태현", status: "진행중", date: "2026-03-10" },
+  { id: "12", company: "리테일허브(주)",     stage: "수주확정",    contact: "조은지", position: "과장",  service: "POS 통합 시스템",     quantity: 300, amount: "₩4,700만", manager: "이서연", status: "성공",  date: "2026-02-28" },
+  { id: "13", company: "(주)스마트물류",     stage: "유선상담",    contact: "임재현", position: "부장",  service: "WMS 도입",            quantity: 80,  amount: "₩3,400만", manager: "박지은", status: "실패",  date: "2026-02-14" },
+  { id: "14", company: "에듀테크파트너(주)", stage: "유선견적상담",contact: "노지수", position: "이사",  service: "LMS 구축",            quantity: 500, amount: "₩9,800만", manager: "김태현", status: "진행중", date: "2026-04-08" },
+  { id: "15", company: "(주)그린에너지",     stage: "일정조율",    contact: "배소연", position: "차장",  service: "에너지 모니터링",     quantity: 100, amount: "₩2,100만", manager: "이서연", status: "진행중", date: "2026-01-20" },
 ];
 
 /* ─── WIDGET DEFINITIONS ─── */
@@ -935,7 +1002,7 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
         stage = stageAliases[stage] || firstActive?.name || pipelineStages[0]?.name || "";
       }
       return {
-        id: now + i,
+        id: String(now + i),
         company: String(r.company ?? ""),
         stage,
         contact: String(r.contact ?? ""),
@@ -1848,9 +1915,9 @@ function OnboardingFlow({ onComplete, customFields, setCustomFields, pipelineSta
 
 /* ─── WEB FORM SAMPLE DEALS ─── */
 const WEB_FORM_SAMPLE_DEALS: Deal[] = [
-  { id: 101, company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", service: "CRM 솔루션 도입 문의", quantity: 1, amount: "₩0", manager: "박지은", status: "진행중", date: "2026-04-12" },
-  { id: 102, company: "스마트로직(주)", stage: "신규", contact: "이동훈", position: "대표이사", service: "ERP 연동 문의", quantity: 1, amount: "₩0", manager: "김태현", status: "진행중", date: "2026-04-12" },
-  { id: 103, company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀", service: "데이터 분석 플랫폼 문의", quantity: 1, amount: "₩0", manager: "이서연", status: "진행중", date: "2026-04-11" },
+  { id: "101", company: "(주)넥스트커머스", stage: "신규", contact: "김서현", position: "마케팅 팀장", service: "CRM 솔루션 도입 문의", quantity: 1, amount: "₩0", manager: "박지은", status: "진행중", date: "2026-04-12" },
+  { id: "102", company: "스마트로직(주)", stage: "신규", contact: "이동훈", position: "대표이사", service: "ERP 연동 문의", quantity: 1, amount: "₩0", manager: "김태현", status: "진행중", date: "2026-04-12" },
+  { id: "103", company: "(주)블루오션테크", stage: "신규", contact: "정하나", position: "기획팀", service: "데이터 분석 플랫폼 문의", quantity: 1, amount: "₩0", manager: "이서연", status: "진행중", date: "2026-04-11" },
 ];
 
 /* ─── WEB FORM ONBOARDING FLOW ─── */
@@ -1989,7 +2056,7 @@ ${activeFields.map((f) => `  <input name="${f.key}" placeholder="${f.label}"${f.
       const deals: Deal[] = subs
         .filter((s) => s.dealId)
         .map((s, i) => ({
-          id: Date.now() + i,
+          id: String(Date.now() + i),
           company: String(s.payload?.company ?? "알 수 없음"),
           stage: "신규",
           contact: String(s.payload?.contact ?? ""),
@@ -2375,7 +2442,7 @@ const FILE_TYPE_COLORS: Record<string, { bg: string; color: string }> = {
   "기타": { bg: "#F3F4F6", color: "#6B7280" },
 };
 
-function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: number, stage: string) => void; onChangeStatus: (dealId: number, status: string) => void; customFields: CustomField[] }) {
+function DetailDrawer({ deal, onClose, stageColorMap, stageNames, onChangeStage, onChangeStatus, customFields }: { deal: Deal; onClose: () => void; stageColorMap: Record<string, string>; stageNames: string[]; onChangeStage: (dealId: string, stage: string) => void; onChangeStatus: (dealId: string, status: string) => void; customFields: CustomField[] }) {
   const [tab, setTab] = useState<DrawerTab>("basic");
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
@@ -3097,7 +3164,7 @@ function AddDealModal({ onClose, onAdd, visibleColumns, stageNames, customFields
   const handleSubmit = () => {
     if (!form.company?.trim()) return;
     const deal: Deal = {
-      id: Date.now(),
+      id: String(Date.now()),
       company: form.company,
       stage: form.stage || stageNames[0] || "신규",
       contact: form.contact || "",
@@ -3470,7 +3537,7 @@ function GoalModal({ onAdd, onClose }: { onAdd: (goal: GoalDef) => void; onClose
 const DEAL_DRAG_TYPE = "DEAL_CARD";
 
 interface DealDragItem {
-  id: number;
+  id: string;
   stage: string;
 }
 
@@ -3603,7 +3670,7 @@ function KanbanColumn({
   deals: Deal[];
   color: string;
   cardFields: KanbanCardField[];
-  onDropDeal: (dealId: number, toStage: string) => void;
+  onDropDeal: (dealId: string, toStage: string) => void;
   onClickDeal: (deal: Deal) => void;
   onAddDeal: () => void;
 }) {
@@ -3739,7 +3806,7 @@ function KanbanView({
   deals: Deal[];
   pipelineStages: PipelineStage[];
   stageColorMap: Record<string, string>;
-  onMoveDeal: (dealId: number, toStage: string) => void;
+  onMoveDeal: (dealId: string, toStage: string) => void;
   onClickDeal: (deal: Deal) => void;
   onAddDeal: () => void;
 }) {
@@ -3947,6 +4014,143 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [savedViews, setSavedViews] = useState<SavedView[]>(DEFAULT_VIEWS);
   const [customFields, setCustomFields] = useState<CustomField[]>(DEFAULT_FIELDS);
 
+  /* ── Supabase hydration: DB가 응답하면 local state seed (Day 3 읽기 전용 연결) ── */
+  const { data: dbPipelineStages } = usePipelineStages();
+  const { data: dbSavedViews } = useSavedViews("deal");
+  const { data: dbCustomFields } = useCustomFields("deal");
+
+  useEffect(() => {
+    if (!dbPipelineStages || dbPipelineStages.length === 0) return;
+    setPipelineStages(
+      dbPipelineStages.map((s) => ({
+        id: s.id,
+        name: s.name,
+        color: s.color,
+        type: s.type.toLowerCase() as PipelineStage["type"],
+      }))
+    );
+  }, [dbPipelineStages]);
+
+  useEffect(() => {
+    if (!dbSavedViews || dbSavedViews.length === 0) return;
+    setSavedViews(
+      dbSavedViews.map((v) => ({
+        id: v.id,
+        name: v.name,
+        viewType: v.view_type as ViewType,
+        filters: (v.filters ?? []) as FilterRule[],
+        sorts: (v.sorts ?? []) as SortRule[],
+        groupBy: (v.group_by ?? "") as GroupByField,
+        searchQuery: v.search_query ?? "",
+      }))
+    );
+  }, [dbSavedViews]);
+
+  useEffect(() => {
+    if (!dbCustomFields) return;
+    // built-in 키는 DEFAULT_FIELDS가 단일 진실 — DB 사용자 필드는 append만
+    const builtInKeys = new Set(DEFAULT_FIELDS.map((f) => f.key));
+    const userFields: CustomField[] = dbCustomFields
+      .filter((f) => !builtInKeys.has(f.key))
+      .map((f) => ({
+        id: f.id,
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        required: f.required,
+        locked: false,
+        visible: f.visible,
+        options: Array.isArray(f.options)
+          ? f.options.map((o) =>
+              typeof o === "string" ? o : (o.value ?? o.label ?? "")
+            )
+          : [],
+      }));
+    setCustomFields([...DEFAULT_FIELDS, ...userFields]);
+  }, [dbCustomFields]);
+
+  /* ── Deals 데이터 소스 + 뮤테이션 (Day 4 Phase B) ── */
+  const { data: dbDeals } = useDeals();
+  const createDealMut = useCreateDeal();
+  const updateDealMut = useUpdateDeal();
+  const deleteDealMut = useDeleteDeal();
+
+  /* ── Deal 편집 값 → DB patch 변환 ──
+   * built-in 필드는 각 컬럼으로, 나머지는 custom_field_values jsonb 머지.
+   * - stage (name) → stage_id (pipelineStages 에서 lookup)
+   * - status (한글) → enum
+   * - amount ("₩XX만") → int 만원
+   * - manager 는 텍스트 이름 → manager_user_id (uuid) 매핑 불가 → 현재 null 처리. */
+  const buildDealPatch = useCallback(
+    (id: string, key: string, value: unknown): DealPatch | null => {
+      switch (key) {
+        case "company":
+        case "contact":
+        case "position":
+        case "service":
+        case "phone":
+        case "email":
+        case "memo":
+          return { [key]: String(value ?? "") } as DealPatch;
+        case "quantity":
+          return { quantity: Number(value) || 0 };
+        case "date":
+          return { date: value ? String(value) : "" };
+        case "amount":
+          return { amount: parseAmountKrw(String(value ?? "")) };
+        case "status":
+          return { status: UI_STATUS_TO_DB[String(value)] ?? "IN_PROGRESS" };
+        case "stage": {
+          const st = pipelineStages.find((s) => s.name === value);
+          return { stage_id: st?.id ?? null };
+        }
+        case "manager":
+          // 이름 → uuid 매핑 미구현. 비워서 저장.
+          return { manager_user_id: null };
+        default: {
+          const field = customFields.find((f) => f.key === key);
+          if (!field) return null;
+          const cur = dbDeals?.find((r) => r.id === id)?.custom_field_values ?? {};
+          return { custom_field_values: { ...cur, [key]: value } };
+        }
+      }
+    },
+    [pipelineStages, customFields, dbDeals]
+  );
+
+  // Deal 전체 객체 (모달/엑셀 임포트 등) → DB insert 입력
+  const buildDealInsert = useCallback(
+    (d: Deal): DealInsertInput => {
+      const st = pipelineStages.find((s) => s.name === d.stage);
+      const builtInKeys = new Set([
+        "id", "company", "stage", "contact", "position", "service",
+        "quantity", "amount", "manager", "status", "date", "phone", "email", "memo",
+      ]);
+      const cfv: Record<string, unknown> = {};
+      for (const k in d) {
+        if (builtInKeys.has(k)) continue;
+        const v = (d as Record<string, unknown>)[k];
+        if (v !== undefined && v !== "") cfv[k] = v;
+      }
+      return {
+        company: d.company,
+        stage_id: st?.id ?? null,
+        contact: d.contact ?? "",
+        position: d.position ?? "",
+        service: d.service ?? "",
+        quantity: Number(d.quantity) || 0,
+        amount: parseAmountKrw(d.amount ?? ""),
+        status: UI_STATUS_TO_DB[d.status] ?? "IN_PROGRESS",
+        date: d.date || new Date().toISOString().slice(0, 10),
+        phone: (d as Record<string, unknown>).phone as string ?? "",
+        email: (d as Record<string, unknown>).email as string ?? "",
+        memo: (d as Record<string, unknown>).memo as string ?? "",
+        custom_field_values: cfv,
+      };
+    },
+    [pipelineStages]
+  );
+
   /* ── Navigation ── */
   const navigate = useNavigate();
   const { pageId } = useParams<{ pageId: string }>();
@@ -3972,7 +4176,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const [showColumnConfig, setShowColumnConfig] = useState(false);
   const [customizeMode, setCustomizeMode] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterRule[]>([]);
   const [sorts, setSorts] = useState<SortRule[]>([]);
@@ -3998,14 +4202,20 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const hoverTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [customerDeals, setCustomerDeals] = useState<Deal[]>([]);
-  const [editingCell, setEditingCell] = useState<{ id: number; key: string } | null>(null);
+
+  useEffect(() => {
+    if (!dbDeals) return;
+    setCustomerDeals(dbDeals.map(adaptDealRow));
+  }, [dbDeals]);
+
+  const [editingCell, setEditingCell] = useState<{ id: string; key: string } | null>(null);
   const [showAddColumn, setShowAddColumn] = useState(false);
   const [newColName, setNewColName] = useState("");
   const [newColType, setNewColType] = useState<FieldType>("text");
   const [headerMenu, setHeaderMenu] = useState<{ key: string; x: number; y: number } | null>(null);
   const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
 
-  const updateDealField = useCallback((id: number, key: string, value: unknown) => {
+  const updateDealField = useCallback((id: string, key: string, value: unknown) => {
     setCustomerDeals((prev) => prev.map((d) => (d.id === id ? { ...d, [key]: value } : d)));
     const field = customFields.find((f) => f.key === key);
     if (field && (field.type === "select" || field.type === "multi-select")) {
@@ -4016,7 +4226,9 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         }
       }
     }
-  }, [customFields]);
+    const patch = buildDealPatch(id, key, value);
+    if (patch) updateDealMut.mutate({ id, patch });
+  }, [customFields, buildDealPatch, updateDealMut]);
 
   const startBlankTable = useCallback(() => {
     const t = Date.now();
@@ -4034,42 +4246,34 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setVisibleColumns(new Set(["company", "stage", ...blankKeys, "status"]));
     setColumnOrder(["company", "stage", ...blankKeys, "status"]);
     setActiveView("table");
-    const id = t + Math.floor(Math.random() * 1000);
-    const blank: Deal = {
-      id,
-      company: "",
-      stage: pipelineStages[0]?.name || "",
-      contact: "",
-      position: "",
-      service: "",
-      quantity: 0,
-      amount: "",
-      manager: "",
-      status: "진행중",
-      date: new Date().toISOString().slice(0, 10),
-    };
-    setCustomerDeals([blank]);
-    setEditingCell(null);
-  }, [pipelineStages]);
+    const firstStage = pipelineStages[0];
+    createDealMut.mutate(
+      {
+        company: "(새 거래)",
+        stage_id: firstStage?.id ?? null,
+        status: "IN_PROGRESS",
+        date: new Date().toISOString().slice(0, 10),
+      },
+      {
+        onSuccess: (row) => setEditingCell({ id: row.id, key: "company" }),
+      }
+    );
+  }, [pipelineStages, createDealMut]);
 
   const addBlankDeal = useCallback(() => {
-    const id = Date.now() + Math.floor(Math.random() * 1000);
-    const blank: Deal = {
-      id,
-      company: "",
-      stage: pipelineStages[0]?.name || "",
-      contact: "",
-      position: "",
-      service: "",
-      quantity: 0,
-      amount: "",
-      manager: "",
-      status: "진행중",
-      date: new Date().toISOString().slice(0, 10),
-    };
-    setCustomerDeals((prev) => [...prev, blank]);
-    setEditingCell({ id, key: "company" });
-  }, [pipelineStages]);
+    const firstStage = pipelineStages[0];
+    createDealMut.mutate(
+      {
+        company: "(새 거래)",
+        stage_id: firstStage?.id ?? null,
+        status: "IN_PROGRESS",
+        date: new Date().toISOString().slice(0, 10),
+      },
+      {
+        onSuccess: (row) => setEditingCell({ id: row.id, key: "company" }),
+      }
+    );
+  }, [pipelineStages, createDealMut]);
 
   const addInlineColumn = useCallback(() => {
     const label = newColName.trim();
@@ -4261,7 +4465,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   };
 
   const addDeal = (deal: Deal) => {
-    setCustomerDeals((prev) => [deal, ...prev]);
+    createDealMut.mutate(buildDealInsert(deal));
   };
 
   const handleOnboardingComplete = (importedDeals: Deal[], recommendedWidgets?: string[]) => {
@@ -4305,7 +4509,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setShowOnboarding(false);
   };
 
-  const moveDealStage = useCallback((dealId: number, toStage: string) => {
+  const moveDealStage = useCallback((dealId: string, toStage: string) => {
     const targetStage = pipelineStages.find((s) => s.name === toStage);
     setCustomerDeals((prev) =>
       prev.map((d) => {
@@ -4317,13 +4521,22 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         return { ...d, stage: toStage, status: nextStatus };
       })
     );
-  }, [pipelineStages]);
+    const patch: DealPatch = { stage_id: targetStage?.id ?? null };
+    if (targetStage?.type === "won") patch.status = "WON";
+    else if (targetStage?.type === "lost") patch.status = "LOST";
+    else patch.status = "IN_PROGRESS";
+    updateDealMut.mutate({ id: dealId, patch });
+  }, [pipelineStages, updateDealMut]);
 
-  const updateDealStatus = useCallback((dealId: number, status: string) => {
+  const updateDealStatus = useCallback((dealId: string, status: string) => {
     setCustomerDeals((prev) =>
       prev.map((d) => (d.id === dealId ? { ...d, status } : d))
     );
-  }, []);
+    updateDealMut.mutate({
+      id: dealId,
+      patch: { status: UI_STATUS_TO_DB[status] ?? "IN_PROGRESS" },
+    });
+  }, [updateDealMut]);
 
   /* ── View Management ── */
   const addView = (view: SavedView) => {
@@ -4462,7 +4675,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     else setSelectedIds(new Set(paginatedDeals.map((d) => d.id)));
   };
 
-  const toggleOne = (id: number) => {
+  const toggleOne = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
@@ -4472,19 +4685,24 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
 
   /* ── Bulk Actions ── */
   const bulkChangeStatus = (newStatus: string) => {
+    const dbStatus = UI_STATUS_TO_DB[newStatus] ?? "IN_PROGRESS";
     setCustomerDeals((prev) => prev.map((d) => selectedIds.has(d.id) ? { ...d, status: newStatus } : d));
+    selectedIds.forEach((id) => updateDealMut.mutate({ id, patch: { status: dbStatus } }));
     setSelectedIds(new Set());
     setBulkActionMenu("");
   };
 
   const bulkChangeManager = (newManager: string) => {
+    // manager_user_id (uuid) ↔ 이름 매핑 미구현 — 로컬 상태만 갱신, DB 반영 보류.
     setCustomerDeals((prev) => prev.map((d) => selectedIds.has(d.id) ? { ...d, manager: newManager } : d));
     setSelectedIds(new Set());
     setBulkActionMenu("");
   };
 
   const bulkDelete = () => {
+    const ids = Array.from(selectedIds);
     setCustomerDeals((prev) => prev.filter((d) => !selectedIds.has(d.id)));
+    ids.forEach((id) => deleteDealMut.mutate(id));
     setSelectedIds(new Set());
     setBulkActionMenu("");
   };

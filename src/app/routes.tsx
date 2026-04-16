@@ -8,11 +8,20 @@ import { CustomerPage } from "./components/customer-page";
 import { DealflowPage } from "./components/dealflow-page";
 import { PipelineSettingsPage } from "./components/pipeline-settings-page";
 import { FieldSettingsPage } from "./components/field-settings-page";
+import { LoginPage } from "./components/login-page";
+import { SignupPage } from "./components/signup-page";
+import { RequireAuth } from "./components/require-auth";
 
 export const router = createBrowserRouter([
+  { path: "/login", Component: LoginPage },
+  { path: "/signup", Component: SignupPage },
   {
     path: "/",
-    Component: Layout,
+    element: (
+      <RequireAuth>
+        <Layout />
+      </RequireAuth>
+    ),
     children: [
       { index: true, Component: HomePage },
       { path: "dashboard", Component: DashboardPage },
