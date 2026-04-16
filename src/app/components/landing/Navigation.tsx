@@ -25,7 +25,7 @@ export function Navigation() {
         </button>
         <button
           type="button"
-          onClick={() => nav("/signup")}
+          onClick={() => nav("/login")}
           className="bg-[var(--lp-accent)] text-white px-5 py-2 rounded-lg text-sm font-semibold border-0 cursor-pointer transition-all hover:bg-[#0f3820] hover:-translate-y-0.5"
         >
           무료로 시작하기

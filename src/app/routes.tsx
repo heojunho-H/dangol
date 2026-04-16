@@ -9,14 +9,13 @@ import { DealflowPage } from "./components/dealflow-page";
 import { PipelineSettingsPage } from "./components/pipeline-settings-page";
 import { FieldSettingsPage } from "./components/field-settings-page";
 import { LoginPage } from "./components/login-page";
-import { SignupPage } from "./components/signup-page";
 import { LandingPage } from "./components/landing-page";
 import { RequireAuth } from "./components/require-auth";
 
 export const router = createBrowserRouter([
   { path: "/", Component: LandingPage },
   { path: "/login", Component: LoginPage },
-  { path: "/signup", Component: SignupPage },
+  { path: "/signup", element: <Navigate to="/login" replace /> },
   {
     element: (
       <RequireAuth>

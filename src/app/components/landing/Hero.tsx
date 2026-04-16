@@ -23,7 +23,7 @@ export function Hero() {
         <div className="flex gap-3.5 flex-wrap mb-12">
           <button
             type="button"
-            onClick={() => nav("/signup")}
+            onClick={() => nav("/login")}
             className="bg-[var(--lp-accent)] text-white px-7 py-3.5 rounded-[10px] text-[0.95rem] font-bold border-0 cursor-pointer transition-all hover:bg-[#0f3820] hover:-translate-y-0.5 shadow-[0_4px_20px_rgba(26,71,42,0.35)] hover:shadow-[0_6px_28px_rgba(26,71,42,0.4)]"
           >
             🚀 무료로 시작하기

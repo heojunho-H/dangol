@@ -35,7 +35,7 @@ export function FinalCTA() {
         <div className="flex gap-4 justify-center flex-wrap">
           <button
             type="button"
-            onClick={() => nav("/signup")}
+            onClick={() => nav("/login")}
             className="bg-white text-[var(--lp-accent)] px-8 py-3.5 rounded-[10px] font-bold text-[0.95rem] border-0 cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(0,0,0,0.2)]"
           >
             무료로 시작하기 →

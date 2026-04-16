@@ -130,7 +130,7 @@ export function Pricing() {
             <button
               type="button"
               onClick={() => {
-                if (plan.ctaTarget === "signup") nav("/signup");
+                if (plan.ctaTarget === "signup") nav("/login");
               }}
               className={`block w-full py-3 rounded-[10px] text-sm font-bold text-center transition-all cursor-pointer border-0 ${
                 plan.ctaStyle === "fill"
