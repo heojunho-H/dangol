@@ -2,8 +2,15 @@
 @import './tailwind.css';
 @import './theme.css';
 
-#root:not(:has(.landing-page)) {
+/* zoom 0.8 은 CRM 레이아웃 전용. 랜딩·로그인 등 풀스크린 페이지는 자기 viewport 그대로 사용. */
+#root:has(.app-layout) {
   zoom: 0.8;
   height: 125vh; /* 100vh ÷ zoom(0.8) = 125vh → 시각적으로 정확히 100vh */
   overflow: hidden;
+}
+
+/* 로그인 셸이 마운트되면 body·html 까지 다크로 물들여서, 스크롤 오버슈트/iOS rubber-banding 시 흰 배경이 새어 나오지 않게 한다. */
+html:has(.login-shell),
+body:has(.login-shell) {
+  background: #0f1115;
 }

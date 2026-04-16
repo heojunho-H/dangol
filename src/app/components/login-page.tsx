@@ -78,7 +78,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1115] text-[#f5f5f7] flex flex-col">
+    <div className="login-shell fixed inset-0 overflow-y-auto bg-[#0f1115] text-[#f5f5f7] flex flex-col">
       <header className="flex items-center justify-center pt-10 pb-8">
         <div className="flex items-center gap-2 font-extrabold text-xl text-white tracking-tight">
           <div className="w-2 h-2 rounded-full bg-[#0d9488]"></div>
