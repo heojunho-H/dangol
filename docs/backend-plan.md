@@ -1,5 +1,7 @@
 # Dangol CRM 백엔드 상세 기획 (Supabase 전면 채택)
 
+> **상태 (2026-04-16)**: 이 문서가 설계한 Express → Supabase 전환이 전 Phase 완료. `server/` 디렉터리는 삭제됐고, 프론트는 모두 `@supabase/supabase-js` 로 직접 붙음. 이 문서는 초기 의사결정 맥락을 남기기 위한 **참고용**으로만 유지. 현재 동작하는 스키마는 `supabase/migrations/` 와 `supabase/functions/` 이 단일 진실.
+
 ---
 
 ## 0. 기획 원칙

@@ -40,8 +40,8 @@ CRM의 데이터 입력·정리·분석 부담을 AI가 대신 맡아, 영업/CS
 
 ## 기술 스택
 
-- **프론트엔드**: React 19 · TypeScript · Vite 6 · Tailwind v4 · react-router v7 · recharts · react-dnd · lucide-react · xlsx
-- **백엔드** (`server/`): Express 4 · Prisma 7.7 · SQLite · JWT (`dangol_access_token`)
+- **프론트엔드**: React 19 · TypeScript · Vite 6 · Tailwind v4 · react-router v7 · @tanstack/react-query · recharts · react-dnd · lucide-react · xlsx
+- **백엔드**: Supabase (Postgres + RLS · Auth · Storage · Edge Functions). Express 서버는 제거됨 (Phase 6 완료) — 모든 데이터 접근은 `@supabase/supabase-js` 클라이언트로 직접, 서버 로직은 Deno Edge Functions 으로.
 - **아이콘 라이브러리**: `lucide-react` (이모지 대신 아이콘 컴포넌트 사용)
 
 ## 디렉터리 지도
@@ -54,12 +54,17 @@ src/app/
     dealflow-page.tsx      # 영업관리 (~5000+ lines)
     customer-page.tsx      # 고객관리 (~5000+ lines, dealflow 미러)
     field-settings-page.tsx  # 현재 disconnected (필드 매니저 다이얼로그로 통합됨)
+    sidebar.tsx            # DB 기반 페이지 네비 (usePages 훅)
     …
+  hooks/                   # @tanstack/react-query 기반 Supabase 훅
+    use-pages.ts · use-deals.ts · use-customers.ts · use-custom-fields.ts · …
   lib/
+    supabase.ts            # 클라이언트 싱글톤
+    auth-context.tsx       # 세션 · 활성 workspace
     excel-import.ts        # 공용 파싱/정규화 헬퍼 + transformRows/FieldMapping
-server/src/
-  routes/ai.ts             # AI 컬럼 매핑 (targetField 네이밍)
-  services/column-mapping.ts
+supabase/
+  migrations/              # SQL 마이그레이션 (수동 적용, 순번 지켜서 병합)
+  functions/               # Edge Functions (ai-column-mapping · ai-dashboard-recommendation · webform-submit 등)
 ```
 
 ## 두 페이지의 병행 구조
@@ -94,7 +99,7 @@ interface CustomField {
 
 ### 공용 엑셀 임포트
 - `src/app/lib/excel-import.ts`의 `transformRows`·`FieldMapping`은 두 페이지가 공유.
-- AI 컬럼 매핑 서비스(`server/src/services/column-mapping.ts`)는 **`targetField`/`targetFields`** 이름 사용 (domain-neutral). `dealflowField`·`customerField`로 되돌리지 말 것.
+- AI 컬럼 매핑 Edge Function (`supabase/functions/ai-column-mapping`) 은 **`targetField`/`targetFields`** 이름 사용 (domain-neutral). `dealflowField`·`customerField`로 되돌리지 말 것.
 
 ## UX 규약
 
@@ -107,7 +112,7 @@ interface CustomField {
 
 - **Typecheck**: `npx tsc --noEmit -p tsconfig.app.json` — 모든 수정 후 실행.
 - **Lint**: `npm run lint`. 필요 시에만 수동 호출.
-- **Dev 서버**: `npm run dev`는 프론트·백 concurrently 실행.
+- **Dev 서버**: `npm run dev`는 vite 프론트만 띄움. 백엔드는 Supabase 원격(프로덕션 프로젝트) 에 직접 붙음 → 별도 로컬 서버 필요 없음. 마이그레이션은 Supabase 대시보드 SQL 에디터에서 수동 적용.
 - **브라우저 테스트 요구**: UI 변경 시 직접 클릭 검증 못 하면 명시적으로 그렇게 보고 (type check만으로 완료 처리 금지).
 
 ## 코드 스타일

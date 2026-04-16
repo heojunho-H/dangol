@@ -30,12 +30,7 @@
       enable = true;
       previews = {
         web = {
-          # $PORT/--host 는 concurrently 가 먹어버리므로 vite 자식에게 직접 꽂아야 Firebase Studio 프록시가 붙음
-          command = [
-            "npx" "concurrently" "-k" "-n" "fe,be" "-c" "cyan,green"
-            "npx vite --port $PORT --host 0.0.0.0"
-            "npm run dev --prefix server"
-          ];
+          command = [ "npx" "vite" "--port" "$PORT" "--host" "0.0.0.0" ];
           manager = "web";
         };
       };
