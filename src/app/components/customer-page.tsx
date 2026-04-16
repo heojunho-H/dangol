@@ -17,6 +17,13 @@ import {
   type CustomerInsertInput,
 } from "../hooks/use-customers";
 import { useLifecycleStages } from "../hooks/use-lifecycle-stages";
+import {
+  useCustomFields,
+  useCreateCustomField,
+  useUpdateCustomField,
+  useDeleteCustomField,
+  type UpdateCustomFieldPatch,
+} from "../hooks/use-custom-fields";
 import { useAuth } from "../lib/auth-context";
 import { supabase } from "../lib/supabase";
 import {
@@ -4003,14 +4010,96 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const { activeWorkspaceId } = useAuth();
   const { data: dbCustomers } = useCustomers();
   const { data: lifecycleStages = [] } = useLifecycleStages();
+  const { data: dbCustomFields } = useCustomFields("customer");
   const createCustomerMut = useCreateCustomer();
   const updateCustomerMut = useUpdateCustomer();
   const deleteCustomerMut = useDeleteCustomer();
+  const createCustomFieldMut = useCreateCustomField("customer");
+  const updateCustomFieldMut = useUpdateCustomField("customer");
+  const deleteCustomFieldMut = useDeleteCustomField("customer");
 
   useEffect(() => {
     if (!dbCustomers) return;
     setCustomerDeals(dbCustomers.map(adaptCustomerRow));
   }, [dbCustomers]);
+
+  // DB 의 custom_fields → 로컬 customFields 동기화. built-in(locked) 은 DEFAULT_FIELDS 유지.
+  useEffect(() => {
+    if (!dbCustomFields) return;
+    const builtInKeys = new Set(DEFAULT_FIELDS.map((f) => f.key));
+    const userFields: CustomField[] = dbCustomFields
+      .filter((f) => !builtInKeys.has(f.key))
+      .map((f) => ({
+        id: f.id,
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        required: f.required,
+        locked: false,
+        visible: f.visible,
+        options: Array.isArray(f.options)
+          ? f.options.map((o) =>
+              typeof o === "string" ? o : (o.value ?? o.label ?? "")
+            )
+          : [],
+      }));
+    setCustomFields([...DEFAULT_FIELDS, ...userFields]);
+  }, [dbCustomFields]);
+
+  // setCustomFields 래퍼 — 로컬 상태 변경과 동시에 DB 에 create/update/delete 디스패치.
+  // built-in(locked) 필드는 DB 에 없으므로 제외. OnboardingFlow 같은 자식에게도 이 래퍼를 넘긴다.
+  const setCustomFieldsAndPersist: React.Dispatch<
+    React.SetStateAction<CustomField[]>
+  > = useCallback(
+    (action) => {
+      setCustomFields((prev) => {
+        const next =
+          typeof action === "function"
+            ? (action as (p: CustomField[]) => CustomField[])(prev)
+            : action;
+        const prevByKey = new Map(prev.map((f) => [f.key, f]));
+        const nextByKey = new Map(next.map((f) => [f.key, f]));
+
+        for (const [key, field] of nextByKey) {
+          if (field.locked) continue;
+          const old = prevByKey.get(key);
+          if (!old) {
+            createCustomFieldMut.mutate({
+              key,
+              label: field.label,
+              type: field.type,
+              required: field.required,
+              options: field.options,
+              visible: field.visible,
+            });
+            continue;
+          }
+          const patch: UpdateCustomFieldPatch = {};
+          if (old.label !== field.label) patch.label = field.label;
+          if (old.type !== field.type) patch.type = field.type;
+          if (old.required !== field.required) patch.required = field.required;
+          if (old.visible !== field.visible) patch.visible = field.visible;
+          const optsChanged =
+            JSON.stringify(old.options ?? []) !==
+            JSON.stringify(field.options ?? []);
+          if (optsChanged) patch.options = field.options ?? [];
+          if (Object.keys(patch).length > 0) {
+            updateCustomFieldMut.mutate({ key, patch });
+          }
+        }
+
+        for (const [key, field] of prevByKey) {
+          if (field.locked) continue;
+          if (!nextByKey.has(key)) {
+            deleteCustomFieldMut.mutate(key);
+          }
+        }
+
+        return next;
+      });
+    },
+    [createCustomFieldMut, updateCustomFieldMut, deleteCustomFieldMut]
+  );
 
   // UI 필드 → DB patch 변환. stage(고객상태) 는 customer_lifecycle_stages 이름 매칭.
   // amount/renewalDate/manager 처럼 스키마에 없는 필드는 custom_field_values 에 저장.
@@ -4083,14 +4172,14 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     const trimmed = nextLabel.trim();
     setRenamingColumn(null);
     if (!trimmed) return;
-    setCustomFields((prev) => {
+    setCustomFieldsAndPersist((prev) => {
       const existing = prev.find((f) => f.key === key);
       if (existing) {
         return prev.map((f) => (f.key === key ? { ...f, label: trimmed } : f));
       }
       return [...prev, { id: `cf_${Date.now()}`, key, label: trimmed, type: "text", required: false, locked: false, visible: true }];
     });
-  }, []);
+  }, [setCustomFieldsAndPersist]);
 
   const deleteColumn = useCallback((key: string) => {
     const field = customFields.find((f) => f.key === key);
@@ -4099,7 +4188,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       return;
     }
     if (!window.confirm(`"${field.label}" 컬럼을 삭제하시겠습니까? 모든 행의 해당 값이 사라집니다.`)) return;
-    setCustomFields((prev) => prev.filter((f) => f.key !== key));
+    setCustomFieldsAndPersist((prev) => prev.filter((f) => f.key !== key));
     setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
     setCustomerDeals((prev) => prev.map((d) => { const { [key]: _, ...rest } = d as Record<string, unknown>; return rest as Customer; }));
     // 서버측 jsonb 값도 purge (orphan 청소). 실패해도 UI 는 정상.
@@ -4108,7 +4197,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         wid: activeWorkspaceId, field_scope: "customer", field_key: key,
       }).then(() => { /* noop */ });
     }
-  }, [customFields, activeWorkspaceId]);
+  }, [customFields, activeWorkspaceId, setCustomFieldsAndPersist]);
 
   const hideColumn = useCallback((key: string) => {
     setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
@@ -4122,7 +4211,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     const baseKey = label.toLowerCase().replace(/[^a-z0-9가-힣]+/g, "_").replace(/^_|_$/g, "") || `col_${Date.now()}`;
     let key = baseKey;
     let i = 1;
-    setCustomFields((prev) => {
+    setCustomFieldsAndPersist((prev) => {
       const existing = new Set(prev.map((f) => f.key));
       while (existing.has(key)) { key = `${baseKey}_${i++}`; }
       return [...prev, {
@@ -4139,7 +4228,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setNewColName("");
     setNewColType("text");
     setShowAddColumn(false);
-  }, [newColName, newColType]);
+  }, [newColName, newColType, setCustomFieldsAndPersist]);
 
   const updateDealField = useCallback((id: string, key: string, value: unknown) => {
     setCustomerDeals((prev) => prev.map((d) => (d.id === id ? { ...d, [key]: value } : d)));
@@ -4148,13 +4237,13 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       const str = typeof value === "string" ? value.trim() : "";
       if (str && !(field.options || []).includes(str)) {
         if (window.confirm(`"${str}"를 "${field.label}" 컬럼의 옵션으로 추가할까요?`)) {
-          setCustomFields((prev) => prev.map((f) => (f.key === key ? { ...f, options: [...(f.options || []), str] } : f)));
+          setCustomFieldsAndPersist((prev) => prev.map((f) => (f.key === key ? { ...f, options: [...(f.options || []), str] } : f)));
         }
       }
     }
     const patch = buildCustomerPatch(id, key, value);
     if (patch) updateCustomerMut.mutate({ id, patch });
-  }, [customFields, buildCustomerPatch, updateCustomerMut]);
+  }, [customFields, buildCustomerPatch, updateCustomerMut, setCustomFieldsAndPersist]);
 
   const startBlankTable = useCallback(() => {
     const t = Date.now();
@@ -4167,7 +4256,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       locked: false,
       visible: true,
     }));
-    setCustomFields((prev) => [...prev, ...blankCols]);
+    setCustomFieldsAndPersist((prev) => [...prev, ...blankCols]);
     setVisibleColumns(new Set(["company", "stage", "customerGrade", ...blankCols.map((c) => c.key)]));
     setColumnOrder(["company", "customerGrade", "stage", ...blankCols.map((c) => c.key)]);
     setActiveView("table");
@@ -4181,7 +4270,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       },
       { onSuccess: (row) => setEditingCell({ id: row.id, key: "company" }) }
     );
-  }, [lifecycleStages, createCustomerMut]);
+  }, [lifecycleStages, createCustomerMut, setCustomFieldsAndPersist]);
 
   const addBlankDeal = useCallback(() => {
     const firstStage = lifecycleStages[0];
@@ -4355,7 +4444,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       // effect doesn't re-add them and the field-settings UI reflects it.
       // 단, Dangol 전용 필드(고객등급·고객상태)는 visible 유지.
       const DANGOL_KEEP_VISIBLE = new Set(["customerGrade", "stage"]);
-      setCustomFields((prev) =>
+      setCustomFieldsAndPersist((prev) =>
         prev.map((f) => {
           if (f.locked || f.required) return f;
           if (DANGOL_KEEP_VISIBLE.has(f.key)) return { ...f, visible: true };
@@ -4622,7 +4711,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const managers = useMemo(() => [...new Set(customerDeals.map((d) => d.manager))].sort(), [customerDeals]);
 
   if (showOnboarding) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} customFields={customFields} setCustomFields={setCustomFields} pipelineStages={pipelineStages} />;
+    return <OnboardingFlow onComplete={handleOnboardingComplete} customFields={customFields} setCustomFields={setCustomFieldsAndPersist} pipelineStages={pipelineStages} />;
   }
   if (showWebFormOnboarding) {
     return <WebFormOnboarding onComplete={(deals) => { handleOnboardingComplete(deals); setShowWebFormOnboarding(false); }} />;
@@ -5770,7 +5859,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           value={currentType}
                           onChange={(e) => {
                             const t = e.target.value as FieldType;
-                            setCustomFields((prev) => prev.map((f) => (f.key === col.key ? { ...f, type: t } : f)));
+                            setCustomFieldsAndPersist((prev) => prev.map((f) => (f.key === col.key ? { ...f, type: t } : f)));
                           }}
                           className="text-[0.65rem] px-1.5 py-1 rounded border bg-white text-[#666] cursor-pointer"
                           style={{ borderColor: T.border }}

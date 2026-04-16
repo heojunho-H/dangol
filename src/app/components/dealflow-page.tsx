@@ -83,7 +83,13 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../lib/auth-context";
 import { usePipelineStages } from "../hooks/use-pipeline-stages";
 import { useSavedViews } from "../hooks/use-saved-views";
-import { useCustomFields } from "../hooks/use-custom-fields";
+import {
+  useCustomFields,
+  useCreateCustomField,
+  useUpdateCustomField,
+  useDeleteCustomField,
+  type UpdateCustomFieldPatch,
+} from "../hooks/use-custom-fields";
 import {
   useDeals,
   useCreateDeal,
@@ -4089,6 +4095,65 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setCustomFields([...DEFAULT_FIELDS, ...userFields]);
   }, [dbCustomFields]);
 
+  const createCustomFieldMut = useCreateCustomField("deal");
+  const updateCustomFieldMut = useUpdateCustomField("deal");
+  const deleteCustomFieldMut = useDeleteCustomField("deal");
+
+  // setCustomFields 래퍼 — 로컬 상태 변경과 동시에 DB 에 create/update/delete 디스패치.
+  // built-in(locked) 필드는 DB 에 없으므로 제외. OnboardingFlow 같은 자식에게도 이 래퍼를 넘긴다.
+  const setCustomFieldsAndPersist: React.Dispatch<
+    React.SetStateAction<CustomField[]>
+  > = useCallback(
+    (action) => {
+      setCustomFields((prev) => {
+        const next =
+          typeof action === "function"
+            ? (action as (p: CustomField[]) => CustomField[])(prev)
+            : action;
+        const prevByKey = new Map(prev.map((f) => [f.key, f]));
+        const nextByKey = new Map(next.map((f) => [f.key, f]));
+
+        for (const [key, field] of nextByKey) {
+          if (field.locked) continue;
+          const old = prevByKey.get(key);
+          if (!old) {
+            createCustomFieldMut.mutate({
+              key,
+              label: field.label,
+              type: field.type,
+              required: field.required,
+              options: field.options,
+              visible: field.visible,
+            });
+            continue;
+          }
+          const patch: UpdateCustomFieldPatch = {};
+          if (old.label !== field.label) patch.label = field.label;
+          if (old.type !== field.type) patch.type = field.type;
+          if (old.required !== field.required) patch.required = field.required;
+          if (old.visible !== field.visible) patch.visible = field.visible;
+          const optsChanged =
+            JSON.stringify(old.options ?? []) !==
+            JSON.stringify(field.options ?? []);
+          if (optsChanged) patch.options = field.options ?? [];
+          if (Object.keys(patch).length > 0) {
+            updateCustomFieldMut.mutate({ key, patch });
+          }
+        }
+
+        for (const [key, field] of prevByKey) {
+          if (field.locked) continue;
+          if (!nextByKey.has(key)) {
+            deleteCustomFieldMut.mutate(key);
+          }
+        }
+
+        return next;
+      });
+    },
+    [createCustomFieldMut, updateCustomFieldMut, deleteCustomFieldMut]
+  );
+
   /* ── Deals 데이터 소스 + 뮤테이션 (Day 4 Phase B) ── */
   const { data: dbDeals } = useDeals();
   const createDealMut = useCreateDeal();
@@ -4242,13 +4307,13 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       const str = typeof value === "string" ? value.trim() : "";
       if (str && !(field.options || []).includes(str)) {
         if (window.confirm(`"${str}"를 "${field.label}" 컬럼의 옵션으로 추가할까요?`)) {
-          setCustomFields((prev) => prev.map((f) => (f.key === key ? { ...f, options: [...(f.options || []), str] } : f)));
+          setCustomFieldsAndPersist((prev) => prev.map((f) => (f.key === key ? { ...f, options: [...(f.options || []), str] } : f)));
         }
       }
     }
     const patch = buildDealPatch(id, key, value);
     if (patch) updateDealMut.mutate({ id, patch });
-  }, [customFields, buildDealPatch, updateDealMut]);
+  }, [customFields, buildDealPatch, updateDealMut, setCustomFieldsAndPersist]);
 
   const startBlankTable = useCallback(() => {
     const t = Date.now();
@@ -4261,7 +4326,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       locked: false,
       visible: true,
     }));
-    setCustomFields((prev) => [...prev, ...blankCols]);
+    setCustomFieldsAndPersist((prev) => [...prev, ...blankCols]);
     const blankKeys = blankCols.map((c) => c.key);
     setVisibleColumns(new Set(["company", "stage", ...blankKeys, "status"]));
     setColumnOrder(["company", "stage", ...blankKeys, "status"]);
@@ -4278,7 +4343,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
         onSuccess: (row) => setEditingCell({ id: row.id, key: "company" }),
       }
     );
-  }, [pipelineStages, createDealMut]);
+  }, [pipelineStages, createDealMut, setCustomFieldsAndPersist]);
 
   const addBlankDeal = useCallback(() => {
     const firstStage = pipelineStages[0];
@@ -4301,7 +4366,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     const baseKey = label.toLowerCase().replace(/[^a-z0-9가-힣]+/g, "_").replace(/^_|_$/g, "") || `col_${Date.now()}`;
     let key = baseKey;
     let i = 1;
-    setCustomFields((prev) => {
+    setCustomFieldsAndPersist((prev) => {
       const existing = new Set(prev.map((f) => f.key));
       while (existing.has(key)) { key = `${baseKey}_${i++}`; }
       return [...prev, {
@@ -4318,7 +4383,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     setNewColName("");
     setNewColType("text");
     setShowAddColumn(false);
-  }, [newColName, newColType]);
+  }, [newColName, newColType, setCustomFieldsAndPersist]);
 
   const renameColumn = useCallback((key: string) => {
     setRenamingColumn(key);
@@ -4328,14 +4393,14 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
     const trimmed = nextLabel.trim();
     setRenamingColumn(null);
     if (!trimmed) return;
-    setCustomFields((prev) => {
+    setCustomFieldsAndPersist((prev) => {
       const existing = prev.find((f) => f.key === key);
       if (existing) {
         return prev.map((f) => (f.key === key ? { ...f, label: trimmed } : f));
       }
       return [...prev, { id: `cf_${Date.now()}`, key, label: trimmed, type: "text", required: false, locked: false, visible: true }];
     });
-  }, []);
+  }, [setCustomFieldsAndPersist]);
 
   const deleteColumn = useCallback((key: string) => {
     const field = customFields.find((f) => f.key === key);
@@ -4344,10 +4409,10 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       return;
     }
     if (!window.confirm(`"${field.label}" 컬럼을 삭제하시겠습니까? 모든 행의 해당 값이 사라집니다.`)) return;
-    setCustomFields((prev) => prev.filter((f) => f.key !== key));
+    setCustomFieldsAndPersist((prev) => prev.filter((f) => f.key !== key));
     setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
     setCustomerDeals((prev) => prev.map((d) => { const { [key]: _, ...rest } = d as Record<string, unknown>; return rest as Deal; }));
-  }, [customFields]);
+  }, [customFields, setCustomFieldsAndPersist]);
 
   const hideColumn = useCallback((key: string) => {
     setVisibleColumns((prev) => { const n = new Set(prev); n.delete(key); return n; });
@@ -4514,7 +4579,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
       });
       // Flip empty custom fields to visible:false so the auto-reveal
       // effect doesn't re-add them and the field-settings UI reflects it.
-      setCustomFields((prev) =>
+      setCustomFieldsAndPersist((prev) =>
         prev.map((f) => {
           if (f.locked || f.required) return f;
           if (hasData.has(f.key)) return f;
@@ -4730,7 +4795,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
   const managers = useMemo(() => [...new Set(customerDeals.map((d) => d.manager))].sort(), [customerDeals]);
 
   if (showOnboarding) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} customFields={customFields} setCustomFields={setCustomFields} pipelineStages={pipelineStages} />;
+    return <OnboardingFlow onComplete={handleOnboardingComplete} customFields={customFields} setCustomFields={setCustomFieldsAndPersist} pipelineStages={pipelineStages} />;
   }
   if (showWebFormOnboarding) {
     return <WebFormOnboarding onComplete={(deals) => { handleOnboardingComplete(deals); setShowWebFormOnboarding(false); }} />;
@@ -5814,7 +5879,7 @@ function DealflowPageInner({ urlViewType }: { urlViewType: ViewType }) {
                           value={currentType}
                           onChange={(e) => {
                             const t = e.target.value as FieldType;
-                            setCustomFields((prev) => prev.map((f) => (f.key === col.key ? { ...f, type: t } : f)));
+                            setCustomFieldsAndPersist((prev) => prev.map((f) => (f.key === col.key ? { ...f, type: t } : f)));
                           }}
                           className="text-[0.65rem] px-1.5 py-1 rounded border bg-white text-[#666] cursor-pointer"
                           style={{ borderColor: T.border }}

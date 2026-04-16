@@ -67,30 +67,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let done = false;
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      if (data.session?.user) {
-        await loadWorkspaces(data.session.user.id);
+    // Supabase 알려진 이슈: onAuthStateChange 콜백에서 async 작업(from() 등)을
+    // 직접 await 하면 내부 lock 이 유지돼 getSession() 이 영영 resolve 안 함.
+    // 해결: onAuthStateChange 안 async 작업은 setTimeout(0) 으로 밖으로 뺀다.
+    // https://github.com/supabase/supabase-js/issues/915
+    const finish = () => {
+      if (!done && mounted) {
+        done = true;
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    // 세이프티: 네트워크/SDK 가 끝내 응답 안 해도 5 초 뒤엔 UI 풀림.
+    const timeoutId = window.setTimeout(() => {
+      if (!done) console.warn("[auth] session load timeout (5s)");
+      finish();
+    }, 5000);
+
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!mounted) return;
+        setSession(data.session);
+        if (data.session?.user) {
+          await loadWorkspaces(data.session.user.id);
+        }
+      } catch (err) {
+        console.error("[auth] initial session load failed", err);
+      } finally {
+        finish();
+      }
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!mounted) return;
       setSession(s);
-      if (s?.user) {
-        await loadWorkspaces(s.user.id);
-      } else {
-        setWorkspaces([]);
-        setActiveWorkspaceIdState(null);
-        localStorage.removeItem(ACTIVE_WS_KEY);
-      }
+      // async 는 defer — getSession lock 과 경합하지 않도록
+      setTimeout(() => {
+        if (!mounted) return;
+        if (s?.user) {
+          loadWorkspaces(s.user.id)
+            .catch((err) => console.error("[auth] reload workspaces failed", err))
+            .finally(finish);
+        } else {
+          setWorkspaces([]);
+          setActiveWorkspaceIdState(null);
+          localStorage.removeItem(ACTIVE_WS_KEY);
+          finish();
+        }
+      }, 0);
     });
 
     return () => {
       mounted = false;
+      window.clearTimeout(timeoutId);
       sub.subscription.unsubscribe();
     };
   }, []);
